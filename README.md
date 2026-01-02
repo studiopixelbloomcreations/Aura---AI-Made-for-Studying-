@@ -41,6 +41,18 @@ Notes:
 
 This README describes how to run the interface locally for testing (including a demo/mock mode) and how to share it with family/teachers for evaluation without changing any AI model code.
 
+## ElevenLabs Text-to-Speech (TTS)
+
+The app can read AI answers aloud using ElevenLabs.
+
+Configuration:
+- Set Netlify environment variable `ELEVENLABS_API_KEY`.
+- The frontend calls `/tts/elevenlabs`, which is proxied to a Netlify Function (`netlify/functions/elevenlabs_tts.js`) so the API key is not exposed in the browser.
+
+Local testing:
+- If you are running locally via Netlify CLI, add `ELEVENLABS_API_KEY` in your local env (or `.env` supported by your tooling).
+- If you are not using Netlify Functions locally, TTS will fall back to browser `speechSynthesis`.
+
 ## Quick local smoke test (frontend + mock backend)
 
 1. Create a Python virtual environment and install dependencies:

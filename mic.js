@@ -25,6 +25,8 @@
         if(inputBox){
           inputBox.value = t;
           inputBox.focus();
+          // Ensure downstream UI reacts exactly like typed input.
+          try { inputBox.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
         }
       };
 

@@ -11,6 +11,11 @@
   to = "/.netlify/functions/health"
   status = 200
 
+ [[redirects]]
+   from = "/tts/elevenlabs"
+   to = "/.netlify/functions/elevenlabs_tts"
+   status = 200
+
 [[redirects]]
   from = "/ask"
   to = "/.netlify/functions/ask"

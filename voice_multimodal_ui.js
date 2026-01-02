@@ -109,6 +109,24 @@
     return window.Api.apiFetch(path, options);
   }
 
+  function getSelectedElevenLabsVoiceId(){
+    // Allow overriding via window for experiments.
+    try {
+      if(window.__ELEVENLABS_VOICE_ID__) return String(window.__ELEVENLABS_VOICE_ID__);
+    } catch (e) {}
+
+    // Reuse existing TTS voice selector UI by storing a voice id in localStorage.
+    // (The dropdown currently stores a *browser voice name*; for ElevenLabs we store a separate key.)
+    try {
+      const v = localStorage.getItem('g9_elevenlabs_voice_id');
+      if(v) return String(v);
+    } catch (e) {}
+
+    // Default: a commonly used ElevenLabs English voice.
+    // NOTE: This is just a default; user can override by setting localStorage key.
+    return '21m00Tcm4TlvDq8ikWAM';
+  }
+
   // --------------------
   // Voice: STT recording
   // --------------------
@@ -160,7 +178,8 @@
         if (inputBox) {
           inputBox.value = text;
           inputBox.focus();
-          try { inputBox.dispatchEvent(new Event('input')); } catch (e) {}
+          // Ensure chat UI reacts exactly like typed input.
+          try { inputBox.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
         }
       } catch (e) {
         toast('Voice server not responding (STT).');
@@ -225,16 +244,23 @@
       .replace(/\s{2,}/g, ' ')
       .trim();
 
-    // Try backend TTS first (available only on the Python server)
+    // Prefer ElevenLabs via Netlify function proxy (keeps API key off the client)
     try {
-      const payload = { text: cleaned };
-      const res = await apiFetch('/voice/speak', {
+      const payload = {
+        text: cleaned,
+        voiceId: getSelectedElevenLabsVoiceId(),
+        stability: 0.5,
+        similarity_boost: 0.75
+      };
+
+      const res = await apiFetch('/tts/elevenlabs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error('HTTP_' + res.status);
       const blob = await res.blob();
+      if(!blob || !blob.size) throw new Error('EMPTY_AUDIO');
       const url = URL.createObjectURL(blob);
 
       if (lastAudio) {
@@ -245,7 +271,13 @@
       const audio = new Audio(url);
       audio.__url = url;
       lastAudio = audio;
-      await audio.play();
+
+      // iOS/Safari can throw if not initiated by user gesture; surface a toast in that case.
+      try {
+        await audio.play();
+      } catch (e) {
+        throw new Error('PLAYBACK_BLOCKED');
+      }
       return;
     } catch (e) {
       // fall through to browser TTS
@@ -389,7 +421,9 @@
       try {
         await speakText(text);
       } catch (err) {
-        toast('Text-to-speech not available on this device/browser.');
+        const msg = (err && err.message) ? String(err.message) : '';
+        if(msg === 'PLAYBACK_BLOCKED') toast('Tap the speaker again to allow audio playback.');
+        else toast('Text-to-speech not available on this device/browser.');
       }
     });
   }
@@ -400,7 +434,9 @@
       try {
         await speakText('Hello! This is a test of the selected AI voice.');
       } catch (err) {
-        toast('Text-to-speech not available on this device/browser.');
+        const msg = (err && err.message) ? String(err.message) : '';
+        if(msg === 'PLAYBACK_BLOCKED') toast('Tap the button again to allow audio playback.');
+        else toast('Text-to-speech not available on this device/browser.');
       }
     });
   }
