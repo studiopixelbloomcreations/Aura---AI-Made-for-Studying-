@@ -13,6 +13,9 @@
   let realtimeDc = null;
   let realtimeStream = null;
   let realtimeAudio = null;
+  let realtimeFailures = 0;
+  let fallbackVoiceMode = false;
+  let localRecognition = null;
   let idleTimer = null;
 
   const panel = document.createElement("div");
@@ -62,6 +65,82 @@
     stateEl.textContent = label;
   }
 
+  async function askTutorFallback(text) {
+    const t = String(text || "").trim();
+    if (!t) return;
+    addLog("user", "You: " + t);
+    setAssistantState("thinking", "Thinking");
+    armIdleTimer();
+    try {
+      const data = await fetchJson("/personal-intelligence/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: t,
+          email: EMAIL,
+          language: localStorage.getItem("g9_language") || "English",
+          subject: localStorage.getItem("g9_subject") || "General",
+          title: "Perosnla IIntelligence",
+        }),
+      });
+      const answer = data && data.answer ? String(data.answer) : "I am here. Tell me again.";
+      addLog("assistant", "Tutor: " + answer);
+      try {
+        const u = new SpeechSynthesisUtterance(answer);
+        u.rate = 1.0;
+        u.pitch = 1.0;
+        u.onstart = function () { setAssistantState("speaking", "Speaking"); };
+        u.onend = function () { setAssistantState("listening", "Listening"); armIdleTimer(); };
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(u);
+      } catch (e) {
+        setAssistantState("listening", "Listening");
+      }
+    } catch (e) {
+      addLog("assistant", "Tutor: I could not answer just now. Try again.");
+      setAssistantState("idle", "Idle");
+    }
+  }
+
+  function initLocalRecognition() {
+    const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Rec) return null;
+    const r = new Rec();
+    r.lang = "en-US";
+    r.continuous = false;
+    r.interimResults = false;
+    r.onstart = function () {
+      setAssistantState("listening", "Listening");
+      armIdleTimer();
+      dbg("local recognition start");
+    };
+    r.onresult = function (ev) {
+      const txt = ev && ev.results && ev.results[0] && ev.results[0][0] ? ev.results[0][0].transcript : "";
+      if (txt) askTutorFallback(String(txt));
+    };
+    r.onerror = function (ev) {
+      dbg("local recognition error", ev && ev.error);
+      setAssistantState("idle", "Idle");
+    };
+    r.onend = function () {
+      // Stay active-looking; user can tap orb again.
+      if (enabled) armIdleTimer();
+    };
+    return r;
+  }
+
+  function startFallbackListening() {
+    if (!localRecognition) localRecognition = initLocalRecognition();
+    if (!localRecognition) {
+      addLog("assistant", "Tutor: Voice recognition not supported in this browser.");
+      setAssistantState("idle", "Idle");
+      return;
+    }
+    try {
+      localRecognition.start();
+    } catch (e) {}
+  }
+
   function clearIdleTimer() {
     if (idleTimer) {
       clearTimeout(idleTimer);
@@ -103,6 +182,7 @@
     realtimePc = null;
     realtimeStream = null;
     realtimeAudio = null;
+    realtimeFailures = 0;
     setAssistantState("idle", "Idle");
     dbg("realtime disconnected");
   }
@@ -119,6 +199,10 @@
 
   function activateListening() {
     if (!enabled) return;
+    if (fallbackVoiceMode) {
+      startFallbackListening();
+      return;
+    }
     if (!realtimeConnected) {
       connectRealtimeVoice();
       return;
@@ -131,6 +215,10 @@
 
   async function connectRealtimeVoice() {
     if (!enabled || realtimeConnected) return;
+    if (fallbackVoiceMode) {
+      startFallbackListening();
+      return;
+    }
     setAssistantState("thinking", "Connecting...");
     addLog("assistant", "Tutor: Connecting ChatGPT voice...");
 
@@ -184,6 +272,7 @@
       realtimeDc = realtimePc.createDataChannel("oai-events");
       realtimeDc.onopen = function () {
         realtimeConnected = true;
+        realtimeFailures = 0;
         setAssistantState("listening", "Listening");
         addLog("assistant", "Tutor: Connected. Speak now.");
         armIdleTimer();
@@ -228,6 +317,17 @@
             if (event.transcript) addLog("assistant", "Tutor: " + event.transcript);
             setAssistantState("speaking", "Speaking");
             armIdleTimer();
+            realtimeFailures = 0;
+          } else if (event.type === "response.output_text.done") {
+            if (event.text) {
+              addLog("assistant", "Tutor: " + event.text);
+              try {
+                const u = new SpeechSynthesisUtterance(String(event.text));
+                window.speechSynthesis.cancel();
+                window.speechSynthesis.speak(u);
+              } catch (e) {}
+            }
+            realtimeFailures = 0;
           } else if (event.type === "conversation.item.input_audio_transcription.completed") {
             if (event.transcript) addLog("user", "You: " + event.transcript);
             armIdleTimer();
@@ -237,6 +337,25 @@
           } else if (event.type === "response.done") {
             setAssistantState("listening", "Listening");
             armIdleTimer();
+            const status = event && event.response && event.response.status ? String(event.response.status) : "";
+            const outputs = event && event.response && Array.isArray(event.response.output) ? event.response.output : [];
+            const hasTextLike = outputs.some(function (o) {
+              return o && o.type && String(o.type).toLowerCase().includes("text");
+            });
+            if (status && status !== "completed" && status !== "incomplete") {
+              realtimeFailures += 1;
+            } else if (!hasTextLike) {
+              realtimeFailures += 1;
+            } else {
+              realtimeFailures = 0;
+            }
+            if (realtimeFailures >= 2) {
+              dbg("switching to fallback voice mode");
+              addLog("assistant", "Tutor: Switching to local voice mode for reliability.");
+              fallbackVoiceMode = true;
+              disconnectRealtimeVoice();
+              startFallbackListening();
+            }
           } else if (event.type === "error") {
             const err = event.error || {};
             const code = String(err.code || "");
@@ -244,6 +363,14 @@
             dbg("realtime error event", code, msg, event);
             // Ignore known non-fatal transcription failures.
             if (code.toLowerCase().includes("transcription") || msg.toLowerCase().includes("transcription")) {
+              return;
+            }
+            realtimeFailures += 1;
+            if (realtimeFailures >= 2) {
+              fallbackVoiceMode = true;
+              addLog("assistant", "Tutor: Realtime voice is unstable. Switching to local voice mode.");
+              disconnectRealtimeVoice();
+              startFallbackListening();
               return;
             }
             setAssistantState("idle", "Idle");
@@ -281,7 +408,10 @@
 
   tabBtn.addEventListener("click", function () {
     setEnabled(!enabled);
-    if (enabled) connectRealtimeVoice();
+    if (enabled) {
+      if (fallbackVoiceMode) startFallbackListening();
+      else connectRealtimeVoice();
+    }
   });
 
   closeBtn.addEventListener("click", function () {
