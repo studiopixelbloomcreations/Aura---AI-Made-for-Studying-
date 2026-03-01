@@ -14,7 +14,6 @@
   let realtimeStream = null;
   let realtimeAudio = null;
   let idleTimer = null;
-  let responseWatchdog = null;
 
   const panel = document.createElement("div");
   panel.className = "pi-panel";
@@ -70,26 +69,6 @@
     }
   }
 
-  function clearResponseWatchdog() {
-    if (responseWatchdog) {
-      clearTimeout(responseWatchdog);
-      responseWatchdog = null;
-    }
-  }
-
-  function armResponseWatchdog() {
-    clearResponseWatchdog();
-    responseWatchdog = setTimeout(function () {
-      // If we didn't get a response event, force one.
-      try {
-        if (realtimeDc && realtimeDc.readyState === "open") {
-          dbg("response watchdog fired -> sending response.create");
-          realtimeDc.send(JSON.stringify({ type: "response.create" }));
-        }
-      } catch (e) {}
-    }, 3500);
-  }
-
   function armIdleTimer() {
     clearIdleTimer();
     idleTimer = setTimeout(function () {
@@ -106,7 +85,6 @@
 
   function disconnectRealtimeVoice() {
     clearIdleTimer();
-    clearResponseWatchdog();
     try { if (realtimeDc) realtimeDc.close(); } catch (e) {}
     try { if (realtimePc) realtimePc.close(); } catch (e) {}
     try {
@@ -224,9 +202,6 @@
                   silence_duration_ms: 200,
                   create_response: true,
                   interrupt_response: true
-                },
-                input_audio_transcription: {
-                  model: "gpt-4o-mini-transcribe"
                 }
               },
             })
@@ -246,35 +221,33 @@
           } else if (event.type === "input_audio_buffer.speech_stopped") {
             setAssistantState("thinking", "Thinking");
             armIdleTimer();
-            armResponseWatchdog();
-            try {
-              realtimeDc.send(JSON.stringify({ type: "response.create" }));
-              dbg("response.create sent after speech_stopped");
-            } catch (e) {}
           } else if (event.type === "input_audio_buffer.committed") {
             setAssistantState("thinking", "Thinking");
             armIdleTimer();
-            armResponseWatchdog();
-            try {
-              realtimeDc.send(JSON.stringify({ type: "response.create" }));
-              dbg("response.create sent after committed");
-            } catch (e) {}
           } else if (event.type === "response.audio_transcript.done") {
             if (event.transcript) addLog("assistant", "Tutor: " + event.transcript);
             setAssistantState("speaking", "Speaking");
             armIdleTimer();
-            clearResponseWatchdog();
           } else if (event.type === "conversation.item.input_audio_transcription.completed") {
             if (event.transcript) addLog("user", "You: " + event.transcript);
             armIdleTimer();
+          } else if (event.type === "conversation.item.input_audio_transcription.failed") {
+            // Non-fatal: audio response can still continue without transcription text.
+            dbg("transcription failed (non-fatal)");
           } else if (event.type === "response.done") {
             setAssistantState("listening", "Listening");
             armIdleTimer();
-            clearResponseWatchdog();
           } else if (event.type === "error") {
+            const err = event.error || {};
+            const code = String(err.code || "");
+            const msg = String(err.message || "");
+            dbg("realtime error event", code, msg, event);
+            // Ignore known non-fatal transcription failures.
+            if (code.toLowerCase().includes("transcription") || msg.toLowerCase().includes("transcription")) {
+              return;
+            }
             setAssistantState("idle", "Idle");
             addLog("assistant", "Tutor: Voice error. Tap the orb to retry.");
-            dbg("realtime error event", event);
           }
         } catch (e) {}
       };
@@ -282,7 +255,6 @@
       realtimeDc.onclose = function () {
         realtimeConnected = false;
         setAssistantState("idle", "Idle");
-        clearResponseWatchdog();
         dbg("datachannel closed");
       };
 
