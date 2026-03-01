@@ -1,5 +1,6 @@
 import random
 import re
+import os
 from typing import Dict, List, Tuple
 
 # Helper utilities for Exam Mode.
@@ -38,6 +39,10 @@ def scrape_papers(subject: str, term: str) -> Dict[int, List[Dict]]:
         cache_key = None
         scrape_papers_dynamic = None  # type: ignore
 
+    allow_fallback = os.environ.get("EXAM_ALLOW_SYNTHETIC_FALLBACK", "").strip().lower() in {
+        "1", "true", "yes", "on"
+    }
+
     # Attempt cache first
     if cache and cache_key:
         ck = cache_key(subject, term)
@@ -53,8 +58,11 @@ def scrape_papers(subject: str, term: str) -> Dict[int, List[Dict]]:
                 cache.set(cache_key(subject, term), data, ttl_seconds=6 * 3600)
             return data
         except Exception:
-            # proceed to fallback
-            pass
+            if not allow_fallback:
+                raise
+    else:
+        if not allow_fallback:
+            raise RuntimeError("Real paper scraper dependencies are unavailable (install bs4/lxml/requests/pypdf)")
 
     # Fallback: synthetic generation
     term_norm = normalize_term(term)

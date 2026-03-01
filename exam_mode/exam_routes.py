@@ -24,6 +24,8 @@ def fetch_papers(req: FetchPapersRequest):
         papers = exam_service.fetch_papers(req.session_id, subject=req.subject, term=req.term)
     except KeyError:
         raise HTTPException(status_code=404, detail="Invalid session")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Paper fetch failed: {str(e)}")
 
     counts: Dict[int, int] = {y: len(qs) for y, qs in papers.items()}
     total = sum(counts.values())
