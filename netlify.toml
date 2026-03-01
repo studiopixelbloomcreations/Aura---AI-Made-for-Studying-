@@ -86,6 +86,11 @@
   to = "/.netlify/functions/personal_intelligence_realtime_session"
   status = 200
 
+[[redirects]]
+  from = "/personal-intelligence/tts"
+  to = "/.netlify/functions/personal_intelligence_tts"
+  status = 200
+
 # Basic headers for HTML/CSS/JS
 [[headers]]
   for = "/*"
