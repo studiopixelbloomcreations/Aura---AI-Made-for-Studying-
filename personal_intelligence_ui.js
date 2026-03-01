@@ -7,7 +7,7 @@
   let enabled = false;
   let recognition = null;
   let idleTimer = null;
-  let noizAudio = null;
+  let tutorAudio = null;
 
   const panel = document.createElement("div");
   panel.className = "pi-panel";
@@ -70,14 +70,14 @@
     }, IDLE_TIMEOUT_MS);
   }
 
-  function stopNoizAudio() {
+  function stopTutorAudio() {
     try {
-      if (noizAudio) {
-        noizAudio.pause();
-        noizAudio.src = "";
+      if (tutorAudio) {
+        tutorAudio.pause();
+        tutorAudio.src = "";
       }
     } catch (e) {}
-    noizAudio = null;
+    tutorAudio = null;
   }
 
   function setEnabled(next) {
@@ -87,7 +87,7 @@
     tabBtn.setAttribute("aria-pressed", enabled ? "true" : "false");
     if (!enabled) {
       clearIdleTimer();
-      stopNoizAudio();
+      stopTutorAudio();
       try {
         if (recognition) recognition.abort();
       } catch (e) {}
@@ -103,8 +103,8 @@
     return data;
   }
 
-  async function playNoizTTS(text) {
-    stopNoizAudio();
+  async function playTutorTTS(text) {
+    stopTutorAudio();
     try {
       const res = await (window.Api && window.Api.apiFetch
         ? window.Api.apiFetch("/personal-intelligence/tts", {
@@ -118,20 +118,20 @@
             body: JSON.stringify({ text }),
           }));
 
-      if (!res.ok) throw new Error("Noiz TTS request failed");
+      if (!res.ok) throw new Error("Speechify TTS request failed");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      noizAudio = new Audio(url);
-      noizAudio.onplay = function () {
+      tutorAudio = new Audio(url);
+      tutorAudio.onplay = function () {
         setAssistantState("speaking", "Speaking");
       };
-      noizAudio.onended = function () {
+      tutorAudio.onended = function () {
         setAssistantState("listening", "Listening");
         armIdleTimer();
       };
-      await noizAudio.play();
+      await tutorAudio.play();
     } catch (e) {
-      dbg("Noiz failed, fallback to browser TTS", e && e.message);
+      dbg("Speechify failed, fallback to browser TTS", e && e.message);
       try {
         const u = new SpeechSynthesisUtterance(String(text || ""));
         u.onstart = function () { setAssistantState("speaking", "Speaking"); };
@@ -164,7 +164,7 @@
       });
       const answer = data && data.answer ? String(data.answer) : "I did not get that. Please try again.";
       addLog("assistant", "Tutor: " + answer);
-      await playNoizTTS(answer);
+      await playTutorTTS(answer);
     } catch (e) {
       addLog("assistant", "Tutor: Request failed. Please try again.");
       setAssistantState("idle", "Idle");
