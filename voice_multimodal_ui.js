@@ -15,6 +15,15 @@
   const ttsTestVoice = qs('ttsTestVoice');
 
   const TTS_VOICE_STORAGE_KEY = 'g9_tts_voice';
+  const PUTER_TTS_VOICES = [
+    { id: 'openai:alloy', label: 'Puter OpenAI Alloy (Natural)', options: { provider: 'openai', voice: 'alloy', model: 'gpt-4o-mini-tts' } },
+    { id: 'openai:verse', label: 'Puter OpenAI Verse', options: { provider: 'openai', voice: 'verse', model: 'gpt-4o-mini-tts' } },
+    { id: 'openai:ash', label: 'Puter OpenAI Ash', options: { provider: 'openai', voice: 'ash', model: 'gpt-4o-mini-tts' } },
+    { id: 'openai:sage', label: 'Puter OpenAI Sage', options: { provider: 'openai', voice: 'sage', model: 'gpt-4o-mini-tts' } },
+    { id: 'openai:coral', label: 'Puter OpenAI Coral', options: { provider: 'openai', voice: 'coral', model: 'gpt-4o-mini-tts' } },
+    { id: 'openai:shimmer', label: 'Puter OpenAI Shimmer', options: { provider: 'openai', voice: 'shimmer', model: 'gpt-4o-mini-tts' } },
+    { id: 'aws:joanna', label: 'Puter AWS Joanna (Neural)', options: { provider: 'aws', voiceId: 'Joanna', engine: 'neural' } },
+  ];
 
   function appendBubble(role, text) {
     if (!messagesEl) return;
@@ -29,62 +38,25 @@
 
   async function initTtsVoiceSelector(){
     if(!ttsVoiceSelect) return;
-    if(!('speechSynthesis' in window) || !window.speechSynthesis.getVoices) return;
-
-    async function populate(){
-      let voices = [];
-      try {
-        voices = window.speechSynthesis.getVoices();
-      } catch (e) {}
-      if(!voices || !voices.length) {
-        // wait a moment for Edge to load "Online (Natural)" voices
-        await new Promise(r => setTimeout(r, 600));
-        try { voices = window.speechSynthesis.getVoices(); } catch (e) {}
-      }
-
-      const prev = ttsVoiceSelect.value;
-      const saved = (function(){
-        try { return String(localStorage.getItem(TTS_VOICE_STORAGE_KEY) || ''); } catch (e) { return ''; }
-      })();
-
-      ttsVoiceSelect.innerHTML = '';
-      const optAuto = document.createElement('option');
-      optAuto.value = '';
-      optAuto.textContent = 'Auto (best available)';
-      ttsVoiceSelect.appendChild(optAuto);
-
-      const sorted = (voices || []).slice().sort((a,b)=>{
-        const an = String(a.name||'');
-        const bn = String(b.name||'');
-        return an.localeCompare(bn);
-      });
-
-      sorted.forEach(v=>{
-        const o = document.createElement('option');
-        o.value = String(v.name || '');
-        o.textContent = `${String(v.name || '')} (${String(v.lang || '')})`;
-        ttsVoiceSelect.appendChild(o);
-      });
-
-      if(saved){
-        const match = Array.from(ttsVoiceSelect.options).find(o => o.value === saved);
-        if(match) ttsVoiceSelect.value = saved;
-        else ttsVoiceSelect.value = '';
-      } else if(prev) {
-        ttsVoiceSelect.value = prev;
-      }
-    }
-
-    await populate();
-    try {
-      window.speechSynthesis.onvoiceschanged = populate;
-    } catch (e) {}
+    const saved = (function(){
+      try { return String(localStorage.getItem(TTS_VOICE_STORAGE_KEY) || ''); } catch (e) { return ''; }
+    })();
+    ttsVoiceSelect.innerHTML = '';
+    PUTER_TTS_VOICES.forEach((v) => {
+      const o = document.createElement('option');
+      o.value = String(v.id || '');
+      o.textContent = String(v.label || v.id || 'Puter Voice');
+      ttsVoiceSelect.appendChild(o);
+    });
+    const hasSaved = PUTER_TTS_VOICES.some((v) => String(v.id) === saved);
+    ttsVoiceSelect.value = hasSaved ? saved : PUTER_TTS_VOICES[0].id;
+    try { localStorage.setItem(TTS_VOICE_STORAGE_KEY, ttsVoiceSelect.value); } catch (e) {}
 
     ttsVoiceSelect.addEventListener('change', ()=>{
       const v = String(ttsVoiceSelect.value || '');
       try { localStorage.setItem(TTS_VOICE_STORAGE_KEY, v); } catch (e) {}
       if(v) toast('Voice set: ' + v);
-      else toast('Voice set: Auto');
+      else toast('Voice set: Puter default');
     });
   }
 
@@ -109,22 +81,27 @@
     return window.Api.apiFetch(path, options);
   }
 
-  function getSelectedElevenLabsVoiceId(){
-    // Allow overriding via window for experiments.
-    try {
-      if(window.__ELEVENLABS_VOICE_ID__) return String(window.__ELEVENLABS_VOICE_ID__);
-    } catch (e) {}
+  function getSelectedPuterVoiceOptions(){
+    let selected = '';
+    try { selected = String(localStorage.getItem(TTS_VOICE_STORAGE_KEY) || ''); } catch (e) {}
+    const voice = PUTER_TTS_VOICES.find((v) => String(v.id) === selected) || PUTER_TTS_VOICES[0];
+    return voice && voice.options ? voice.options : { provider: 'openai', voice: 'alloy', model: 'gpt-4o-mini-tts' };
+  }
 
-    // Reuse existing TTS voice selector UI by storing a voice id in localStorage.
-    // (The dropdown currently stores a *browser voice name*; for ElevenLabs we store a separate key.)
+  async function ensurePuterReady(interactive){
+    if(!window.puter || !window.puter.ai){
+      throw new Error('PUTER_NOT_LOADED');
+    }
+    if(!window.puter.auth || !window.puter.auth.isSignedIn || !window.puter.auth.signIn){
+      return;
+    }
+    let signed = false;
     try {
-      const v = localStorage.getItem('g9_elevenlabs_voice_id');
-      if(v) return String(v);
+      signed = !!(await window.puter.auth.isSignedIn());
     } catch (e) {}
-
-    // Default: a commonly used ElevenLabs English voice.
-    // NOTE: This is just a default; user can override by setting localStorage key.
-    return '21m00Tcm4TlvDq8ikWAM';
+    if(!signed && interactive){
+      await window.puter.auth.signIn({ attempt_temp_user_creation: true });
+    }
   }
 
   // --------------------
@@ -133,6 +110,23 @@
   let recorder = null;
   let chunks = [];
   let recording = false;
+
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      try {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('READ_FAILED'));
+        reader.onload = () => {
+          const out = String(reader.result || '');
+          const comma = out.indexOf(',');
+          resolve(comma >= 0 ? out.slice(comma + 1) : out);
+        };
+        reader.readAsDataURL(blob);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
 
   async function startRecording() {
     if (recording) return;
@@ -161,11 +155,17 @@
         recording = false;
         micBtn && micBtn.classList.remove('recording');
         const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
-
-        const fd = new FormData();
-        fd.append('audio', blob, 'speech.webm');
-
-        const res = await apiFetch('/voice/recognize?language=en-US', { method: 'POST', body: fd });
+        const base64 = await blobToBase64(blob);
+        const res = await apiFetch('/voice/recognize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            audio_base64: base64,
+            mime_type: blob.type || recorder.mimeType || 'audio/webm',
+            filename: 'speech.webm',
+            language: 'en-US'
+          })
+        });
         if (!res.ok) throw new Error('HTTP_' + res.status);
         const data = await res.json();
 
@@ -244,40 +244,16 @@
       .replace(/\s{2,}/g, ' ')
       .trim();
 
-    // Prefer ElevenLabs via Netlify function proxy (keeps API key off the client)
+    // Prefer Puter TTS for testing across the app.
     try {
-      const payload = {
-        text: cleaned,
-        voiceId: getSelectedElevenLabsVoiceId(),
-        stability: 0.5,
-        similarity_boost: 0.75
-      };
-
-      const res = await apiFetch('/tts/elevenlabs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw new Error('HTTP_' + res.status);
-      const blob = await res.blob();
-      if(!blob || !blob.size) throw new Error('EMPTY_AUDIO');
-      const url = URL.createObjectURL(blob);
-
-      if (lastAudio) {
+      await ensurePuterReady(true);
+      const audio = await window.puter.ai.txt2speech(cleaned, getSelectedPuterVoiceOptions());
+      if(!audio || !audio.play) throw new Error('PUTER_TTS_EMPTY');
+      if (lastAudio && lastAudio.pause) {
         try { lastAudio.pause(); } catch (e) {}
-        try { URL.revokeObjectURL(lastAudio.__url); } catch (e) {}
       }
-
-      const audio = new Audio(url);
-      audio.__url = url;
       lastAudio = audio;
-
-      // iOS/Safari can throw if not initiated by user gesture; surface a toast in that case.
-      try {
-        await audio.play();
-      } catch (e) {
-        throw new Error('PLAYBACK_BLOCKED');
-      }
+      await audio.play();
       return;
     } catch (e) {
       // fall through to browser TTS
