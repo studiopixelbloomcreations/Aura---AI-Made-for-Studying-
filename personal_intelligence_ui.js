@@ -9,6 +9,9 @@
   const HISTORY_KEY = "personal_intelligence_history_v1";
   let enabled = false;
   let recognition = null;
+  let recognitionRunning = false;
+  let keepListening = false;
+  let userSpeaking = false;
   let idleTimer = null;
   let tutorAudio = null;
   let knownFacts = {};
@@ -108,6 +111,10 @@
   function armIdleTimer() {
     clearIdleTimer();
     idleTimer = setTimeout(function () {
+      keepListening = false;
+      try {
+        if (recognition && recognitionRunning) recognition.stop();
+      } catch (e) {}
       setAssistantState("idle", "Idle");
     }, IDLE_TIMEOUT_MS);
   }
@@ -128,6 +135,7 @@
     tabBtn.classList.toggle("active", enabled);
     tabBtn.setAttribute("aria-pressed", enabled ? "true" : "false");
     if (!enabled) {
+      keepListening = false;
       clearIdleTimer();
       stopTutorAudio();
       try {
@@ -194,6 +202,7 @@
         setAssistantState("listening", "Listening");
         armIdleTimer();
         try { URL.revokeObjectURL(url); } catch (e) {}
+        if (enabled) startListening(true);
       };
       await tutorAudio.play();
     } catch (e) {
@@ -258,26 +267,49 @@
       }
       recognition = new Rec();
       recognition.lang = "en-US";
-      recognition.continuous = false;
+      recognition.continuous = true;
       recognition.interimResults = false;
       recognition.onstart = function () {
+        recognitionRunning = true;
         setAssistantState("listening", "Listening");
         armIdleTimer();
       };
       recognition.onresult = function (ev) {
+        userSpeaking = false;
+        armIdleTimer();
         const text = ev && ev.results && ev.results[0] && ev.results[0][0] ? ev.results[0][0].transcript : "";
         if (text) askTutorText(String(text));
       };
       recognition.onerror = function (ev) {
         dbg("recognition error", ev && ev.error);
+        recognitionRunning = false;
+        userSpeaking = false;
+        if (enabled && keepListening) {
+          setTimeout(function () { startListening(true); }, 250);
+          return;
+        }
         setAssistantState("idle", "Idle");
       };
-      recognition.onend = function () {
-        // Keep idle timer active; user can tap orb to re-listen.
+      recognition.onspeechstart = function () {
+        userSpeaking = true;
         armIdleTimer();
+      };
+      recognition.onspeechend = function () {
+        userSpeaking = false;
+        armIdleTimer();
+      };
+      recognition.onend = function () {
+        recognitionRunning = false;
+        if (enabled && keepListening) {
+          setTimeout(function () { startListening(true); }, 120);
+        } else {
+          armIdleTimer();
+        }
       };
     }
     try {
+      keepListening = true;
+      if (recognitionRunning) return;
       recognition.start();
     } catch (e) {}
   }
@@ -292,7 +324,7 @@
   });
 
   orbBtn.addEventListener("click", function () {
-    startListening();
+    startListening(true);
   });
 
   loadMemory();
