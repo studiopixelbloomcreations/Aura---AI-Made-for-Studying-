@@ -42,6 +42,7 @@ function sanitizeKnownFacts(input) {
   if (src.city) out.city = sanitizeFactValue(src.city, 80);
   if (src.school) out.school = sanitizeFactValue(src.school, 120);
   if (src.country) out.country = sanitizeFactValue(src.country, 80);
+  if (typeof src.spotify_connected === "boolean") out.spotify_connected = src.spotify_connected;
   return out;
 }
 
@@ -89,12 +90,31 @@ function findHomeFromHistory(history) {
 function detectAction(message, history, knownFacts) {
   const text = String(message || "").toLowerCase();
   const spotifyAuthUrl = String(process.env.SPOTIFY_AUTH_URL || "").trim();
+  const spotifyConnected = !!(knownFacts && knownFacts.spotify_connected);
   const homeFromMsg = extractHomeAddress(message);
   const home = homeFromMsg || sanitizeFactValue(knownFacts && knownFacts.home_address, 220) || findHomeFromHistory(history);
+
+  const openExplorerTrigger =
+    text.includes("open file explorer") ||
+    text.includes("open files explorer") ||
+    text.includes("open my files") ||
+    text.includes("open file manager") ||
+    text.includes("browse files");
+  if (openExplorerTrigger) {
+    return {
+      type: "open_file_explorer",
+      requires_confirmation: true,
+      requires_connection: false,
+      service: "system",
+      execute_via: "browser_file_picker",
+      message: "I can open your file picker. Please confirm to continue.",
+    };
+  }
 
   if (text.includes("connect spotify") || text.includes("link spotify")) {
     return {
       type: "connect_spotify",
+      requires_confirmation: true,
       requires_connection: true,
       service: "spotify",
       oauth_url: spotifyAuthUrl || null,
@@ -103,8 +123,19 @@ function detectAction(message, history, knownFacts) {
   }
 
   if (text.includes("play") && (text.includes("liked playlist") || text.includes("liked songs") || text.includes("spotify"))) {
+    if (spotifyConnected) {
+      return {
+        type: "play_spotify_liked",
+        requires_confirmation: true,
+        requires_connection: false,
+        service: "spotify",
+        spotify_url: "https://open.spotify.com/collection/tracks",
+        message: "I can open your Spotify Liked Songs now. Please confirm.",
+      };
+    }
     return {
       type: "play_spotify_liked",
+      requires_confirmation: true,
       requires_connection: true,
       service: "spotify",
       oauth_url: spotifyAuthUrl || null,
@@ -115,6 +146,7 @@ function detectAction(message, history, knownFacts) {
   if (homeFromMsg) {
     return {
       type: "save_home_address",
+      requires_confirmation: false,
       requires_connection: false,
       service: "maps",
       home_address: homeFromMsg,
@@ -131,6 +163,7 @@ function detectAction(message, history, knownFacts) {
     if (!home) {
       return {
         type: "directions_home",
+        requires_confirmation: false,
         requires_connection: false,
         service: "maps",
         message: "I need your home address first. Say: set home to <your address>.",
@@ -142,6 +175,7 @@ function detectAction(message, history, knownFacts) {
       "&travelmode=driving";
     return {
       type: "directions_home",
+      requires_confirmation: true,
       requires_connection: false,
       service: "maps",
       maps_url: mapsUrl,
@@ -296,7 +330,9 @@ exports.handler = async function handler(event) {
   const extractedUpdates = detectMemoryUpdates(message);
   const combinedKnownFacts = mergeKnownFacts(incomingKnownFacts, extractedUpdates);
   const action = detectAction(message, history, combinedKnownFacts);
-  const actionUpdates = action && action.home_address ? { home_address: String(action.home_address) } : {};
+  const actionUpdates = {};
+  if (action && action.home_address) actionUpdates.home_address = String(action.home_address);
+  if (action && action.type === "connect_spotify") actionUpdates.spotify_connected = true;
   const mergedKnownFacts = mergeKnownFacts(combinedKnownFacts, actionUpdates);
   const llm = action ? null : await geminiChatReply(message, history, language, subject, mergedKnownFacts);
   const answer = action && action.message ? String(action.message) : llm.answer;
