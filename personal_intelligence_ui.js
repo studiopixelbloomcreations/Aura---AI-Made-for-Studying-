@@ -176,7 +176,7 @@
       if (timerId) clearTimeout(timerId);
 
       if (!res.ok) {
-        let detail = "Gemini TTS request failed";
+        let detail = "Groq TTS request failed";
         try {
           const err = await res.json();
           if (err && (err.error || err.detail)) detail = String(err.error || err.detail);
@@ -197,7 +197,7 @@
       };
       await tutorAudio.play();
     } catch (e) {
-      dbg("Gemini TTS failed, fallback to browser TTS", e && e.message);
+      dbg("Groq TTS failed, fallback to browser TTS", e && e.message);
       addLog("assistant", "Tutor: Voice engine fallback (" + String((e && e.message) || "TTS error") + ").");
       try {
         const u = new SpeechSynthesisUtterance(String(text || ""));
