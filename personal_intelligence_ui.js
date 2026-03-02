@@ -4,6 +4,7 @@
 
   const EMAIL = "guest@student.com";
   const IDLE_TIMEOUT_MS = 15000;
+  const TTS_TIMEOUT_MS = 12000;
   let enabled = false;
   let recognition = null;
   let idleTimer = null;
@@ -103,20 +104,38 @@
     return data;
   }
 
+  function buildSpeakText(text) {
+    const cleaned = String(text || "")
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/\[(.*?)\]\((.*?)\)/g, "$1")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!cleaned) return "";
+    const firstSentence = cleaned.match(/^[\s\S]{1,220}?[.!?](\s|$)/);
+    const chosen = firstSentence ? firstSentence[0].trim() : cleaned.slice(0, 200).trim();
+    return chosen.length > 210 ? `${chosen.slice(0, 207)}...` : chosen;
+  }
+
   async function playTutorTTS(text) {
     stopTutorAudio();
     try {
+      const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+      const timerId = controller ? setTimeout(function () { controller.abort(); }, TTS_TIMEOUT_MS) : null;
       const res = await (window.Api && window.Api.apiFetch
         ? window.Api.apiFetch("/personal-intelligence/tts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ text }),
+            signal: controller ? controller.signal : undefined,
           })
         : fetch("/personal-intelligence/tts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ text }),
+            signal: controller ? controller.signal : undefined,
           }));
+      if (timerId) clearTimeout(timerId);
 
       if (!res.ok) {
         let detail = "Gemini TTS request failed";
@@ -129,6 +148,7 @@
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       tutorAudio = new Audio(url);
+      tutorAudio.preload = "auto";
       tutorAudio.onplay = function () {
         setAssistantState("speaking", "Speaking");
       };
@@ -172,11 +192,12 @@
         }),
       });
       const answer = data && data.answer ? String(data.answer) : "I did not get that. Please try again.";
+      const speakText = data && data.speak_text ? String(data.speak_text) : buildSpeakText(answer);
       addLog("assistant", "Tutor: " + answer);
       if (data && data.ai_provider && data.ai_provider !== "local_action") {
         dbg("AI provider:", data.ai_provider, "ok:", data.ai_ok, "error:", data.ai_error || "");
       }
-      await playTutorTTS(answer);
+      await playTutorTTS(speakText);
     } catch (e) {
       addLog("assistant", "Tutor: Request failed. Please try again.");
       setAssistantState("idle", "Idle");

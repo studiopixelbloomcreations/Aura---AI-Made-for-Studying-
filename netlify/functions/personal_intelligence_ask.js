@@ -113,6 +113,20 @@ function fallbackReply(message) {
   return "I am here and listening. Tell me what you want to do, and I will help you right away.";
 }
 
+function buildSpeakText(text) {
+  const cleaned = String(text || "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\[(.*?)\]\((.*?)\)/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned) return "";
+
+  const firstSentence = cleaned.match(/^[\s\S]{1,240}?[.!?](\s|$)/);
+  const chosen = firstSentence ? firstSentence[0].trim() : cleaned.slice(0, 220).trim();
+  return chosen.length > 230 ? `${chosen.slice(0, 227)}...` : chosen;
+}
+
 async function geminiChatReply(message, history, language, subject) {
   const apiKey = String(process.env.GEMINI_API_KEY || "").trim();
   if (!apiKey) {
@@ -124,10 +138,12 @@ async function geminiChatReply(message, history, language, subject) {
   }
 
   const model = String(process.env.GEMINI_PERSONAL_MODEL || "gemini-2.5-flash").trim();
+  const maxOutputTokens = Number(process.env.GEMINI_PERSONAL_MAX_TOKENS || 140);
   const baseUrl = String(process.env.GEMINI_API_BASE || "https://generativelanguage.googleapis.com").trim();
   const systemInstruction =
     `You are Tutor, a warm and capable personal assistant for a student. Speak in ${language}. ` +
-    `Keep replies short, natural, and practical. Help with daily tasks and study support in ${subject}.`;
+    `Keep replies short, natural, and practical. Default to 1-2 short sentences unless the user asks for detailed steps. ` +
+    `Help with daily tasks and study support in ${subject}.`;
 
   const contents = [];
   const h = Array.isArray(history) ? history.slice(-8) : [];
@@ -150,7 +166,7 @@ async function geminiChatReply(message, history, language, subject) {
         contents,
         generationConfig: {
           temperature: 0.6,
-          maxOutputTokens: 350,
+          maxOutputTokens: Number.isFinite(maxOutputTokens) ? maxOutputTokens : 140,
         },
       }),
     });
@@ -181,12 +197,13 @@ async function geminiChatReply(message, history, language, subject) {
         answer: fallbackReply(message),
       };
     }
-    return { ok: true, answer, error: "" };
+    return { ok: true, answer, speak_text: buildSpeakText(answer), error: "" };
   } catch (e) {
     return {
       ok: false,
       error: `Gemini request failed: ${String(e.message || e)}`,
       answer: fallbackReply(message),
+      speak_text: buildSpeakText(fallbackReply(message)),
     };
   }
 }
@@ -211,9 +228,11 @@ exports.handler = async function handler(event) {
   const action = detectAction(message, history);
   const gemini = action ? null : await geminiChatReply(message, history, language, subject);
   const answer = action && action.message ? String(action.message) : gemini.answer;
+  const speakText = action && action.message ? buildSpeakText(action.message) : String(gemini.speak_text || buildSpeakText(answer));
 
   return json(200, {
     answer,
+    speak_text: speakText,
     ai_provider: action ? "local_action" : "gemini",
     ai_ok: action ? true : !!gemini.ok,
     ai_error: action ? "" : String(gemini.error || ""),
