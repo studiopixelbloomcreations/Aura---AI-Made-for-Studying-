@@ -14,16 +14,7 @@
   const ttsVoiceSelect = qs('ttsVoiceSelect');
   const ttsTestVoice = qs('ttsTestVoice');
 
-  const TTS_VOICE_STORAGE_KEY = 'g9_tts_voice';
-  const PUTER_TTS_VOICES = [
-    { id: 'openai:alloy', label: 'Puter OpenAI Alloy (Natural)', options: { provider: 'openai', voice: 'alloy', model: 'gpt-4o-mini-tts' } },
-    { id: 'openai:verse', label: 'Puter OpenAI Verse', options: { provider: 'openai', voice: 'verse', model: 'gpt-4o-mini-tts' } },
-    { id: 'openai:ash', label: 'Puter OpenAI Ash', options: { provider: 'openai', voice: 'ash', model: 'gpt-4o-mini-tts' } },
-    { id: 'openai:sage', label: 'Puter OpenAI Sage', options: { provider: 'openai', voice: 'sage', model: 'gpt-4o-mini-tts' } },
-    { id: 'openai:coral', label: 'Puter OpenAI Coral', options: { provider: 'openai', voice: 'coral', model: 'gpt-4o-mini-tts' } },
-    { id: 'openai:shimmer', label: 'Puter OpenAI Shimmer', options: { provider: 'openai', voice: 'shimmer', model: 'gpt-4o-mini-tts' } },
-    { id: 'aws:joanna', label: 'Puter AWS Joanna (Neural)', options: { provider: 'aws', voiceId: 'Joanna', engine: 'neural' } },
-  ];
+  const TTS_VOICE_STORAGE_KEY = (window.PuterVoiceCatalog && window.PuterVoiceCatalog.storageKey) || 'g9_tts_voice';
 
   function appendBubble(role, text) {
     if (!messagesEl) return;
@@ -38,18 +29,22 @@
 
   async function initTtsVoiceSelector(){
     if(!ttsVoiceSelect) return;
+    const catalog = window.PuterVoiceCatalog;
+    const allVoices = (catalog && Array.isArray(catalog.voices)) ? catalog.voices : [];
+    if(!allVoices.length) return;
     const saved = (function(){
       try { return String(localStorage.getItem(TTS_VOICE_STORAGE_KEY) || ''); } catch (e) { return ''; }
     })();
     ttsVoiceSelect.innerHTML = '';
-    PUTER_TTS_VOICES.forEach((v) => {
+    allVoices.forEach((v) => {
       const o = document.createElement('option');
       o.value = String(v.id || '');
       o.textContent = String(v.label || v.id || 'Puter Voice');
       ttsVoiceSelect.appendChild(o);
     });
-    const hasSaved = PUTER_TTS_VOICES.some((v) => String(v.id) === saved);
-    ttsVoiceSelect.value = hasSaved ? saved : PUTER_TTS_VOICES[0].id;
+    const defaultVoice = catalog.getDefault ? catalog.getDefault() : allVoices[0];
+    const hasSaved = allVoices.some((v) => String(v.id) === saved);
+    ttsVoiceSelect.value = hasSaved ? saved : String(defaultVoice && defaultVoice.id ? defaultVoice.id : '');
     try { localStorage.setItem(TTS_VOICE_STORAGE_KEY, ttsVoiceSelect.value); } catch (e) {}
 
     ttsVoiceSelect.addEventListener('change', ()=>{
@@ -82,10 +77,17 @@
   }
 
   function getSelectedPuterVoiceOptions(){
+    const catalog = window.PuterVoiceCatalog;
+    if (catalog && catalog.getById) {
+      let selected = '';
+      try { selected = String(localStorage.getItem(TTS_VOICE_STORAGE_KEY) || ''); } catch (e) {}
+      const voice = catalog.getById(selected) || (catalog.getDefault ? catalog.getDefault() : null);
+      if (voice && voice.options) return voice.options;
+    }
     let selected = '';
     try { selected = String(localStorage.getItem(TTS_VOICE_STORAGE_KEY) || ''); } catch (e) {}
-    const voice = PUTER_TTS_VOICES.find((v) => String(v.id) === selected) || PUTER_TTS_VOICES[0];
-    return voice && voice.options ? voice.options : { provider: 'openai', voice: 'alloy', model: 'gpt-4o-mini-tts' };
+    if (selected === 'openai:alloy') return { provider: 'openai', voice: 'alloy', model: 'gpt-4o-mini-tts' };
+    return { provider: 'openai', voice: 'alloy', model: 'gpt-4o-mini-tts' };
   }
 
   async function ensurePuterReady(interactive){

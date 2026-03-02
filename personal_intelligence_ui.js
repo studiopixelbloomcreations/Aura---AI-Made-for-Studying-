@@ -8,7 +8,7 @@
   const STT_TIMEOUT_MS = 22000;
   const STT_RECORD_MS = 8000;
   const PI_PUTER_MODEL = "openai/gpt-5.2-chat";
-  const TTS_VOICE_STORAGE_KEY = "g9_tts_voice";
+  const TTS_VOICE_STORAGE_KEY = (window.PuterVoiceCatalog && window.PuterVoiceCatalog.storageKey) || "g9_tts_voice";
   const PUTER_DEFAULT_TTS = { provider: "openai", voice: "alloy", model: "gpt-4o-mini-tts" };
   const MEMORY_KEY = "personal_intelligence_memory_v1";
   const HISTORY_KEY = "personal_intelligence_history_v1";
@@ -188,6 +188,13 @@
   }
 
   function getSelectedPuterVoiceOptions() {
+    const catalog = window.PuterVoiceCatalog;
+    if (catalog && catalog.getById) {
+      let selectedId = "";
+      try { selectedId = String(localStorage.getItem(TTS_VOICE_STORAGE_KEY) || ""); } catch (e) {}
+      const selected = catalog.getById(selectedId) || (catalog.getDefault ? catalog.getDefault() : null);
+      if (selected && selected.options) return selected.options;
+    }
     let id = "";
     try { id = String(localStorage.getItem(TTS_VOICE_STORAGE_KEY) || ""); } catch (e) {}
     const table = {
