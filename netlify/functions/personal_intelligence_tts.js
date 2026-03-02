@@ -51,6 +51,13 @@ function pcm16ToWav(pcmBuffer, sampleRate, channels) {
   return wav;
 }
 
+function decodeBase64Audio(input) {
+  const raw = String(input || "").trim();
+  const normalized = raw.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+  return Buffer.from(padded, "base64");
+}
+
 exports.handler = async function handler(event) {
   if (event.httpMethod === "OPTIONS") return json(200, { ok: true });
   if (event.httpMethod !== "POST") return json(405, { error: "Method not allowed" });
@@ -123,13 +130,28 @@ exports.handler = async function handler(event) {
     }
 
     const mime = String((inlineData.mimeType || inlineData.mime_type || "")).toLowerCase();
-    const raw = Buffer.from(String(inlineData.data), "base64");
+    const raw = decodeBase64Audio(inlineData.data);
 
-    if (mime.includes("wav") || mime.includes("mpeg") || mime.includes("mp3") || mime.includes("ogg")) {
-      return audio(200, raw, mime || "audio/wav");
+    if (!raw || raw.length < 32) {
+      return json(502, { ok: false, error: "Gemini TTS returned empty audio." });
     }
 
+    const isLikelyWav = raw.length > 12 && raw.toString("ascii", 0, 4) === "RIFF" && raw.toString("ascii", 8, 12) === "WAVE";
+    const isLikelyMpeg = raw.length > 3 && raw.toString("ascii", 0, 3) === "ID3";
+    const isPcm = mime.includes("l16") || mime.includes("pcm");
+
+    if (isLikelyWav || isLikelyMpeg || mime.includes("wav") || mime.includes("mpeg") || mime.includes("mp3") || mime.includes("ogg")) {
+      // Always use broadly supported browser audio types for HTMLAudioElement.
+      const ctype = isLikelyWav || mime.includes("wav") ? "audio/wav" : "audio/mpeg";
+      return audio(200, raw, ctype);
+    }
+
+    // Default to PCM16 mono -> WAV when Gemini returns raw PCM (common for AUDIO modality).
     const wav = pcm16ToWav(raw, Number.isFinite(sampleRate) ? sampleRate : 24000, 1);
+    if (!isPcm && !mime) {
+      // Unknown mime with non-container bytes; still deliver WAV as safest browser format.
+      return audio(200, wav, "audio/wav");
+    }
     return audio(200, wav, "audio/wav");
   } catch (e) {
     return json(502, { ok: false, error: `Gemini TTS request failed: ${String(e.message || e)}` });
