@@ -7,7 +7,7 @@
   const TTS_TIMEOUT_MS = 12000;
   const STT_TIMEOUT_MS = 22000;
   const STT_RECORD_MS = 8000;
-  const PI_PUTER_MODEL = "anthropic/claude-opus-4-6";
+  const PI_PUTER_MODEL = "google/gemini-2.5-flash";
   const TTS_VOICE_STORAGE_KEY = "g9_tts_voice";
   const PUTER_DEFAULT_TTS = { provider: "openai", voice: "alloy", model: "gpt-4o-mini-tts" };
   const MEMORY_KEY = "personal_intelligence_memory_v1";
