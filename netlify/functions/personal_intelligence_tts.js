@@ -27,115 +27,48 @@ function json(statusCode, obj) {
   };
 }
 
-function splitIntoChunks(text, maxLen) {
-  const t = String(text || "").replace(/\s+/g, " ").trim();
-  if (!t) return [];
-  if (t.length <= maxLen) return [t];
-
-  const sentences = t.split(/(?<=[.!?])\s+/);
-  const chunks = [];
-  let current = "";
-  for (const s of sentences) {
-    const sentence = String(s || "").trim();
-    if (!sentence) continue;
-    if (!current) {
-      if (sentence.length <= maxLen) {
-        current = sentence;
-      } else {
-        for (let i = 0; i < sentence.length; i += maxLen) {
-          chunks.push(sentence.slice(i, i + maxLen));
-        }
-      }
-      continue;
-    }
-    if ((current + " " + sentence).length <= maxLen) {
-      current += " " + sentence;
-    } else {
-      chunks.push(current);
-      if (sentence.length <= maxLen) {
-        current = sentence;
-      } else {
-        for (let i = 0; i < sentence.length; i += maxLen) {
-          chunks.push(sentence.slice(i, i + maxLen));
-        }
-        current = "";
-      }
-    }
-  }
-  if (current) chunks.push(current);
-  return chunks;
-}
-
-function parseWav(buf) {
-  if (!Buffer.isBuffer(buf) || buf.length < 44) return null;
-  if (buf.toString("ascii", 0, 4) !== "RIFF" || buf.toString("ascii", 8, 12) !== "WAVE") return null;
-
-  let offset = 12;
-  let fmt = null;
-  let dataChunk = null;
-  while (offset + 8 <= buf.length) {
-    const id = buf.toString("ascii", offset, offset + 4);
-    const size = buf.readUInt32LE(offset + 4);
-    const bodyStart = offset + 8;
-    const bodyEnd = bodyStart + size;
-    if (bodyEnd > buf.length) break;
-
-    if (id === "fmt " && size >= 16) {
-      fmt = {
-        audioFormat: buf.readUInt16LE(bodyStart),
-        channels: buf.readUInt16LE(bodyStart + 2),
-        sampleRate: buf.readUInt32LE(bodyStart + 4),
-        byteRate: buf.readUInt32LE(bodyStart + 8),
-        blockAlign: buf.readUInt16LE(bodyStart + 12),
-        bitsPerSample: buf.readUInt16LE(bodyStart + 14),
-      };
-    } else if (id === "data") {
-      dataChunk = buf.subarray(bodyStart, bodyEnd);
-    }
-
-    offset = bodyEnd + (size % 2);
-  }
-
-  if (!fmt || !dataChunk) return null;
-  return { fmt, data: dataChunk };
-}
-
-function buildWav(dataBuffer, fmt) {
-  const channels = fmt.channels || 1;
-  const sampleRate = fmt.sampleRate || 24000;
-  const bitsPerSample = fmt.bitsPerSample || 16;
+function pcm16ToWav(pcmBuffer, sampleRate, channels) {
+  const bitsPerSample = 16;
   const blockAlign = (channels * bitsPerSample) / 8;
   const byteRate = sampleRate * blockAlign;
-  const dataSize = dataBuffer.length;
+  const dataSize = pcmBuffer.length;
+  const wav = Buffer.alloc(44 + dataSize);
 
-  const out = Buffer.alloc(44 + dataSize);
-  out.write("RIFF", 0);
-  out.writeUInt32LE(36 + dataSize, 4);
-  out.write("WAVE", 8);
-  out.write("fmt ", 12);
-  out.writeUInt32LE(16, 16);
-  out.writeUInt16LE(1, 20);
-  out.writeUInt16LE(channels, 22);
-  out.writeUInt32LE(sampleRate, 24);
-  out.writeUInt32LE(byteRate, 28);
-  out.writeUInt16LE(blockAlign, 32);
-  out.writeUInt16LE(bitsPerSample, 34);
-  out.write("data", 36);
-  out.writeUInt32LE(dataSize, 40);
-  dataBuffer.copy(out, 44);
-  return out;
+  wav.write("RIFF", 0);
+  wav.writeUInt32LE(36 + dataSize, 4);
+  wav.write("WAVE", 8);
+  wav.write("fmt ", 12);
+  wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20);
+  wav.writeUInt16LE(channels, 22);
+  wav.writeUInt32LE(sampleRate, 24);
+  wav.writeUInt32LE(byteRate, 28);
+  wav.writeUInt16LE(blockAlign, 32);
+  wav.writeUInt16LE(bitsPerSample, 34);
+  wav.write("data", 36);
+  wav.writeUInt32LE(dataSize, 40);
+  pcmBuffer.copy(wav, 44);
+  return wav;
+}
+
+function decodeBase64Audio(input) {
+  const raw = String(input || "").trim();
+  const normalized = raw.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+  return Buffer.from(padded, "base64");
 }
 
 exports.handler = async function handler(event) {
   if (event.httpMethod === "OPTIONS") return json(200, { ok: true });
   if (event.httpMethod !== "POST") return json(405, { error: "Method not allowed" });
 
-  const apiKey = String(process.env.GROQ_API_KEY || "").trim();
-  const baseUrl = String(process.env.GROQ_API_BASE || "https://api.groq.com").trim();
-  const model = String(process.env.GROQ_TTS_MODEL || "canopylabs/orpheus-v1-english").trim();
-  const voice = String(process.env.GROQ_TTS_VOICE || "autumn").trim();
+  const apiKey = String(process.env.GEMINI_API_KEY || "").trim();
+  const baseUrl = String(process.env.GEMINI_API_BASE || "https://generativelanguage.googleapis.com").trim();
+  const model = String(process.env.GEMINI_TTS_MODEL || "gemini-2.5-flash-preview-tts").trim();
+  const defaultVoice = String(process.env.GEMINI_TTS_VOICE || "Kore").trim();
+  const defaultSampleRate = Number(process.env.GEMINI_TTS_SAMPLE_RATE || 24000);
   if (!apiKey) {
-    return json(500, { ok: false, error: "GROQ_API_KEY missing in Netlify environment" });
+    return json(500, { ok: false, error: "GEMINI_API_KEY missing in Netlify environment" });
   }
 
   let payload = {};
@@ -145,64 +78,79 @@ exports.handler = async function handler(event) {
     return json(400, { error: "Invalid JSON body" });
   }
   const text = String((payload && payload.text) || "").trim();
-  if (!text) return json(400, { error: "text is required" });
+  const voiceName = String((payload && payload.voice_name) || defaultVoice).trim();
+  const sampleRate = Number((payload && payload.sample_rate) || defaultSampleRate || 24000);
 
-  const chunks = splitIntoChunks(text, 180);
-  if (!chunks.length) return json(400, { error: "text is required" });
+  if (!text) return json(400, { error: "text is required" });
+  if (!voiceName) return json(400, { error: "voice_name is required" });
 
   try {
-    const wavParts = [];
-    let wavFmt = null;
-
-    for (const chunk of chunks) {
-      const res = await fetch(`${baseUrl}/openai/v1/audio/speech`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
+    const endpoint = `${baseUrl}/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const resp = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text }] }],
+        generationConfig: {
+          responseModalities: ["AUDIO"],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName },
+            },
+          },
         },
-        body: JSON.stringify({
-          model,
-          voice,
-          input: chunk,
-          response_format: "wav",
-        }),
-      });
+      }),
+    });
 
-      if (!res.ok) {
-        const errTxt = await res.text().catch(() => "");
-        return json(502, {
-          ok: false,
-          error: `Groq TTS failed (HTTP ${res.status})`,
-          detail: errTxt.slice(0, 500),
-        });
-      }
-
-      const raw = Buffer.from(await res.arrayBuffer());
-      const parsed = parseWav(raw);
-      if (!parsed) {
-        if (chunks.length === 1) return audio(200, raw, "audio/wav");
-        return json(502, { ok: false, error: "Groq TTS returned non-WAV chunk for a multi-part response." });
-      }
-
-      if (!wavFmt) {
-        wavFmt = parsed.fmt;
-      } else {
-        const mismatch =
-          wavFmt.channels !== parsed.fmt.channels ||
-          wavFmt.sampleRate !== parsed.fmt.sampleRate ||
-          wavFmt.bitsPerSample !== parsed.fmt.bitsPerSample;
-        if (mismatch) {
-          return json(502, { ok: false, error: "Groq TTS chunks returned mismatched audio formats." });
-        }
-      }
-      wavParts.push(parsed.data);
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      const detail = (data && data.error && data.error.message) ? String(data.error.message) : `HTTP ${resp.status}`;
+      return json(502, { ok: false, error: `Gemini TTS failed: ${detail}` });
     }
 
-    const mergedPcm = Buffer.concat(wavParts);
-    const mergedWav = buildWav(mergedPcm, wavFmt || { channels: 1, sampleRate: 24000, bitsPerSample: 16 });
-    return audio(200, mergedWav, "audio/wav");
+    const parts =
+      data &&
+      data.candidates &&
+      data.candidates[0] &&
+      data.candidates[0].content &&
+      Array.isArray(data.candidates[0].content.parts)
+        ? data.candidates[0].content.parts
+        : [];
+
+    let inlineData = null;
+    for (const p of parts) {
+      const a = p && (p.inlineData || p.inline_data);
+      if (a && a.data) {
+        inlineData = a;
+        break;
+      }
+    }
+    if (!inlineData || !inlineData.data) {
+      return json(502, { ok: false, error: "Gemini TTS returned no audio data." });
+    }
+
+    const mime = String((inlineData.mimeType || inlineData.mime_type || "")).toLowerCase();
+    const raw = decodeBase64Audio(inlineData.data);
+
+    if (!raw || raw.length < 32) {
+      return json(502, { ok: false, error: "Gemini TTS returned empty audio." });
+    }
+
+    const isLikelyWav = raw.length > 12 && raw.toString("ascii", 0, 4) === "RIFF" && raw.toString("ascii", 8, 12) === "WAVE";
+    const isLikelyMpeg = raw.length > 3 && raw.toString("ascii", 0, 3) === "ID3";
+    const isPcm = mime.includes("l16") || mime.includes("pcm");
+
+    if (isLikelyWav || isLikelyMpeg || mime.includes("wav") || mime.includes("mpeg") || mime.includes("mp3") || mime.includes("ogg")) {
+      const ctype = isLikelyWav || mime.includes("wav") ? "audio/wav" : "audio/mpeg";
+      return audio(200, raw, ctype);
+    }
+
+    const wav = pcm16ToWav(raw, Number.isFinite(sampleRate) ? sampleRate : 24000, 1);
+    if (!isPcm && !mime) {
+      return audio(200, wav, "audio/wav");
+    }
+    return audio(200, wav, "audio/wav");
   } catch (e) {
-    return json(502, { ok: false, error: `Groq TTS request failed: ${String(e.message || e)}` });
+    return json(502, { ok: false, error: `Gemini TTS request failed: ${String(e.message || e)}` });
   }
 };
