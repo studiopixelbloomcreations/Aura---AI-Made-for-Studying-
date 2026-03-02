@@ -99,7 +99,7 @@
     X-Content-Type-Options = "nosniff"
     Cross-Origin-Opener-Policy = "same-origin-allow-popups"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Content-Security-Policy = "default-src 'self' https://www.gstatic.com https://accounts.google.com https://*.google.com https://*.googleapis.com https://*.firebaseapp.com; script-src 'self' https://www.gstatic.com https://apis.google.com https://accounts.google.com https://unpkg.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*; frame-src 'self' https://accounts.google.com https://*.google.com https://*.firebaseapp.com; frame-ancestors 'self';"
+    Content-Security-Policy = "default-src 'self' https://www.gstatic.com https://accounts.google.com https://*.google.com https://*.googleapis.com https://*.firebaseapp.com; script-src 'self' https://www.gstatic.com https://apis.google.com https://accounts.google.com https://unpkg.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' blob: data: https:; connect-src 'self' https://*; frame-src 'self' https://accounts.google.com https://*.google.com https://*.firebaseapp.com; frame-ancestors 'self';"
 
 # Cache static assets
 [[headers]]
