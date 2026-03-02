@@ -113,15 +113,15 @@ function fallbackReply(message) {
   return "I am here and listening. Tell me what you want to do, and I will help you right away.";
 }
 
-async function openaiChatReply(message, history) {
-  const apiKey = String(process.env.OPENAI_API_KEY || "").trim();
+async function groqChatReply(message, history, language, subject) {
+  const apiKey = String(process.env.GROQ_API_KEY || "").trim();
   if (!apiKey) return fallbackReply(message);
 
   const msgs = [];
   msgs.push({
     role: "system",
     content:
-      "You are Tutor, a warm personal assistant. Keep responses short, natural, and conversational. Help with daily tasks and study.",
+      `You are Tutor, a warm and capable personal assistant for a student. Speak in ${language}. Keep responses short, natural, and conversational. Be helpful for daily tasks and study support in ${subject}.`,
   });
   const h = Array.isArray(history) ? history.slice(-8) : [];
   for (const item of h) {
@@ -132,16 +132,17 @@ async function openaiChatReply(message, history) {
   msgs.push({ role: "user", content: String(message || "") });
 
   try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini",
+        model: process.env.GROQ_PERSONAL_MODEL || process.env.GROQ_MODEL || "llama-3.1-8b-instant",
         messages: msgs,
         temperature: 0.6,
+        max_tokens: 350,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -173,10 +174,12 @@ exports.handler = async function handler(event) {
 
   const message = String((payload && payload.message) || "").trim();
   const history = payload && payload.history ? payload.history : [];
+  const language = String((payload && payload.language) || "English");
+  const subject = String((payload && payload.subject) || "General");
   if (!message) return json(200, { error: "Message cannot be empty" });
 
   const action = detectAction(message, history);
-  const answer = action && action.message ? String(action.message) : await openaiChatReply(message, history);
+  const answer = action && action.message ? String(action.message) : await groqChatReply(message, history, language, subject);
 
   return json(200, {
     answer,
