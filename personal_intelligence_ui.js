@@ -5,10 +5,14 @@
   const EMAIL = "guest@student.com";
   const IDLE_TIMEOUT_MS = 15000;
   const TTS_TIMEOUT_MS = 12000;
+  const MEMORY_KEY = "personal_intelligence_memory_v1";
+  const HISTORY_KEY = "personal_intelligence_history_v1";
   let enabled = false;
   let recognition = null;
   let idleTimer = null;
   let tutorAudio = null;
+  let knownFacts = {};
+  let convoHistory = [];
 
   const panel = document.createElement("div");
   panel.className = "pi-panel";
@@ -49,6 +53,43 @@
     row.textContent = text;
     logEl.appendChild(row);
     logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function loadMemory() {
+    try {
+      const m = JSON.parse(localStorage.getItem(MEMORY_KEY) || "{}");
+      knownFacts = m && typeof m === "object" ? m : {};
+    } catch (e) {
+      knownFacts = {};
+    }
+    try {
+      const h = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+      convoHistory = Array.isArray(h) ? h.slice(-20) : [];
+    } catch (e) {
+      convoHistory = [];
+    }
+  }
+
+  function saveMemory() {
+    try { localStorage.setItem(MEMORY_KEY, JSON.stringify(knownFacts || {})); } catch (e) {}
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify((convoHistory || []).slice(-20))); } catch (e) {}
+  }
+
+  function mergeKnownFacts(nextFacts) {
+    const src = nextFacts && typeof nextFacts === "object" ? nextFacts : {};
+    const merged = Object.assign({}, knownFacts || {});
+    Object.keys(src).forEach(function (k) {
+      const v = String(src[k] || "").trim();
+      if (v) merged[k] = v;
+    });
+    knownFacts = merged;
+    saveMemory();
+  }
+
+  function pushHistory(role, content) {
+    convoHistory.push({ role: role === "assistant" ? "assistant" : "user", content: String(content || "").slice(0, 1200) });
+    if (convoHistory.length > 20) convoHistory = convoHistory.slice(-20);
+    saveMemory();
   }
 
   function setAssistantState(kind, label) {
@@ -111,10 +152,7 @@
       .replace(/\[(.*?)\]\((.*?)\)/g, "$1")
       .replace(/\s+/g, " ")
       .trim();
-    if (!cleaned) return "";
-    const firstSentence = cleaned.match(/^[\s\S]{1,220}?[.!?](\s|$)/);
-    const chosen = firstSentence ? firstSentence[0].trim() : cleaned.slice(0, 200).trim();
-    return chosen.length > 210 ? `${chosen.slice(0, 207)}...` : chosen;
+    return cleaned;
   }
 
   async function playTutorTTS(text) {
@@ -177,6 +215,7 @@
     const t = String(text || "").trim();
     if (!t || !enabled) return;
     addLog("user", "You: " + t);
+    pushHistory("user", t);
     setAssistantState("thinking", "Thinking");
     armIdleTimer();
     try {
@@ -189,11 +228,16 @@
           language: localStorage.getItem("g9_language") || "English",
           subject: localStorage.getItem("g9_subject") || "General",
           title: "Personal Intelligence",
+          history: convoHistory.slice(-12),
+          known_facts: knownFacts,
         }),
       });
       const answer = data && data.answer ? String(data.answer) : "I did not get that. Please try again.";
       const speakText = data && data.speak_text ? String(data.speak_text) : buildSpeakText(answer);
       addLog("assistant", "Tutor: " + answer);
+      pushHistory("assistant", answer);
+      if (data && data.learned_facts) mergeKnownFacts(data.learned_facts);
+      if (data && data.memory_updates) mergeKnownFacts(data.memory_updates);
       if (data && data.ai_provider && data.ai_provider !== "local_action") {
         dbg("AI provider:", data.ai_provider, "ok:", data.ai_ok, "error:", data.ai_error || "");
       }
@@ -251,6 +295,7 @@
     startListening();
   });
 
+  loadMemory();
   setEnabled(false);
   try {
     if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();

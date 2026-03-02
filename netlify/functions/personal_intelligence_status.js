@@ -19,7 +19,7 @@ exports.handler = async function handler(event) {
   return json(200, {
     email: String(email).toLowerCase(),
     assistant_name: "Tutor",
-    section_name: "Perosnla IIntelligence",
+    section_name: "Personal Intelligence",
     integration_state: {
       spotify_connected: false,
       google_maps_connected: true,
