@@ -7,7 +7,7 @@
   const TTS_TIMEOUT_MS = 12000;
   const STT_TIMEOUT_MS = 22000;
   const STT_RECORD_MS = 8000;
-  const PI_PUTER_MODEL = "google/gemini-2.5-flash";
+  const PI_PUTER_MODEL = "openai/gpt-5.2-chat";
   const TTS_VOICE_STORAGE_KEY = "g9_tts_voice";
   const PUTER_DEFAULT_TTS = { provider: "openai", voice: "alloy", model: "gpt-4o-mini-tts" };
   const MEMORY_KEY = "personal_intelligence_memory_v1";
@@ -218,6 +218,16 @@
     if (resp.message && typeof resp.message.content === "string") return String(resp.message.content).trim();
     if (typeof resp.content === "string") return String(resp.content).trim();
     return "";
+  }
+
+  function modelIdOf(m) {
+    if (!m) return "";
+    if (typeof m === "string") return m.toLowerCase();
+    return String(m.id || m.name || "").toLowerCase();
+  }
+
+  async function resolvePuterPersonalModel() {
+    return PI_PUTER_MODEL;
   }
 
   function detectMemoryUpdatesLocal(message) {
@@ -617,12 +627,13 @@
         { role: "system", content: systemPrompt + "\nLanguage: " + language + "\nSubject: " + subject + "\n" + contextBlock },
       ].concat(recent).concat([{ role: "user", content: t }]);
 
-      const puterResp = await window.puter.ai.chat(chatMessages, { model: PI_PUTER_MODEL });
+      const model = await resolvePuterPersonalModel();
+      const puterResp = await window.puter.ai.chat(chatMessages, { model: model });
       const answer = extractPuterText(puterResp) || "I did not get that. Please try again.";
       const speakText = buildSpeakText(answer);
       addLog("assistant", "Tutor: " + answer);
       pushHistory("assistant", answer);
-      dbg("AI provider:", "puter", "ok:", true, "model:", PI_PUTER_MODEL);
+      dbg("AI provider:", "puter", "ok:", true, "model:", model);
       await playTutorTTS(speakText);
     } catch (e) {
       dbg("puter ask failed; fallback to backend", e && e.message);
