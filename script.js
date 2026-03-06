@@ -913,8 +913,18 @@
   let sidebarVisible = localStorage.getItem('g9_sidebar_visible');
   if(sidebarVisible===null) sidebarVisible = 'true';
   sidebarVisible = sidebarVisible === 'true';
+  const mobileMq = window.matchMedia('(max-width: 900px)');
+  if (mobileMq.matches) sidebarVisible = false;
   function applySidebar(){ if(sidebarVisible){ appEl.classList.remove('sidebar-hidden'); if(sidebar) sidebar.classList.remove('hidden'); toggleSidebarBtn && toggleSidebarBtn.setAttribute('aria-expanded','true'); } else { appEl.classList.add('sidebar-hidden'); if(sidebar) sidebar.classList.add('hidden'); toggleSidebarBtn && toggleSidebarBtn.setAttribute('aria-expanded','false'); } localStorage.setItem('g9_sidebar_visible', sidebarVisible); }
   if(toggleSidebarBtn){ toggleSidebarBtn.addEventListener('click', ()=>{ sidebarVisible = !sidebarVisible; applySidebar(); }); }
+  try {
+    mobileMq.addEventListener('change', (ev) => {
+      if (ev.matches) {
+        sidebarVisible = false;
+        applySidebar();
+      }
+    });
+  } catch (e) {}
   applySidebar();
 
   // Input box mic/send toggle

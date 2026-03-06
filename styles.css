@@ -4702,3 +4702,238 @@ body {
     height: 120px;
   }
 }
+
+/* Mobile app shell override: force native-like layout on phones */
+@media (max-width: 900px) {
+  html,
+  body {
+    width: 100%;
+    height: 100dvh;
+    overflow: hidden !important;
+  }
+
+  .app {
+    width: 100%;
+    height: 100dvh;
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto 1fr !important;
+    grid-template-areas: "header" "main" !important;
+    padding: 10px !important;
+    gap: 10px !important;
+    border-radius: 0;
+  }
+
+  .app::before,
+  .app::after {
+    border-radius: 0;
+  }
+
+  .app-header {
+    min-height: 76px;
+    padding: 10px 12px !important;
+    border-radius: 18px;
+    gap: 10px;
+  }
+
+  .brand {
+    min-width: 0;
+    gap: 10px;
+  }
+
+  .logo {
+    width: 42px;
+    height: 42px;
+    font-size: 28px;
+  }
+
+  .brand-title {
+    font-size: 20px;
+    line-height: 1.1;
+  }
+
+  .subtitle {
+    display: none;
+  }
+
+  .header-actions {
+    min-width: 0;
+    flex: 1;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .profile-options {
+    display: none;
+  }
+
+  #personalIntelligenceTab span,
+  #badgesTab span {
+    display: none;
+  }
+
+  #personalIntelligenceTab,
+  #badgesTab,
+  #toggleSidebar {
+    min-width: 44px;
+    height: 44px;
+    padding: 0 12px;
+    border-radius: 12px;
+  }
+
+  .chat {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .chat .liquidGlass-content {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .welcome-panel {
+    margin: 0 0 10px 0;
+    padding: 18px 14px;
+    border-radius: 20px;
+  }
+
+  .welcome-message {
+    font-size: clamp(28px, 8vw, 36px);
+    line-height: 1.08;
+  }
+
+  .welcome-description {
+    font-size: 15px;
+    line-height: 1.45;
+  }
+
+  .messages {
+    padding: 10px 8px 12px !important;
+    gap: 10px;
+  }
+
+  .msg {
+    max-width: 92%;
+    font-size: 15px;
+    line-height: 1.42;
+  }
+
+  .composer {
+    margin: 8px 0 0 !important;
+    padding: 10px !important;
+    gap: 8px;
+    border-radius: 18px;
+  }
+
+  .input {
+    font-size: 16px !important;
+    padding: 12px !important;
+  }
+
+  .icon-btn,
+  .send {
+    min-width: 44px;
+    height: 44px;
+  }
+
+  .sidebar {
+    position: fixed !important;
+    left: 8px;
+    right: 8px;
+    top: 86px;
+    bottom: 8px;
+    width: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    border-radius: 24px !important;
+    padding: 14px !important;
+    z-index: 60;
+    overflow: hidden !important;
+    transform: translateY(105%);
+    transition: transform 260ms cubic-bezier(.2, .9, .3, 1);
+  }
+
+  .app:not(.sidebar-hidden) .sidebar {
+    transform: translateY(0);
+  }
+
+  .sidebar-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding-bottom: 10px;
+    background: linear-gradient(180deg, rgba(8, 12, 18, 0.78), rgba(8, 12, 18, 0));
+    backdrop-filter: blur(10px);
+  }
+
+  .tab-btn {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 8px;
+  }
+
+  .tab-btn span {
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tab-content {
+    max-height: calc(100dvh - 210px);
+    overflow: auto;
+    padding-bottom: 24px;
+  }
+
+  .settings-section,
+  .chat-list {
+    max-height: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .app {
+    padding: 8px !important;
+    gap: 8px !important;
+  }
+
+  .app-header {
+    min-height: 70px;
+    padding: 8px 10px !important;
+  }
+
+  .logo {
+    width: 38px;
+    height: 38px;
+    font-size: 24px;
+  }
+
+  .brand-title {
+    font-size: 18px;
+  }
+
+  .welcome-panel {
+    padding: 14px 12px;
+  }
+
+  .welcome-description {
+    font-size: 14px;
+  }
+
+  .composer {
+    padding: 8px !important;
+  }
+
+  .input {
+    font-size: 16px !important;
+  }
+
+  .sidebar {
+    left: 6px;
+    right: 6px;
+    top: 78px;
+    bottom: 6px;
+    border-radius: 20px !important;
+  }
+}
