@@ -14,7 +14,8 @@
   const ttsVoiceSelect = qs('ttsVoiceSelect');
   const ttsTestVoice = qs('ttsTestVoice');
 
-  const TTS_VOICE_STORAGE_KEY = (window.PuterVoiceCatalog && window.PuterVoiceCatalog.storageKey) || 'g9_tts_voice';
+  const TTS_VOICE_STORAGE_KEY = 'g9_elevenlabs_voice_id';
+  const ELEVENLABS_DEFAULT_VOICE_ID = '21m00Tcm4TlvDq8ikWAM'; // Rachel
 
   function appendBubble(role, text) {
     if (!messagesEl) return;
@@ -29,29 +30,45 @@
 
   async function initTtsVoiceSelector(){
     if(!ttsVoiceSelect) return;
-    const catalog = window.PuterVoiceCatalog;
-    const allVoices = (catalog && Array.isArray(catalog.voices)) ? catalog.voices : [];
-    if(!allVoices.length) return;
+    async function fetchVoices(){
+      try {
+        const res = await apiFetch('/tts/elevenlabs/voices', { method: 'GET' });
+        if(!res.ok) throw new Error('HTTP_' + res.status);
+        const data = await res.json();
+        const voices = Array.isArray(data && data.voices) ? data.voices : [];
+        if(voices.length) return voices;
+      } catch (e) {}
+      return [
+        { voice_id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel', category: 'premade' },
+        { voice_id: 'pNInz6obpgDQGcFmaJgB', name: 'Adam', category: 'premade' },
+        { voice_id: 'Xb7hH8MSUJpSbSDYk0k2', name: 'Alice', category: 'premade' }
+      ];
+    }
+
+    const allVoices = await fetchVoices();
     const saved = (function(){
       try { return String(localStorage.getItem(TTS_VOICE_STORAGE_KEY) || ''); } catch (e) { return ''; }
     })();
     ttsVoiceSelect.innerHTML = '';
     allVoices.forEach((v) => {
       const o = document.createElement('option');
-      o.value = String(v.id || '');
-      o.textContent = String(v.label || v.id || 'Puter Voice');
+      const vid = String(v && v.voice_id ? v.voice_id : '');
+      if(!vid) return;
+      o.value = vid;
+      const name = String(v && v.name ? v.name : 'Voice');
+      const category = String(v && v.category ? v.category : '');
+      o.textContent = category ? `${name} (${category})` : name;
       ttsVoiceSelect.appendChild(o);
     });
-    const defaultVoice = catalog.getDefault ? catalog.getDefault() : allVoices[0];
-    const hasSaved = allVoices.some((v) => String(v.id) === saved);
-    ttsVoiceSelect.value = hasSaved ? saved : String(defaultVoice && defaultVoice.id ? defaultVoice.id : '');
+    const hasSaved = Array.from(ttsVoiceSelect.options).some((o) => o.value === saved);
+    ttsVoiceSelect.value = hasSaved ? saved : ELEVENLABS_DEFAULT_VOICE_ID;
     try { localStorage.setItem(TTS_VOICE_STORAGE_KEY, ttsVoiceSelect.value); } catch (e) {}
 
     ttsVoiceSelect.addEventListener('change', ()=>{
       const v = String(ttsVoiceSelect.value || '');
       try { localStorage.setItem(TTS_VOICE_STORAGE_KEY, v); } catch (e) {}
       if(v) toast('Voice set: ' + v);
-      else toast('Voice set: Puter default');
+      else toast('Voice set: ElevenLabs default');
     });
   }
 
@@ -76,33 +93,12 @@
     return window.Api.apiFetch(path, options);
   }
 
-  function getSelectedPuterVoiceOptions(){
-    const catalog = window.PuterVoiceCatalog;
-    if (catalog && catalog.getById) {
-      let selected = '';
-      try { selected = String(localStorage.getItem(TTS_VOICE_STORAGE_KEY) || ''); } catch (e) {}
-      const voice = catalog.getById(selected) || (catalog.getDefault ? catalog.getDefault() : null);
-      if (voice && voice.options) return voice.options;
-    }
-    let selected = '';
-    try { selected = String(localStorage.getItem(TTS_VOICE_STORAGE_KEY) || ''); } catch (e) {}
-    if (selected === 'openai:alloy') return { provider: 'openai', voice: 'alloy', model: 'gpt-4o-mini-tts' };
-    return { provider: 'openai', voice: 'alloy', model: 'gpt-4o-mini-tts' };
-  }
-
-  async function ensurePuterReady(interactive){
-    if(!window.puter || !window.puter.ai){
-      throw new Error('PUTER_NOT_LOADED');
-    }
-    if(!window.puter.auth || !window.puter.auth.isSignedIn || !window.puter.auth.signIn){
-      return;
-    }
-    let signed = false;
+  function getSelectedElevenLabsVoiceId(){
     try {
-      signed = !!(await window.puter.auth.isSignedIn());
-    } catch (e) {}
-    if(!signed && interactive){
-      await window.puter.auth.signIn({ attempt_temp_user_creation: true });
+      const v = String(localStorage.getItem(TTS_VOICE_STORAGE_KEY) || '').trim();
+      return v || ELEVENLABS_DEFAULT_VOICE_ID;
+    } catch (e) {
+      return ELEVENLABS_DEFAULT_VOICE_ID;
     }
   }
 
@@ -246,14 +242,32 @@
       .replace(/\s{2,}/g, ' ')
       .trim();
 
-    // Prefer Puter TTS for testing across the app.
+    // Prefer ElevenLabs TTS via backend proxy.
     try {
-      await ensurePuterReady(true);
-      const audio = await window.puter.ai.txt2speech(cleaned, getSelectedPuterVoiceOptions());
-      if(!audio || !audio.play) throw new Error('PUTER_TTS_EMPTY');
-      if (lastAudio && lastAudio.pause) {
+      const payload = {
+        text: cleaned,
+        voiceId: getSelectedElevenLabsVoiceId(),
+        stability: 0.5,
+        similarity_boost: 0.75
+      };
+
+      const res = await apiFetch('/tts/elevenlabs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('HTTP_' + res.status);
+      const blob = await res.blob();
+      if(!blob || !blob.size) throw new Error('EMPTY_AUDIO');
+      const url = URL.createObjectURL(blob);
+
+      if (lastAudio) {
         try { lastAudio.pause(); } catch (e) {}
+        try { URL.revokeObjectURL(lastAudio.__url); } catch (e) {}
       }
+
+      const audio = new Audio(url);
+      audio.__url = url;
       lastAudio = audio;
       await audio.play();
       return;

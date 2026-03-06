@@ -7,17 +7,14 @@
   const TTS_TIMEOUT_MS = 12000;
   const STT_TIMEOUT_MS = 22000;
   const STT_RECORD_MS = 8000;
-  const PI_GEMINI_MODEL_KEY = "pi_gemini_model";
-  const PI_GEMINI_MODEL_DEFAULT = "gemini-1.5-pro-preview-0409";
+  const PI_MODEL_KEY = "pi_model";
+  const PI_MODEL_DEFAULT = "openai/gpt-5.2-chat";
   const PI_ELEVENLABS_VOICE_KEY = "pi_elevenlabs_voice_id";
   const PI_ELEVENLABS_VOICE_DEFAULT = "21m00Tcm4TlvDq8ikWAM";
-  const PI_MODEL_OPTIONS = [
-    { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash (Low Rate)" },
-    { id: "gemini-2.0-flash-exp", label: "Gemini 2.0 Flash Exp (Preview)" },
-    { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash (Low Rate)" },
-    { id: "gemini-1.5-flash", label: "Gemini 1.5 Flash (Low Rate)" },
-    { id: "gemini-1.5-pro-preview-0409", label: "Gemini 1.5 Pro Preview 0409" },
-    { id: "gemini-1.5-pro", label: "Gemini 1.5 Pro" },
+  const PI_MODEL_OPTIONS_FALLBACK = [
+    { id: "openai/gpt-5.2-chat", label: "openai/gpt-5.2-chat" },
+    { id: "google/gemini-2.5-flash", label: "google/gemini-2.5-flash" },
+    { id: "anthropic/claude-opus-4-6", label: "anthropic/claude-opus-4-6" },
   ];
   const MEMORY_KEY = "personal_intelligence_memory_v1";
   const HISTORY_KEY = "personal_intelligence_history_v1";
@@ -202,18 +199,18 @@
     sttStream = null;
   }
 
-  function getGeminiModel() {
+  function getPIModel() {
     try {
-      return String(localStorage.getItem(PI_GEMINI_MODEL_KEY) || PI_GEMINI_MODEL_DEFAULT).trim() || PI_GEMINI_MODEL_DEFAULT;
+      return String(localStorage.getItem(PI_MODEL_KEY) || PI_MODEL_DEFAULT).trim() || PI_MODEL_DEFAULT;
     } catch (e) {
-      return PI_GEMINI_MODEL_DEFAULT;
+      return PI_MODEL_DEFAULT;
     }
   }
 
-  function setGeminiModel(nextModel) {
+  function setPIModel(nextModel) {
     const v = String(nextModel || "").trim();
     if (!v) return false;
-    try { localStorage.setItem(PI_GEMINI_MODEL_KEY, v); } catch (e) {}
+    try { localStorage.setItem(PI_MODEL_KEY, v); } catch (e) {}
     return true;
   }
 
@@ -235,6 +232,48 @@
     if (!v) return false;
     try { localStorage.setItem(PI_ELEVENLABS_VOICE_KEY, v); } catch (e) {}
     return true;
+  }
+
+  async function ensurePuterReady(interactive) {
+    if (!window.puter || !window.puter.ai) throw new Error("PUTER_NOT_LOADED");
+    if (!window.puter.auth || !window.puter.auth.isSignedIn || !window.puter.auth.signIn) return;
+    let signed = false;
+    try { signed = !!(await window.puter.auth.isSignedIn()); } catch (e) {}
+    if (!signed && interactive) {
+      await window.puter.auth.signIn({ attempt_temp_user_creation: true });
+    }
+  }
+
+  function extractPuterText(resp) {
+    if (!resp) return "";
+    if (typeof resp === "string") return resp.trim();
+    if (resp.message && typeof resp.message.content === "string") return String(resp.message.content).trim();
+    if (typeof resp.content === "string") return String(resp.content).trim();
+    return "";
+  }
+
+  function fallbackPuterModels() {
+    return PI_MODEL_OPTIONS_FALLBACK.slice();
+  }
+
+  async function fetchPuterModels() {
+    try {
+      await ensurePuterReady(false);
+      const raw = await window.puter.ai.listModels();
+      const list = Array.isArray(raw) ? raw : [];
+      const mapped = list.map(function (m) {
+        const id = String((m && (m.id || m.name)) || "").trim();
+        if (!id) return null;
+        const provider = String((m && m.provider) || "").trim();
+        const label = provider ? (id + " (" + provider + ")") : id;
+        return { id: id, label: label };
+      }).filter(Boolean);
+      if (!mapped.length) return fallbackPuterModels();
+      mapped.sort(function (a, b) { return String(a.id).localeCompare(String(b.id)); });
+      return mapped;
+    } catch (e) {
+      return fallbackPuterModels();
+    }
   }
 
   function detectMemoryUpdatesLocal(message) {
@@ -272,6 +311,25 @@
       if (t.includes(emotionalSignals[j])) return "therapy";
     }
     return "normal";
+  }
+
+  function isActionIntent(text) {
+    const low = String(text || "").toLowerCase();
+    return (
+      low.includes("open file explorer") ||
+      low.includes("open files explorer") ||
+      low.includes("open my files") ||
+      low.includes("open file manager") ||
+      low.includes("browse files") ||
+      low.includes("connect spotify") ||
+      low.includes("link spotify") ||
+      (low.includes("play") && (low.includes("liked playlist") || low.includes("liked songs") || low.includes("spotify"))) ||
+      ((low.includes("direction") || low.includes("directions")) && low.includes("home")) ||
+      low.includes("get me home") ||
+      low.includes("navigate home") ||
+      low.includes("set home to") ||
+      low.includes("home address is")
+    );
   }
 
   function buildTutorSystemPrompt(mode, language, subject, facts) {
@@ -351,20 +409,21 @@
 
     if (modelSelect) {
       modelSelect.innerHTML = "";
-      for (let i = 0; i < PI_MODEL_OPTIONS.length; i += 1) {
-        const m = PI_MODEL_OPTIONS[i];
+      const modelOptions = await fetchPuterModels();
+      for (let i = 0; i < modelOptions.length; i += 1) {
+        const m = modelOptions[i];
         const o = document.createElement("option");
         o.value = String(m.id);
         o.textContent = String(m.label);
         modelSelect.appendChild(o);
       }
-      const selectedModel = getGeminiModel();
-      const hasModel = PI_MODEL_OPTIONS.some(function (m) { return m.id === selectedModel; });
-      modelSelect.value = hasModel ? selectedModel : PI_GEMINI_MODEL_DEFAULT;
-      if (!hasModel) setGeminiModel(modelSelect.value);
+      const selectedModel = getPIModel();
+      const hasModel = modelOptions.some(function (m) { return m.id === selectedModel; });
+      modelSelect.value = hasModel ? selectedModel : (modelOptions[0] ? String(modelOptions[0].id) : PI_MODEL_DEFAULT);
+      if (!hasModel) setPIModel(modelSelect.value);
       modelSelect.addEventListener("change", function () {
         const v = String(modelSelect.value || "").trim();
-        if (v) setGeminiModel(v);
+        if (v) setPIModel(v);
       });
     }
 
@@ -717,36 +776,80 @@
       const language = localStorage.getItem("g9_language") || "English";
       const subject = localStorage.getItem("g9_subject") || "General";
       const mode = detectSupportMode(t);
-      const model = getGeminiModel();
-      const data = await fetchJson("/personal-intelligence/ask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: t,
-          email: EMAIL,
-          language: language,
-          subject: subject,
-          title: "Personal Intelligence",
-          history: convoHistory.slice(-12),
-          known_facts: knownFacts,
-          mode: mode,
-          model: model,
-          system_prompt: buildTutorSystemPrompt(mode, language, subject, knownFacts),
-        }),
+      if (isActionIntent(t)) {
+        const actionData = await fetchJson("/personal-intelligence/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: t,
+            email: EMAIL,
+            language: language,
+            subject: subject,
+            title: "Personal Intelligence",
+            history: convoHistory.slice(-12),
+            known_facts: knownFacts,
+            mode: mode,
+            system_prompt: buildTutorSystemPrompt(mode, language, subject, knownFacts),
+          }),
+        });
+        const actionAnswer = actionData && actionData.answer ? String(actionData.answer) : "I did not get that. Please try again.";
+        const actionSpeakText = buildSpeakText(actionAnswer);
+        addLog("assistant", "Tutor: " + actionAnswer);
+        pushHistory("assistant", actionAnswer);
+        if (actionData && actionData.learned_facts) mergeKnownFacts(actionData.learned_facts);
+        if (actionData && actionData.memory_updates) mergeKnownFacts(actionData.memory_updates);
+        if (actionData && actionData.action) executeAssistantAction(actionData.action);
+        dbg("AI provider:", "local_action", "ok:", true);
+        await playTutorTTS(actionSpeakText);
+        return;
+      }
+
+      await ensurePuterReady(false);
+      const model = getPIModel();
+      const recent = convoHistory.slice(-10).map(function (m) {
+        return { role: m.role === "assistant" ? "assistant" : "user", content: String(m.content || "") };
       });
-      const answer = data && data.answer ? String(data.answer) : "I did not get that. Please try again.";
+      const chatMessages = [
+        { role: "system", content: buildTutorSystemPrompt(mode, language, subject, knownFacts) + "\nConversation mode: " + mode },
+      ].concat(recent).concat([{ role: "user", content: t }]);
+
+      const puterResp = await window.puter.ai.chat(chatMessages, { model: model });
+      const answer = extractPuterText(puterResp) || "I did not get that. Please try again.";
       const speakText = buildSpeakText(answer);
       addLog("assistant", "Tutor: " + answer);
       pushHistory("assistant", answer);
-      if (data && data.learned_facts) mergeKnownFacts(data.learned_facts);
-      if (data && data.memory_updates) mergeKnownFacts(data.memory_updates);
-      if (data && data.action) executeAssistantAction(data.action);
-      dbg("AI provider:", "gemini", "ok:", true, "model:", model);
+      dbg("AI provider:", "puter", "ok:", true, "model:", model);
       await playTutorTTS(speakText);
     } catch (e) {
-      dbg("gemini ask failed", e && e.message);
-      addLog("assistant", "Tutor: Request failed. Please try again.");
-      setAssistantState("idle", "Idle");
+      dbg("puter ask failed, fallback to backend", e && e.message);
+      try {
+        const data = await fetchJson("/personal-intelligence/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: t,
+            email: EMAIL,
+            language: localStorage.getItem("g9_language") || "English",
+            subject: localStorage.getItem("g9_subject") || "General",
+            title: "Personal Intelligence",
+            history: convoHistory.slice(-12),
+            known_facts: knownFacts,
+            mode: detectSupportMode(t),
+            system_prompt: buildTutorSystemPrompt(detectSupportMode(t), localStorage.getItem("g9_language") || "English", localStorage.getItem("g9_subject") || "General", knownFacts),
+          }),
+        });
+        const answer = data && data.answer ? String(data.answer) : "I did not get that. Please try again.";
+        const speakText = buildSpeakText(answer);
+        addLog("assistant", "Tutor: " + answer);
+        pushHistory("assistant", answer);
+        if (data && data.learned_facts) mergeKnownFacts(data.learned_facts);
+        if (data && data.memory_updates) mergeKnownFacts(data.memory_updates);
+        if (data && data.action) executeAssistantAction(data.action);
+        await playTutorTTS(speakText);
+      } catch (e2) {
+        addLog("assistant", "Tutor: Request failed. Please try again.");
+        setAssistantState("idle", "Idle");
+      }
     }
   }
 
@@ -933,8 +1036,8 @@
 
   // Runtime controls so model/tts can be changed later without code edits.
   window.PersonalIntelligenceConfig = {
-    getModel: function () { return getGeminiModel(); },
-    setModel: function (model) { return setGeminiModel(model); },
+    getModel: function () { return getPIModel(); },
+    setModel: function (model) { return setPIModel(model); },
     getVoiceId: function () { return getSelectedVoiceId(); },
     setVoiceId: function (voiceId) { return setSelectedVoiceId(voiceId); },
   };
