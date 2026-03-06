@@ -51,8 +51,6 @@
   panel.innerHTML = `
     <div class="pi-aurora">
       <canvas class="pi-aurora-canvas" aria-hidden="true"></canvas>
-      <div class="pi-aurora-ring"></div>
-      <div class="pi-aurora-noise"></div>
     </div>
     <div class="pi-header">
       <div class="pi-title-wrap">
@@ -63,10 +61,9 @@
     </div>
     <div class="pi-orb-wrap">
       <button class="pi-orb idle" type="button" aria-label="Activate Tutor">
-        <span class="pi-orb-halo"></span>
-        <span class="pi-orb-grid"></span>
+        <span class="pi-orb-shell"></span>
         <span class="pi-orb-core"></span>
-        <span class="pi-orb-spark"></span>
+        <span class="pi-orb-glint"></span>
       </button>
       <div class="pi-state">Idle</div>
     </div>
@@ -557,22 +554,17 @@
   function resetVizParticles() {
     vizParticles = [];
     const isMobile = window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
-    const particleCount = isMobile ? 420 : 760;
+    const particleCount = isMobile ? 180 : 320;
     for (let i = 0; i < particleCount; i += 1) {
-      const ringBias = Math.random();
-      const orbitBase = ringBias < 0.36 ? (48 + Math.random() * 36) : (86 + Math.random() * 86);
       vizParticles.push({
-        seed: Math.random() * 1000,
+        seed: Math.random() * 2000,
         angle: Math.random() * Math.PI * 2,
-        radius: orbitBase,
-        speed: 0.0018 + Math.random() * 0.0105,
-        size: 0.45 + Math.random() * 2.6,
-        alpha: 0.18 + Math.random() * 0.8,
-        wobble: 2 + Math.random() * 22,
-        wobbleSpeed: 0.5 + Math.random() * 3.2,
-        drift: (Math.random() - 0.5) * 0.38,
-        prevX: 0,
-        prevY: 0,
+        radius: 24 + Math.random() * 68,
+        speed: 0.004 + Math.random() * 0.016,
+        size: 0.7 + Math.random() * 2.4,
+        alpha: 0.2 + Math.random() * 0.65,
+        jitter: 0.5 + Math.random() * 2.2,
+        band: Math.random() < 0.35 ? "inner" : (Math.random() < 0.8 ? "mid" : "outer"),
       });
     }
   }
@@ -601,103 +593,78 @@
     vizEnergy += (targetEnergy - vizEnergy) * 0.16;
     const pulse = Math.min(1.5, vizEnergy * 0.9 + micLevel * 1.1 + spkLevel * 1.25);
 
-    vizRotation += (assistantState === "thinking" ? 0.03 : 0.014) * (1 + vizEnergy * 0.6);
+    vizRotation += (assistantState === "thinking" ? 0.018 : 0.01) * (1 + vizEnergy * 0.55);
 
     const w = vizW;
     const h = vizH;
-    const cx = w / 2;
-    const cy = Math.floor(h * 0.8);
+    const canvasRect = auraCanvas.getBoundingClientRect();
+    const orbRect = orbBtn.getBoundingClientRect();
+    const cx = (orbRect.left - canvasRect.left) + (orbRect.width / 2);
+    const cy = (orbRect.top - canvasRect.top) + (orbRect.height / 2);
 
     vizCtx.globalCompositeOperation = "source-over";
     vizCtx.clearRect(0, 0, w, h);
-    vizCtx.fillStyle = assistantState === "speaking" ? "rgba(2, 4, 10, 0.22)" : "rgba(2, 4, 10, 0.3)";
+    vizCtx.fillStyle = assistantState === "speaking" ? "rgba(3, 8, 16, 0.36)" : "rgba(3, 8, 16, 0.28)";
     vizCtx.fillRect(0, 0, w, h);
 
     const t = performance.now() * 0.001;
-    const sweep = 38 + vizEnergy * 110;
-    const ringR = 94 + vizEnergy * 88;
-    const hueShift = (t * 62 + vizRotation * 300) % 360;
-    const coreR = 18 + vizEnergy * 20 + pulse * 8;
-    const outerR = 72 + vizEnergy * 58 + pulse * 10;
+    const ringR = 60 + vizEnergy * 42;
+    const coreR = 16 + vizEnergy * 14 + pulse * 5;
+    const outerR = 86 + vizEnergy * 44;
 
-    const coreGlow = vizCtx.createRadialGradient(cx, cy, 0, cx, cy, outerR * 2.3);
-    coreGlow.addColorStop(0, `hsla(${(hueShift + 10) % 360}, 100%, 78%, ${0.5 + vizEnergy * 0.4})`);
-    coreGlow.addColorStop(0.2, `hsla(${(hueShift + 56) % 360}, 100%, 68%, ${0.3 + vizEnergy * 0.35})`);
-    coreGlow.addColorStop(0.5, `hsla(${(hueShift + 220) % 360}, 100%, 62%, ${0.1 + vizEnergy * 0.25})`);
+    const coreGlow = vizCtx.createRadialGradient(cx, cy, 0, cx, cy, outerR * 1.55);
+    coreGlow.addColorStop(0, `rgba(184, 235, 255, ${0.42 + vizEnergy * 0.4})`);
+    coreGlow.addColorStop(0.22, `rgba(96, 187, 255, ${0.28 + vizEnergy * 0.28})`);
+    coreGlow.addColorStop(0.62, `rgba(53, 127, 255, ${0.1 + vizEnergy * 0.18})`);
     coreGlow.addColorStop(1, "rgba(0,0,0,0)");
     vizCtx.fillStyle = coreGlow;
     vizCtx.beginPath();
-    vizCtx.arc(cx, cy, outerR * 2.3, 0, Math.PI * 2);
+    vizCtx.arc(cx, cy, outerR * 1.55, 0, Math.PI * 2);
     vizCtx.fill();
 
     vizCtx.globalCompositeOperation = "lighter";
-    const blobs = [
-      { x: cx + Math.cos(t * 0.8) * 140, y: cy - 210 + Math.sin(t * 0.6) * 40, r: 420 + sweep, c1: `hsla(${(hueShift + 12) % 360}, 96%, 66%, 0.32)` },
-      { x: cx - Math.sin(t * 0.7) * 160, y: cy - 160 + Math.cos(t * 0.5) * 34, r: 400 + sweep * 0.8, c1: `hsla(${(hueShift + 102) % 360}, 96%, 64%, 0.28)` },
-      { x: cx + Math.sin(t * 0.95) * 180, y: cy - 140 + Math.sin(t * 0.4) * 22, r: 440 + sweep * 0.7, c1: `hsla(${(hueShift + 188) % 360}, 96%, 62%, 0.26)` },
-      { x: cx + Math.cos(t * 0.55) * 120, y: cy - 120 + Math.sin(t * 0.8) * 28, r: 380 + sweep * 0.75, c1: `hsla(${(hueShift + 282) % 360}, 96%, 66%, 0.3)` },
-    ];
-    for (let b = 0; b < blobs.length; b += 1) {
-      const g = vizCtx.createRadialGradient(blobs[b].x, blobs[b].y, 10, blobs[b].x, blobs[b].y, blobs[b].r);
-      g.addColorStop(0, blobs[b].c1);
-      g.addColorStop(0.45, blobs[b].c1.replace(/0\.\d+\)/, "0.11)"));
-      g.addColorStop(1, "rgba(0,0,0,0)");
-      vizCtx.fillStyle = g;
-      vizCtx.beginPath();
-      vizCtx.arc(blobs[b].x, blobs[b].y, blobs[b].r, 0, Math.PI * 2);
-      vizCtx.fill();
-    }
 
-    for (let ring = 0; ring < 3; ring += 1) {
-      const rr = ringR + ring * (16 + vizEnergy * 10);
-      const seg = Math.PI * (1.2 + ring * 0.25 + vizEnergy * 0.5);
-      vizCtx.strokeStyle = `hsla(${(hueShift + 20 + ring * 46) % 360}, 100%, 72%, ${0.16 + vizEnergy * 0.32})`;
-      vizCtx.lineWidth = 1.6 + vizEnergy * (3.8 - ring * 0.7);
+    for (let ring = 0; ring < 4; ring += 1) {
+      const rr = ringR + ring * (10 + vizEnergy * 7);
+      const seg = Math.PI * (1.08 + ring * 0.2 + vizEnergy * 0.4);
+      vizCtx.strokeStyle = `rgba(${ring === 0 ? "176, 236, 255" : "108, 188, 255"}, ${0.18 + vizEnergy * 0.3})`;
+      vizCtx.lineWidth = 1.2 + vizEnergy * (2.8 - ring * 0.35);
       vizCtx.beginPath();
-      vizCtx.arc(cx, cy, rr, vizRotation * (1 + ring * 0.22), vizRotation * (1 + ring * 0.22) + seg);
+      vizCtx.arc(cx, cy, rr, vizRotation * (1 + ring * 0.18), vizRotation * (1 + ring * 0.18) + seg);
       vizCtx.stroke();
     }
 
-    vizCtx.strokeStyle = `hsla(${(hueShift + 210) % 360}, 100%, 72%, ${0.2 + vizEnergy * 0.18})`;
-    vizCtx.lineWidth = 1.4 + vizEnergy * 2.6;
+    vizCtx.strokeStyle = `rgba(219, 245, 255, ${0.14 + vizEnergy * 0.22})`;
+    vizCtx.lineWidth = 1.1 + vizEnergy * 1.8;
     vizCtx.beginPath();
-    vizCtx.arc(cx, cy, ringR + 18 + Math.sin(t * 1.8) * 6, -vizRotation * 0.6, -vizRotation * 0.6 + Math.PI * 1.4);
+    vizCtx.arc(cx, cy, ringR + 26 + Math.sin(t * 1.8) * 4, -vizRotation * 0.6, -vizRotation * 0.6 + Math.PI * 1.2);
     vizCtx.stroke();
 
     for (let i = 0; i < vizParticles.length; i += 1) {
       const p = vizParticles[i];
-      p.angle += p.speed * (1 + vizEnergy * 1.6);
-      const wave = Math.sin(t * p.wobbleSpeed + p.seed) * (p.wobble + vizEnergy * 26);
-      const r = ringR + p.radius * 0.82 + wave;
-      const a = p.angle + vizRotation + (assistantState === "speaking" ? Math.sin(t * 4 + p.seed) * 0.03 : 0);
-      const x = cx + Math.cos(a) * r + Math.sin(t * 2 + p.seed) * p.drift * 8;
-      const y = cy + Math.sin(a) * r + Math.cos(t * 2.2 + p.seed) * p.drift * 8;
-      if (p.prevX || p.prevY) {
-        vizCtx.strokeStyle = `hsla(${(hueShift + (i % 7) * 52) % 360},100%,72%,${(0.04 + vizEnergy * 0.16).toFixed(3)})`;
-        vizCtx.lineWidth = 0.4 + p.size * 0.35;
-        vizCtx.beginPath();
-        vizCtx.moveTo(p.prevX, p.prevY);
-        vizCtx.lineTo(x, y);
-        vizCtx.stroke();
-      }
-      p.prevX = x;
-      p.prevY = y;
-      const alpha = Math.min(1, p.alpha * (0.72 + vizEnergy * 0.9));
-      const particleHue = (hueShift + (i % 5) * 64) % 360;
-      vizCtx.fillStyle = `hsla(${particleHue.toFixed(1)},98%,72%,${alpha.toFixed(3)})`;
+      p.angle += p.speed * (1 + vizEnergy * 1.8);
+      const ringScale = p.band === "inner" ? 0.72 : (p.band === "mid" ? 1 : 1.24);
+      const ripple = Math.sin(t * (1.2 + p.jitter) + p.seed) * (2 + vizEnergy * 12);
+      const r = ringR * ringScale + p.radius + ripple;
+      const x = cx + Math.cos(p.angle + vizRotation) * r;
+      const y = cy + Math.sin(p.angle + vizRotation) * r;
+      const alpha = Math.min(1, p.alpha * (0.46 + vizEnergy * 1.1));
+      vizCtx.fillStyle = p.band === "inner"
+        ? `rgba(220, 246, 255, ${alpha.toFixed(3)})`
+        : `rgba(133, 209, 255, ${(alpha * 0.9).toFixed(3)})`;
       vizCtx.beginPath();
-      vizCtx.arc(x, y, p.size + vizEnergy * 1.2, 0, Math.PI * 2);
+      vizCtx.arc(x, y, p.size + vizEnergy * 0.9, 0, Math.PI * 2);
       vizCtx.fill();
     }
 
-    const hotCore = vizCtx.createRadialGradient(cx, cy, coreR * 0.2, cx, cy, coreR * 2.4);
-    hotCore.addColorStop(0, `rgba(255,255,255,${0.95})`);
-    hotCore.addColorStop(0.16, `hsla(${(hueShift + 22) % 360}, 100%, 82%, ${0.9})`);
-    hotCore.addColorStop(0.48, `hsla(${(hueShift + 180) % 360}, 100%, 70%, ${0.5 + vizEnergy * 0.25})`);
+    const hotCore = vizCtx.createRadialGradient(cx, cy, coreR * 0.2, cx, cy, coreR * 2.5);
+    hotCore.addColorStop(0, `rgba(255,255,255,0.98)`);
+    hotCore.addColorStop(0.18, `rgba(210, 245, 255, ${0.9})`);
+    hotCore.addColorStop(0.56, `rgba(95, 180, 255, ${0.44 + vizEnergy * 0.22})`);
     hotCore.addColorStop(1, "rgba(0,0,0,0)");
     vizCtx.fillStyle = hotCore;
     vizCtx.beginPath();
-    vizCtx.arc(cx, cy, coreR * 2.4, 0, Math.PI * 2);
+    vizCtx.arc(cx, cy, coreR * 2.5, 0, Math.PI * 2);
     vizCtx.fill();
 
     vizCtx.globalCompositeOperation = "source-over";
