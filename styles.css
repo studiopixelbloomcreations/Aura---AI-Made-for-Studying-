@@ -4595,10 +4595,10 @@ body {
   background:
     conic-gradient(from calc(var(--pi-spin) * 1rad),
       rgba(255, 255, 255, 0.02),
-      rgba(111, 198, 255, 0.52),
-      rgba(177, 120, 255, 0.4),
-      rgba(106, 241, 220, 0.48),
-      rgba(255, 201, 90, 0.44),
+      rgba(90, 204, 255, 0.58),
+      rgba(83, 164, 255, 0.52),
+      rgba(132, 232, 255, 0.44),
+      rgba(255, 189, 96, 0.34),
       rgba(255, 255, 255, 0.02));
   filter: blur(12px) saturate(1.35);
   mix-blend-mode: screen;
@@ -4630,7 +4630,7 @@ body {
   inset: -18%;
   border-radius: 50%;
   background:
-    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.2), rgba(90, 162, 255, 0.08) 42%, rgba(0, 0, 0, 0) 72%);
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.24), rgba(82, 181, 255, 0.12) 42%, rgba(0, 0, 0, 0) 72%);
   filter: blur(8px);
   opacity: calc(0.42 + var(--pi-energy) * 0.5);
   animation: pi-halo-breathe 2.2s ease-in-out infinite;
@@ -4641,9 +4641,9 @@ body {
   border-radius: 50%;
   background:
     repeating-conic-gradient(from 0deg,
-      rgba(220, 240, 255, 0.16) 0deg 2deg,
+      rgba(214, 238, 255, 0.18) 0deg 2deg,
       rgba(0, 0, 0, 0) 2deg 8deg),
-    radial-gradient(circle at center, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 64%);
+    radial-gradient(circle at center, rgba(138, 220, 255, 0.22), rgba(255, 255, 255, 0) 64%);
   mix-blend-mode: screen;
   filter: blur(0.4px);
   opacity: calc(0.22 + var(--pi-energy) * 0.36);
@@ -4656,8 +4656,8 @@ body {
   border-radius: 999px;
   background: radial-gradient(circle at center,
       rgba(255, 255, 255, 0.98),
-      rgba(207, 228, 255, 0.85) 32%,
-      rgba(157, 198, 255, 0.56) 54%,
+      rgba(195, 239, 255, 0.88) 32%,
+      rgba(123, 206, 255, 0.62) 54%,
       rgba(80, 140, 255, 0.02) 100%);
   filter: blur(0.15px);
   box-shadow:
@@ -4670,7 +4670,7 @@ body {
   border-radius: 50%;
   background:
     radial-gradient(closest-side at 62% 34%, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.02) 60%),
-    radial-gradient(closest-side at 34% 67%, rgba(107, 215, 255, 0.6), rgba(255, 255, 255, 0) 58%);
+    radial-gradient(closest-side at 34% 67%, rgba(255, 198, 122, 0.46), rgba(255, 255, 255, 0) 58%);
   mix-blend-mode: screen;
   opacity: calc(0.48 + var(--pi-energy) * 0.34);
   animation: pi-spark-flicker 1.6s ease-in-out infinite;
