@@ -43,6 +43,8 @@
   let sttRecorder = null;
   let sttStream = null;
   let sttStopTimer = null;
+  let audioUnlocked = false;
+  const SILENT_WAV_DATA_URI = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=";
 
   const panel = document.createElement("div");
   panel.className = "pi-panel";
@@ -61,7 +63,10 @@
     </div>
     <div class="pi-orb-wrap">
       <button class="pi-orb idle" type="button" aria-label="Activate Tutor">
+        <span class="pi-orb-halo"></span>
+        <span class="pi-orb-grid"></span>
         <span class="pi-orb-core"></span>
+        <span class="pi-orb-spark"></span>
       </button>
       <div class="pi-state">Idle</div>
     </div>
@@ -165,6 +170,21 @@
       }
     } catch (e) {}
     tutorAudio = null;
+  }
+
+  async function primeAudioPlayback() {
+    if (audioUnlocked) return true;
+    try {
+      const probe = new Audio(SILENT_WAV_DATA_URI);
+      probe.muted = true;
+      probe.playsInline = true;
+      await probe.play();
+      try { probe.pause(); } catch (e) {}
+      audioUnlocked = true;
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   function blobToBase64(blob) {
@@ -536,14 +556,23 @@
 
   function resetVizParticles() {
     vizParticles = [];
-    for (let i = 0; i < 260; i += 1) {
+    const isMobile = window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
+    const particleCount = isMobile ? 420 : 760;
+    for (let i = 0; i < particleCount; i += 1) {
+      const ringBias = Math.random();
+      const orbitBase = ringBias < 0.36 ? (48 + Math.random() * 36) : (86 + Math.random() * 86);
       vizParticles.push({
         seed: Math.random() * 1000,
         angle: Math.random() * Math.PI * 2,
-        radius: 26 + Math.random() * 58,
-        speed: 0.002 + Math.random() * 0.007,
-        size: 0.7 + Math.random() * 1.7,
-        alpha: 0.25 + Math.random() * 0.7,
+        radius: orbitBase,
+        speed: 0.0018 + Math.random() * 0.0105,
+        size: 0.45 + Math.random() * 2.6,
+        alpha: 0.18 + Math.random() * 0.8,
+        wobble: 2 + Math.random() * 22,
+        wobbleSpeed: 0.5 + Math.random() * 3.2,
+        drift: (Math.random() - 0.5) * 0.38,
+        prevX: 0,
+        prevY: 0,
       });
     }
   }
@@ -570,6 +599,7 @@
       assistantState === "thinking" ? 0.24 :
       0.08;
     vizEnergy += (targetEnergy - vizEnergy) * 0.16;
+    const pulse = Math.min(1.5, vizEnergy * 0.9 + micLevel * 1.1 + spkLevel * 1.25);
 
     vizRotation += (assistantState === "thinking" ? 0.03 : 0.014) * (1 + vizEnergy * 0.6);
 
@@ -578,19 +608,34 @@
     const cx = w / 2;
     const cy = Math.floor(h * 0.8);
 
+    vizCtx.globalCompositeOperation = "source-over";
     vizCtx.clearRect(0, 0, w, h);
-    vizCtx.fillStyle = "rgba(2, 4, 10, 0.34)";
+    vizCtx.fillStyle = assistantState === "speaking" ? "rgba(2, 4, 10, 0.22)" : "rgba(2, 4, 10, 0.3)";
     vizCtx.fillRect(0, 0, w, h);
 
     const t = performance.now() * 0.001;
-    const sweep = 26 + vizEnergy * 58;
-    const ringR = 90 + vizEnergy * 60;
-    const hueShift = (t * 45 + vizRotation * 260) % 360;
+    const sweep = 38 + vizEnergy * 110;
+    const ringR = 94 + vizEnergy * 88;
+    const hueShift = (t * 62 + vizRotation * 300) % 360;
+    const coreR = 18 + vizEnergy * 20 + pulse * 8;
+    const outerR = 72 + vizEnergy * 58 + pulse * 10;
+
+    const coreGlow = vizCtx.createRadialGradient(cx, cy, 0, cx, cy, outerR * 2.3);
+    coreGlow.addColorStop(0, `hsla(${(hueShift + 10) % 360}, 100%, 78%, ${0.5 + vizEnergy * 0.4})`);
+    coreGlow.addColorStop(0.2, `hsla(${(hueShift + 56) % 360}, 100%, 68%, ${0.3 + vizEnergy * 0.35})`);
+    coreGlow.addColorStop(0.5, `hsla(${(hueShift + 220) % 360}, 100%, 62%, ${0.1 + vizEnergy * 0.25})`);
+    coreGlow.addColorStop(1, "rgba(0,0,0,0)");
+    vizCtx.fillStyle = coreGlow;
+    vizCtx.beginPath();
+    vizCtx.arc(cx, cy, outerR * 2.3, 0, Math.PI * 2);
+    vizCtx.fill();
+
+    vizCtx.globalCompositeOperation = "lighter";
     const blobs = [
-      { x: cx + Math.cos(t * 0.8) * 140, y: cy - 210 + Math.sin(t * 0.6) * 40, r: 420 + sweep, c1: `hsla(${(hueShift + 12) % 360}, 96%, 66%, 0.26)` },
-      { x: cx - Math.sin(t * 0.7) * 160, y: cy - 160 + Math.cos(t * 0.5) * 34, r: 400 + sweep * 0.8, c1: `hsla(${(hueShift + 102) % 360}, 96%, 64%, 0.22)` },
-      { x: cx + Math.sin(t * 0.95) * 180, y: cy - 140 + Math.sin(t * 0.4) * 22, r: 440 + sweep * 0.7, c1: `hsla(${(hueShift + 188) % 360}, 96%, 62%, 0.22)` },
-      { x: cx + Math.cos(t * 0.55) * 120, y: cy - 120 + Math.sin(t * 0.8) * 28, r: 380 + sweep * 0.75, c1: `hsla(${(hueShift + 282) % 360}, 96%, 66%, 0.24)` },
+      { x: cx + Math.cos(t * 0.8) * 140, y: cy - 210 + Math.sin(t * 0.6) * 40, r: 420 + sweep, c1: `hsla(${(hueShift + 12) % 360}, 96%, 66%, 0.32)` },
+      { x: cx - Math.sin(t * 0.7) * 160, y: cy - 160 + Math.cos(t * 0.5) * 34, r: 400 + sweep * 0.8, c1: `hsla(${(hueShift + 102) % 360}, 96%, 64%, 0.28)` },
+      { x: cx + Math.sin(t * 0.95) * 180, y: cy - 140 + Math.sin(t * 0.4) * 22, r: 440 + sweep * 0.7, c1: `hsla(${(hueShift + 188) % 360}, 96%, 62%, 0.26)` },
+      { x: cx + Math.cos(t * 0.55) * 120, y: cy - 120 + Math.sin(t * 0.8) * 28, r: 380 + sweep * 0.75, c1: `hsla(${(hueShift + 282) % 360}, 96%, 66%, 0.3)` },
     ];
     for (let b = 0; b < blobs.length; b += 1) {
       const g = vizCtx.createRadialGradient(blobs[b].x, blobs[b].y, 10, blobs[b].x, blobs[b].y, blobs[b].r);
@@ -603,11 +648,15 @@
       vizCtx.fill();
     }
 
-    vizCtx.strokeStyle = `hsla(${(hueShift + 20) % 360}, 100%, 72%, ${0.25 + vizEnergy * 0.22})`;
-    vizCtx.lineWidth = 2 + vizEnergy * 4;
-    vizCtx.beginPath();
-    vizCtx.arc(cx, cy, ringR, vizRotation, vizRotation + Math.PI * 1.85);
-    vizCtx.stroke();
+    for (let ring = 0; ring < 3; ring += 1) {
+      const rr = ringR + ring * (16 + vizEnergy * 10);
+      const seg = Math.PI * (1.2 + ring * 0.25 + vizEnergy * 0.5);
+      vizCtx.strokeStyle = `hsla(${(hueShift + 20 + ring * 46) % 360}, 100%, 72%, ${0.16 + vizEnergy * 0.32})`;
+      vizCtx.lineWidth = 1.6 + vizEnergy * (3.8 - ring * 0.7);
+      vizCtx.beginPath();
+      vizCtx.arc(cx, cy, rr, vizRotation * (1 + ring * 0.22), vizRotation * (1 + ring * 0.22) + seg);
+      vizCtx.stroke();
+    }
 
     vizCtx.strokeStyle = `hsla(${(hueShift + 210) % 360}, 100%, 72%, ${0.2 + vizEnergy * 0.18})`;
     vizCtx.lineWidth = 1.4 + vizEnergy * 2.6;
@@ -618,11 +667,21 @@
     for (let i = 0; i < vizParticles.length; i += 1) {
       const p = vizParticles[i];
       p.angle += p.speed * (1 + vizEnergy * 1.6);
-      const wave = Math.sin(t * 2.8 + p.seed) * (4 + vizEnergy * 18);
-      const r = ringR + p.radius * 0.8 + wave;
+      const wave = Math.sin(t * p.wobbleSpeed + p.seed) * (p.wobble + vizEnergy * 26);
+      const r = ringR + p.radius * 0.82 + wave;
       const a = p.angle + vizRotation + (assistantState === "speaking" ? Math.sin(t * 4 + p.seed) * 0.03 : 0);
-      const x = cx + Math.cos(a) * r;
-      const y = cy + Math.sin(a) * r;
+      const x = cx + Math.cos(a) * r + Math.sin(t * 2 + p.seed) * p.drift * 8;
+      const y = cy + Math.sin(a) * r + Math.cos(t * 2.2 + p.seed) * p.drift * 8;
+      if (p.prevX || p.prevY) {
+        vizCtx.strokeStyle = `hsla(${(hueShift + (i % 7) * 52) % 360},100%,72%,${(0.04 + vizEnergy * 0.16).toFixed(3)})`;
+        vizCtx.lineWidth = 0.4 + p.size * 0.35;
+        vizCtx.beginPath();
+        vizCtx.moveTo(p.prevX, p.prevY);
+        vizCtx.lineTo(x, y);
+        vizCtx.stroke();
+      }
+      p.prevX = x;
+      p.prevY = y;
       const alpha = Math.min(1, p.alpha * (0.72 + vizEnergy * 0.9));
       const particleHue = (hueShift + (i % 5) * 64) % 360;
       vizCtx.fillStyle = `hsla(${particleHue.toFixed(1)},98%,72%,${alpha.toFixed(3)})`;
@@ -631,7 +690,21 @@
       vizCtx.fill();
     }
 
+    const hotCore = vizCtx.createRadialGradient(cx, cy, coreR * 0.2, cx, cy, coreR * 2.4);
+    hotCore.addColorStop(0, `rgba(255,255,255,${0.95})`);
+    hotCore.addColorStop(0.16, `hsla(${(hueShift + 22) % 360}, 100%, 82%, ${0.9})`);
+    hotCore.addColorStop(0.48, `hsla(${(hueShift + 180) % 360}, 100%, 70%, ${0.5 + vizEnergy * 0.25})`);
+    hotCore.addColorStop(1, "rgba(0,0,0,0)");
+    vizCtx.fillStyle = hotCore;
+    vizCtx.beginPath();
+    vizCtx.arc(cx, cy, coreR * 2.4, 0, Math.PI * 2);
+    vizCtx.fill();
+
+    vizCtx.globalCompositeOperation = "source-over";
+
     panel.style.setProperty("--pi-energy", vizEnergy.toFixed(3));
+    panel.style.setProperty("--pi-pulse", pulse.toFixed(3));
+    panel.style.setProperty("--pi-spin", vizRotation.toFixed(3));
     vizRaf = window.requestAnimationFrame(drawOrb);
   }
 
@@ -717,6 +790,7 @@
   async function playTutorTTS(text) {
     stopTutorAudio();
     try {
+      await primeAudioPlayback();
       const cleanedText = String(text || "").replace(/\s+/g, " ").trim();
       const sendOnce = async function (textToSpeak) {
         const payload = {
@@ -754,6 +828,7 @@
       const url = URL.createObjectURL(blob);
       tutorAudio = new Audio(url);
       tutorAudio.preload = "auto";
+      tutorAudio.playsInline = true;
       stopSpeakerAnalyser();
       connectSpeakerAnalyserForAudioElement(tutorAudio);
       tutorAudio.onplay = function () { setAssistantState("speaking", "Speaking"); };
@@ -762,7 +837,15 @@
         armIdleTimer();
         try { URL.revokeObjectURL(url); } catch (e) {}
       };
-      await tutorAudio.play();
+      try {
+        await tutorAudio.play();
+      } catch (playErr) {
+        const msg = String((playErr && playErr.message) || "").toLowerCase();
+        if ((playErr && playErr.name === "NotAllowedError") || msg.includes("not allowed") || msg.includes("user agent")) {
+          throw new Error("Audio playback blocked on this device. Tap the Tutor orb once, allow media/mic, then try again.");
+        }
+        throw playErr;
+      }
     } catch (e) {
       dbg("ElevenLabs TTS failed, fallback to browser TTS", e && e.message);
       addLog("assistant", "Tutor: Voice engine fallback (" + String((e && e.message) || "TTS error") + ").");
@@ -773,6 +856,10 @@
         window.speechSynthesis.cancel();
         window.speechSynthesis.speak(u);
       } catch (e2) {
+        const blocked = String((e2 && e2.message) || "").toLowerCase();
+        if (blocked.includes("not allowed") || blocked.includes("user agent")) {
+          addLog("assistant", "Tutor: iPhone blocked audio. Tap the orb once and allow permissions, then speak again.");
+        }
         setAssistantState("idle", "Idle");
       }
     }
@@ -868,6 +955,13 @@
 
   async function startServerListening() {
     if (!enabled) return;
+    const host = String(location.hostname || "").toLowerCase();
+    const isLocal = host === "localhost" || host === "127.0.0.1";
+    if (!window.isSecureContext && !isLocal) {
+      addLog("assistant", "Tutor: Microphone needs HTTPS on iPhone/Chrome. Open the secure site URL and try again.");
+      setAssistantState("idle", "Idle");
+      return;
+    }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === "undefined") {
       addLog("assistant", "Tutor: Voice recognition is not supported in this environment.");
       setAssistantState("idle", "Idle");
@@ -928,7 +1022,12 @@
       }, STT_RECORD_MS);
     } catch (e) {
       dbg("server listening getUserMedia failed", e && e.message);
-      addLog("assistant", "Tutor: Microphone access is blocked.");
+      const em = String((e && e.message) || "").toLowerCase();
+      if ((e && e.name === "NotAllowedError") || em.includes("denied") || em.includes("not allowed")) {
+        addLog("assistant", "Tutor: Microphone permission denied. In iPhone Settings > Chrome > Microphone, allow access.");
+      } else {
+        addLog("assistant", "Tutor: Microphone access is blocked.");
+      }
       stopServerRecorder();
       setAssistantState("idle", "Idle");
     }
@@ -1032,7 +1131,8 @@
     }
   }
 
-  tabBtn.addEventListener("click", function () {
+  tabBtn.addEventListener("click", async function () {
+    await primeAudioPlayback();
     setEnabled(!enabled);
     if (enabled) {
       startListening();
@@ -1043,7 +1143,8 @@
     setEnabled(false);
   });
 
-  orbBtn.addEventListener("click", function () {
+  orbBtn.addEventListener("click", async function () {
+    await primeAudioPlayback();
     startListening();
   });
 
