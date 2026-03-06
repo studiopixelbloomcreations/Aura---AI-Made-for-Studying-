@@ -9,7 +9,16 @@
   const STT_RECORD_MS = 8000;
   const PI_GEMINI_MODEL_KEY = "pi_gemini_model";
   const PI_GEMINI_MODEL_DEFAULT = "gemini-1.5-pro-preview-0409";
-  const TTS_VOICE_STORAGE_KEY = (window.PuterVoiceCatalog && window.PuterVoiceCatalog.storageKey) || "g9_tts_voice";
+  const PI_ELEVENLABS_VOICE_KEY = "pi_elevenlabs_voice_id";
+  const PI_ELEVENLABS_VOICE_DEFAULT = "21m00Tcm4TlvDq8ikWAM";
+  const PI_MODEL_OPTIONS = [
+    { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash (Low Rate)" },
+    { id: "gemini-2.0-flash-exp", label: "Gemini 2.0 Flash Exp (Preview)" },
+    { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash (Low Rate)" },
+    { id: "gemini-1.5-flash", label: "Gemini 1.5 Flash (Low Rate)" },
+    { id: "gemini-1.5-pro-preview-0409", label: "Gemini 1.5 Pro Preview 0409" },
+    { id: "gemini-1.5-pro", label: "Gemini 1.5 Pro" },
+  ];
   const MEMORY_KEY = "personal_intelligence_memory_v1";
   const HISTORY_KEY = "personal_intelligence_history_v1";
   let enabled = false;
@@ -208,46 +217,24 @@
     return true;
   }
 
-  function getSelectedPuterVoiceOptions() {
-    const catalog = window.PuterVoiceCatalog;
-    if (catalog && catalog.getById) {
-      let selectedId = "";
-      try { selectedId = String(localStorage.getItem(TTS_VOICE_STORAGE_KEY) || ""); } catch (e) {}
-      const selected = catalog.getById(selectedId) || (catalog.getDefault ? catalog.getDefault() : null);
-      if (selected && selected.options) return selected.options;
-    }
-    return { provider: "openai", voice: "alloy", model: "gpt-4o-mini-tts" };
-  }
-
   function getSelectedElevenLabsVoiceId() {
-    const raw = getSelectedVoiceId();
-    if (raw && raw.indexOf("elevenlabs:") === 0) {
-      const id = raw.slice("elevenlabs:".length).trim();
-      if (id) return id;
+    try {
+      const id = String(localStorage.getItem(PI_ELEVENLABS_VOICE_KEY) || "").trim();
+      return id || PI_ELEVENLABS_VOICE_DEFAULT;
+    } catch (e) {
+      return PI_ELEVENLABS_VOICE_DEFAULT;
     }
-    // Rachel (safe default)
-    return "21m00Tcm4TlvDq8ikWAM";
   }
 
   function getSelectedVoiceId() {
-    try { return String(localStorage.getItem(TTS_VOICE_STORAGE_KEY) || ""); } catch (e) { return ""; }
+    return getSelectedElevenLabsVoiceId();
   }
 
   function setSelectedVoiceId(id) {
     const v = String(id || "").trim();
     if (!v) return false;
-    try { localStorage.setItem(TTS_VOICE_STORAGE_KEY, v); } catch (e) {}
+    try { localStorage.setItem(PI_ELEVENLABS_VOICE_KEY, v); } catch (e) {}
     return true;
-  }
-
-  async function ensurePuterReady(interactive) {
-    if (!window.puter || !window.puter.ai) throw new Error("PUTER_NOT_LOADED");
-    if (!window.puter.auth || !window.puter.auth.isSignedIn || !window.puter.auth.signIn) return;
-    let signed = false;
-    try { signed = !!(await window.puter.auth.isSignedIn()); } catch (e) {}
-    if (!signed && interactive) {
-      await window.puter.auth.signIn({ attempt_temp_user_creation: true });
-    }
   }
 
   function detectMemoryUpdatesLocal(message) {
@@ -333,6 +320,78 @@
       "sound human and emotionally present, avoid robotic bullet dumps unless explicitly requested.";
 
     return [corePersona, principles, modeInstructions, styleRules, knownFactsLine].join("\n");
+  }
+
+  function fallbackVoiceList() {
+    return [
+      { voice_id: "21m00Tcm4TlvDq8ikWAM", name: "Rachel", category: "premade" },
+      { voice_id: "pNInz6obpgDQGcFmaJgB", name: "Adam", category: "premade" },
+      { voice_id: "Xb7hH8MSUJpSbSDYk0k2", name: "Alice", category: "premade" },
+    ];
+  }
+
+  async function fetchElevenVoices() {
+    try {
+      const res = await (window.Api && window.Api.apiFetch
+        ? window.Api.apiFetch("/tts/elevenlabs/voices", { method: "GET" })
+        : fetch("/tts/elevenlabs/voices", { method: "GET" }));
+      if (!res.ok) throw new Error("HTTP_" + res.status);
+      const data = await res.json().catch(function () { return {}; });
+      const voices = Array.isArray(data && data.voices) ? data.voices : [];
+      if (!voices.length) return fallbackVoiceList();
+      return voices.slice(0, 120);
+    } catch (e) {
+      return fallbackVoiceList();
+    }
+  }
+
+  async function initPISettingsSelectors() {
+    const voiceSelect = document.getElementById("piVoiceSelect");
+    const modelSelect = document.getElementById("piModelSelect");
+
+    if (modelSelect) {
+      modelSelect.innerHTML = "";
+      for (let i = 0; i < PI_MODEL_OPTIONS.length; i += 1) {
+        const m = PI_MODEL_OPTIONS[i];
+        const o = document.createElement("option");
+        o.value = String(m.id);
+        o.textContent = String(m.label);
+        modelSelect.appendChild(o);
+      }
+      const selectedModel = getGeminiModel();
+      const hasModel = PI_MODEL_OPTIONS.some(function (m) { return m.id === selectedModel; });
+      modelSelect.value = hasModel ? selectedModel : PI_GEMINI_MODEL_DEFAULT;
+      if (!hasModel) setGeminiModel(modelSelect.value);
+      modelSelect.addEventListener("change", function () {
+        const v = String(modelSelect.value || "").trim();
+        if (v) setGeminiModel(v);
+      });
+    }
+
+    if (voiceSelect) {
+      voiceSelect.innerHTML = "<option value=''>Loading ElevenLabs voices...</option>";
+      const voices = await fetchElevenVoices();
+      voiceSelect.innerHTML = "";
+      for (let i = 0; i < voices.length; i += 1) {
+        const v = voices[i];
+        const id = String(v && v.voice_id ? v.voice_id : "").trim();
+        if (!id) continue;
+        const name = String(v && v.name ? v.name : "Voice");
+        const category = String(v && v.category ? v.category : "");
+        const o = document.createElement("option");
+        o.value = id;
+        o.textContent = category ? (name + " (" + category + ")") : name;
+        voiceSelect.appendChild(o);
+      }
+      const selectedVoice = getSelectedElevenLabsVoiceId();
+      const hasVoice = Array.from(voiceSelect.options).some(function (o) { return o.value === selectedVoice; });
+      voiceSelect.value = hasVoice ? selectedVoice : PI_ELEVENLABS_VOICE_DEFAULT;
+      if (!hasVoice) setSelectedVoiceId(voiceSelect.value);
+      voiceSelect.addEventListener("change", function () {
+        const v = String(voiceSelect.value || "").trim();
+        if (v) setSelectedVoiceId(v);
+      });
+    }
   }
 
   function ensureAudioContext() {
@@ -881,6 +940,7 @@
   };
 
   loadMemory();
+  initPISettingsSelectors().catch(function (e) { dbg("init PI settings selectors failed", e && e.message); });
   setEnabled(false);
   try {
     if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
