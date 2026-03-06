@@ -219,7 +219,14 @@ function knownFactsToPrompt(facts) {
   return rows.length ? rows.join("\n") : "none";
 }
 
-async function geminiChatReply(message, history, language, subject, knownFacts) {
+function sanitizeModelId(v) {
+  const s = String(v || "").trim();
+  if (!s) return "";
+  if (!/^[A-Za-z0-9._-]{3,120}$/.test(s)) return "";
+  return s;
+}
+
+async function geminiChatReply(message, history, language, subject, knownFacts, opts) {
   const apiKey = String(process.env.GEMINI_API_KEY || "").trim();
   if (!apiKey) {
     return {
@@ -230,14 +237,16 @@ async function geminiChatReply(message, history, language, subject, knownFacts) 
     };
   }
 
-  const model = String(process.env.GEMINI_PERSONAL_MODEL || "gemini-2.5-flash").trim();
+  const reqModel = sanitizeModelId(opts && opts.model);
+  const model = reqModel || String(process.env.GEMINI_PERSONAL_MODEL || "gemini-2.5-flash").trim();
   const maxOutputTokens = Number(process.env.GEMINI_PERSONAL_MAX_TOKENS || 140);
   const baseUrl = String(process.env.GEMINI_API_BASE || "https://generativelanguage.googleapis.com").trim();
-  const systemInstruction =
+  const defaultSystemInstruction =
     `You are Tutor, a warm and capable personal assistant for a student. Speak in ${language}. ` +
     `Keep replies short, natural, and practical. Default to 1-2 short sentences unless the user asks for detailed steps. ` +
     `Help with daily tasks and study support in ${subject}. ` +
     `Use known user facts when relevant to personalize responses naturally.`;
+  const systemInstruction = String((opts && opts.system_prompt) || "").trim() || defaultSystemInstruction;
 
   const contents = [];
   const h = Array.isArray(history) ? history.slice(-8) : [];
@@ -333,7 +342,10 @@ exports.handler = async function handler(event) {
   const actionUpdates = {};
   if (action && action.home_address) actionUpdates.home_address = String(action.home_address);
   const mergedKnownFacts = mergeKnownFacts(combinedKnownFacts, actionUpdates);
-  const llm = action ? null : await geminiChatReply(message, history, language, subject, mergedKnownFacts);
+  const llm = action ? null : await geminiChatReply(message, history, language, subject, mergedKnownFacts, {
+    model: payload && payload.model,
+    system_prompt: payload && payload.system_prompt,
+  });
   const answer = action && action.message ? String(action.message) : llm.answer;
   const speakText = action && action.message ? buildSpeakText(action.message) : String(llm.speak_text || buildSpeakText(answer));
 

@@ -7,9 +7,9 @@
   const TTS_TIMEOUT_MS = 12000;
   const STT_TIMEOUT_MS = 22000;
   const STT_RECORD_MS = 8000;
-  const PI_PUTER_MODEL = "openai/gpt-5.2-chat";
+  const PI_GEMINI_MODEL_KEY = "pi_gemini_model";
+  const PI_GEMINI_MODEL_DEFAULT = "gemini-1.5-pro-preview-0409";
   const TTS_VOICE_STORAGE_KEY = (window.PuterVoiceCatalog && window.PuterVoiceCatalog.storageKey) || "g9_tts_voice";
-  const PUTER_DEFAULT_TTS = { provider: "openai", voice: "alloy", model: "gpt-4o-mini-tts" };
   const MEMORY_KEY = "personal_intelligence_memory_v1";
   const HISTORY_KEY = "personal_intelligence_history_v1";
   let enabled = false;
@@ -193,6 +193,21 @@
     sttStream = null;
   }
 
+  function getGeminiModel() {
+    try {
+      return String(localStorage.getItem(PI_GEMINI_MODEL_KEY) || PI_GEMINI_MODEL_DEFAULT).trim() || PI_GEMINI_MODEL_DEFAULT;
+    } catch (e) {
+      return PI_GEMINI_MODEL_DEFAULT;
+    }
+  }
+
+  function setGeminiModel(nextModel) {
+    const v = String(nextModel || "").trim();
+    if (!v) return false;
+    try { localStorage.setItem(PI_GEMINI_MODEL_KEY, v); } catch (e) {}
+    return true;
+  }
+
   function getSelectedPuterVoiceOptions() {
     const catalog = window.PuterVoiceCatalog;
     if (catalog && catalog.getById) {
@@ -201,18 +216,18 @@
       const selected = catalog.getById(selectedId) || (catalog.getDefault ? catalog.getDefault() : null);
       if (selected && selected.options) return selected.options;
     }
-    let id = "";
-    try { id = String(localStorage.getItem(TTS_VOICE_STORAGE_KEY) || ""); } catch (e) {}
-    const table = {
-      "openai:alloy": { provider: "openai", voice: "alloy", model: "gpt-4o-mini-tts" },
-      "openai:verse": { provider: "openai", voice: "verse", model: "gpt-4o-mini-tts" },
-      "openai:ash": { provider: "openai", voice: "ash", model: "gpt-4o-mini-tts" },
-      "openai:sage": { provider: "openai", voice: "sage", model: "gpt-4o-mini-tts" },
-      "openai:coral": { provider: "openai", voice: "coral", model: "gpt-4o-mini-tts" },
-      "openai:shimmer": { provider: "openai", voice: "shimmer", model: "gpt-4o-mini-tts" },
-      "aws:joanna": { provider: "aws", voiceId: "Joanna", engine: "neural" },
-    };
-    return table[id] || PUTER_DEFAULT_TTS;
+    return { provider: "openai", voice: "alloy", model: "gpt-4o-mini-tts" };
+  }
+
+  function getSelectedVoiceId() {
+    try { return String(localStorage.getItem(TTS_VOICE_STORAGE_KEY) || ""); } catch (e) { return ""; }
+  }
+
+  function setSelectedVoiceId(id) {
+    const v = String(id || "").trim();
+    if (!v) return false;
+    try { localStorage.setItem(TTS_VOICE_STORAGE_KEY, v); } catch (e) {}
+    return true;
   }
 
   async function ensurePuterReady(interactive) {
@@ -223,24 +238,6 @@
     if (!signed && interactive) {
       await window.puter.auth.signIn({ attempt_temp_user_creation: true });
     }
-  }
-
-  function extractPuterText(resp) {
-    if (!resp) return "";
-    if (typeof resp === "string") return resp.trim();
-    if (resp.message && typeof resp.message.content === "string") return String(resp.message.content).trim();
-    if (typeof resp.content === "string") return String(resp.content).trim();
-    return "";
-  }
-
-  function modelIdOf(m) {
-    if (!m) return "";
-    if (typeof m === "string") return m.toLowerCase();
-    return String(m.id || m.name || "").toLowerCase();
-  }
-
-  async function resolvePuterPersonalModel() {
-    return PI_PUTER_MODEL;
   }
 
   function detectMemoryUpdatesLocal(message) {
@@ -257,25 +254,6 @@
     m = text.match(/\b(?:set home to|set home as|my home is at|home address is|i live at)\s+([A-Za-z0-9 ,./#'-]{6,220})/i);
     if (m && m[1]) updates.home_address = String(m[1]).trim().replace(/\.$/, "").slice(0, 220);
     return updates;
-  }
-
-  function isActionIntent(text) {
-    const low = String(text || "").toLowerCase();
-    return (
-      low.includes("open file explorer") ||
-      low.includes("open files explorer") ||
-      low.includes("open my files") ||
-      low.includes("open file manager") ||
-      low.includes("browse files") ||
-      low.includes("connect spotify") ||
-      low.includes("link spotify") ||
-      (low.includes("play") && (low.includes("liked playlist") || low.includes("liked songs") || low.includes("spotify"))) ||
-      ((low.includes("direction") || low.includes("directions")) && low.includes("home")) ||
-      low.includes("get me home") ||
-      low.includes("navigate home") ||
-      low.includes("set home to") ||
-      low.includes("home address is")
-    );
   }
 
   function detectSupportMode(text) {
@@ -619,53 +597,8 @@
       await tutorAudio.play();
       setAssistantState("listening", "Listening");
       armIdleTimer();
-      return;
-    } catch (e0) {
-      dbg("Puter TTS failed, fallback to server TTS", e0 && e0.message);
-    }
-    try {
-      const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-      const timerId = controller ? setTimeout(function () { controller.abort(); }, TTS_TIMEOUT_MS) : null;
-      const res = await (window.Api && window.Api.apiFetch
-        ? window.Api.apiFetch("/personal-intelligence/tts", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text }),
-            signal: controller ? controller.signal : undefined,
-          })
-        : fetch("/personal-intelligence/tts", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text }),
-            signal: controller ? controller.signal : undefined,
-          }));
-      if (timerId) clearTimeout(timerId);
-
-      if (!res.ok) {
-        let detail = "Gemini TTS request failed";
-        try {
-          const err = await res.json();
-          if (err && (err.error || err.detail)) detail = String(err.error || err.detail);
-        } catch (e) {}
-        throw new Error(detail);
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      tutorAudio = new Audio(url);
-      tutorAudio.preload = "auto";
-      stopSpeakerAnalyser();
-      connectSpeakerAnalyserForAudioElement(tutorAudio);
-      tutorAudio.onplay = function () {
-        setAssistantState("speaking", "Speaking");
-      };
-      tutorAudio.onended = function () {
-        setAssistantState("listening", "Listening");
-        armIdleTimer();
-        try { URL.revokeObjectURL(url); } catch (e) {}
-      };
-      await tutorAudio.play();
     } catch (e) {
-      dbg("Gemini TTS failed, fallback to browser TTS", e && e.message);
+      dbg("Puter TTS failed, fallback to browser TTS", e && e.message);
       addLog("assistant", "Tutor: Voice engine fallback (" + String((e && e.message) || "TTS error") + ").");
       try {
         const u = new SpeechSynthesisUtterance(String(text || ""));
@@ -688,80 +621,39 @@
     setAssistantState("thinking", "Thinking");
     armIdleTimer();
     try {
-      if (isActionIntent(t)) {
-        const data = await fetchJson("/personal-intelligence/ask", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: t,
-            email: EMAIL,
-            language: localStorage.getItem("g9_language") || "English",
-            subject: localStorage.getItem("g9_subject") || "General",
-            title: "Personal Intelligence",
-            history: convoHistory.slice(-12),
-            known_facts: knownFacts,
-          }),
-        });
-        const answer = data && data.answer ? String(data.answer) : "I did not get that. Please try again.";
-        const speakText = data && data.speak_text ? String(data.speak_text) : buildSpeakText(answer);
-        addLog("assistant", "Tutor: " + answer);
-        pushHistory("assistant", answer);
-        if (data && data.learned_facts) mergeKnownFacts(data.learned_facts);
-        if (data && data.memory_updates) mergeKnownFacts(data.memory_updates);
-        if (data && data.action) executeAssistantAction(data.action);
-        await playTutorTTS(speakText);
-        return;
-      }
-
-      await ensurePuterReady(false);
       const language = localStorage.getItem("g9_language") || "English";
       const subject = localStorage.getItem("g9_subject") || "General";
       const mode = detectSupportMode(t);
-      const systemPrompt = buildTutorSystemPrompt(mode, language, subject, knownFacts);
-      const contextBlock = "Conversation mode: " + mode;
-      const recent = convoHistory.slice(-10).map(function (m) {
-        return { role: m.role === "assistant" ? "assistant" : "user", content: String(m.content || "") };
+      const model = getGeminiModel();
+      const data = await fetchJson("/personal-intelligence/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: t,
+          email: EMAIL,
+          language: language,
+          subject: subject,
+          title: "Personal Intelligence",
+          history: convoHistory.slice(-12),
+          known_facts: knownFacts,
+          mode: mode,
+          model: model,
+          system_prompt: buildTutorSystemPrompt(mode, language, subject, knownFacts),
+        }),
       });
-      const chatMessages = [
-        { role: "system", content: systemPrompt + "\n" + contextBlock },
-      ].concat(recent).concat([{ role: "user", content: t }]);
-
-      const model = await resolvePuterPersonalModel();
-      const puterResp = await window.puter.ai.chat(chatMessages, { model: model });
-      const answer = extractPuterText(puterResp) || "I did not get that. Please try again.";
+      const answer = data && data.answer ? String(data.answer) : "I did not get that. Please try again.";
       const speakText = buildSpeakText(answer);
       addLog("assistant", "Tutor: " + answer);
       pushHistory("assistant", answer);
-      dbg("AI provider:", "puter", "ok:", true, "model:", model);
+      if (data && data.learned_facts) mergeKnownFacts(data.learned_facts);
+      if (data && data.memory_updates) mergeKnownFacts(data.memory_updates);
+      if (data && data.action) executeAssistantAction(data.action);
+      dbg("AI provider:", "gemini", "ok:", true, "model:", model);
       await playTutorTTS(speakText);
     } catch (e) {
-      dbg("puter ask failed; fallback to backend", e && e.message);
-      try {
-        const data = await fetchJson("/personal-intelligence/ask", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: t,
-            email: EMAIL,
-            language: localStorage.getItem("g9_language") || "English",
-            subject: localStorage.getItem("g9_subject") || "General",
-            title: "Personal Intelligence",
-            history: convoHistory.slice(-12),
-            known_facts: knownFacts,
-          }),
-        });
-        const answer = data && data.answer ? String(data.answer) : "I did not get that. Please try again.";
-        const speakText = data && data.speak_text ? String(data.speak_text) : buildSpeakText(answer);
-        addLog("assistant", "Tutor: " + answer);
-        pushHistory("assistant", answer);
-        if (data && data.learned_facts) mergeKnownFacts(data.learned_facts);
-        if (data && data.memory_updates) mergeKnownFacts(data.memory_updates);
-        if (data && data.action) executeAssistantAction(data.action);
-        await playTutorTTS(speakText);
-      } catch (e2) {
-        addLog("assistant", "Tutor: Request failed. Please try again.");
-        setAssistantState("idle", "Idle");
-      }
+      dbg("gemini ask failed", e && e.message);
+      addLog("assistant", "Tutor: Request failed. Please try again.");
+      setAssistantState("idle", "Idle");
     }
   }
 
@@ -934,7 +826,6 @@
   tabBtn.addEventListener("click", function () {
     setEnabled(!enabled);
     if (enabled) {
-      ensurePuterReady(true).catch(function (e) { dbg("puter auth warning", e && e.message); });
       startListening();
     }
   });
@@ -944,9 +835,16 @@
   });
 
   orbBtn.addEventListener("click", function () {
-    ensurePuterReady(true).catch(function (e) { dbg("puter auth warning", e && e.message); });
     startListening();
   });
+
+  // Runtime controls so model/tts can be changed later without code edits.
+  window.PersonalIntelligenceConfig = {
+    getModel: function () { return getGeminiModel(); },
+    setModel: function (model) { return setGeminiModel(model); },
+    getVoiceId: function () { return getSelectedVoiceId(); },
+    setVoiceId: function (voiceId) { return setSelectedVoiceId(voiceId); },
+  };
 
   loadMemory();
   setEnabled(false);
