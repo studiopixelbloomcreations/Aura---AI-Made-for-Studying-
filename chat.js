@@ -20,6 +20,32 @@
       try { window.dispatchEvent(new CustomEvent(name, { detail })); } catch (e) {}
     }
 
+    function getMainModel(){
+      try {
+        return String(localStorage.getItem('main_model') || 'google/gemini-2.5-flash').trim() || 'google/gemini-2.5-flash';
+      } catch (e) {
+        return 'google/gemini-2.5-flash';
+      }
+    }
+
+    async function ensurePuterReady(interactive){
+      if(!window.puter || !window.puter.ai) throw new Error('PUTER_NOT_LOADED');
+      if(!window.puter.auth || !window.puter.auth.isSignedIn || !window.puter.auth.signIn) return;
+      let signed = false;
+      try { signed = !!(await window.puter.auth.isSignedIn()); } catch (e) {}
+      if(!signed && interactive){
+        await window.puter.auth.signIn({ attempt_temp_user_creation: true });
+      }
+    }
+
+    function extractPuterText(resp){
+      if(!resp) return '';
+      if(typeof resp === 'string') return resp.trim();
+      if(resp.message && typeof resp.message.content === 'string') return String(resp.message.content).trim();
+      if(typeof resp.content === 'string') return String(resp.content).trim();
+      return '';
+    }
+
     async function sendMessage(){
       const text = (inputBox && inputBox.value || '').trim();
       if(!text) return;
@@ -69,35 +95,20 @@
         : [];
 
       try {
-        const res = await window.Api.apiFetch('/ask',{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({
-            subject:state.subject,
-            language:state.language,
-            student_question:text,
-            history,
-            title:chat.title,
-            email:'guest@student.com'
-          })
-        });
-
-        if(!res.ok){
-          throw new Error('HTTP_' + res.status);
-        }
-
-        const data = await res.json();
+        await ensurePuterReady(true);
+        const systemPrompt =
+          'You are The Tutor, a helpful study tutor for Grade 9 students. ' +
+          'Keep answers accurate, clear, and practical. ' +
+          'Current subject: ' + state.subject + '. ' +
+          'Respond in ' + state.language + '.';
+        const mainModel = getMainModel();
+        const puterResp = await window.puter.ai.chat([{ role: 'system', content: systemPrompt }].concat(history), { model: mainModel });
         const lastAi = [...chat.messages].reverse().find(m=>m.role==='ai');
+        const answer = extractPuterText(puterResp);
 
-        if(!data || !data.answer){
+        if(!answer){
           throw new Error('INVALID_RESPONSE');
         }
-
-        if(data.off_syllabus){
-          toast('Beyond Grade 9 scope — answer provided with note.', {duration: 4000});
-        }
-
-        const answer = data.answer;
         if(lastAi){
           lastAi.content = answer;
         } else {
@@ -153,3 +164,4 @@
 
   window.Chat = { initChat };
 })();
+

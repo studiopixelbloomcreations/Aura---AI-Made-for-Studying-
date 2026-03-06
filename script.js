@@ -19,6 +19,7 @@
   const appEl = document.querySelector('.app');
   const composerEl = document.querySelector('.composer');
   const settingsLanguage = document.getElementById('settingsLanguage');
+  const mainModelSelect = document.getElementById('mainModelSelect');
   const defaultSubject = document.getElementById('defaultSubject');
   const themeOptions = document.querySelectorAll('.theme-option');
   const themeToggleBtn = document.querySelector('.theme-toggle-btn');
@@ -34,6 +35,13 @@
   let examModeSessionId = null;
   let examModePapersLoaded = false;
   let examModePdfLinks = [];
+  const MAIN_MODEL_KEY = 'main_model';
+  const MAIN_MODEL_DEFAULT = 'google/gemini-2.5-flash';
+  const MAIN_MODEL_OPTIONS_FALLBACK = [
+    { id: 'google/gemini-2.5-flash', label: 'google/gemini-2.5-flash' },
+    { id: 'openai/gpt-5.2-chat', label: 'openai/gpt-5.2-chat' },
+    { id: 'anthropic/claude-opus-4-6', label: 'anthropic/claude-opus-4-6' }
+  ];
   
 
   // restore state
@@ -433,6 +441,103 @@
     try { return JSON.stringify(data); } catch (e) { return 'Unknown error'; }
   }
 
+  function getMainModel(){
+    try {
+      return String(localStorage.getItem(MAIN_MODEL_KEY) || MAIN_MODEL_DEFAULT).trim() || MAIN_MODEL_DEFAULT;
+    } catch (e) {
+      return MAIN_MODEL_DEFAULT;
+    }
+  }
+
+  function setMainModel(nextModel){
+    const v = String(nextModel || '').trim();
+    if(!v) return false;
+    try { localStorage.setItem(MAIN_MODEL_KEY, v); } catch (e) {}
+    return true;
+  }
+
+  async function ensurePuterReady(interactive){
+    if(!window.puter || !window.puter.ai) throw new Error('PUTER_NOT_LOADED');
+    if(!window.puter.auth || !window.puter.auth.isSignedIn || !window.puter.auth.signIn) return;
+    let signed = false;
+    try { signed = !!(await window.puter.auth.isSignedIn()); } catch (e) {}
+    if(!signed && interactive){
+      await window.puter.auth.signIn({ attempt_temp_user_creation: true });
+    }
+  }
+
+  function extractPuterText(resp){
+    if(!resp) return '';
+    if(typeof resp === 'string') return resp.trim();
+    if(resp.message && typeof resp.message.content === 'string') return String(resp.message.content).trim();
+    if(typeof resp.content === 'string') return String(resp.content).trim();
+    return '';
+  }
+
+  function fallbackMainModels(){
+    return MAIN_MODEL_OPTIONS_FALLBACK.slice();
+  }
+
+  async function fetchMainPuterModels(interactive){
+    try {
+      await ensurePuterReady(!!interactive);
+      const raw = await window.puter.ai.listModels();
+      const list = Array.isArray(raw) ? raw : [];
+      const mapped = list.map(function(m){
+        const id = String((m && (m.id || m.name)) || '').trim();
+        if(!id) return null;
+        const provider = String((m && m.provider) || '').trim();
+        const label = provider ? (id + ' (' + provider + ')') : id;
+        return { id: id, label: label };
+      }).filter(Boolean);
+      if(!mapped.length) return fallbackMainModels();
+      mapped.sort(function(a,b){ return String(a.id).localeCompare(String(b.id)); });
+      return mapped;
+    } catch (e) {
+      return fallbackMainModels();
+    }
+  }
+
+  async function initMainModelSelector(){
+    if(!mainModelSelect) return;
+    const selectedModel = getMainModel();
+    mainModelSelect.innerHTML = '';
+    const models = await fetchMainPuterModels(false);
+    for(let i=0;i<models.length;i+=1){
+      const m = models[i];
+      const o = document.createElement('option');
+      o.value = m.id;
+      o.textContent = m.label;
+      mainModelSelect.appendChild(o);
+    }
+    const hasModel = models.some(function(m){ return m.id === selectedModel; });
+    mainModelSelect.value = hasModel ? selectedModel : (models[0] ? String(models[0].id) : MAIN_MODEL_DEFAULT);
+    if(!hasModel) setMainModel(mainModelSelect.value);
+    mainModelSelect.addEventListener('change', function(){
+      const v = String(mainModelSelect.value || '').trim();
+      if(v){
+        setMainModel(v);
+        toast('Main model set to ' + v);
+      }
+    });
+    mainModelSelect.addEventListener('focus', async function(){
+      const fresh = await fetchMainPuterModels(true);
+      if(!Array.isArray(fresh) || !fresh.length) return;
+      const current = getMainModel();
+      mainModelSelect.innerHTML = '';
+      for(let i=0;i<fresh.length;i+=1){
+        const m = fresh[i];
+        const o = document.createElement('option');
+        o.value = m.id;
+        o.textContent = m.label;
+        mainModelSelect.appendChild(o);
+      }
+      const hasCurrent = fresh.some(function(m){ return m.id === current; });
+      mainModelSelect.value = hasCurrent ? current : String(fresh[0].id);
+      if(!hasCurrent) setMainModel(mainModelSelect.value);
+    });
+  }
+
   // Account wiring (Google identity + logout)
   try {
     if(window.Account && window.Account.initAccount){
@@ -741,16 +846,22 @@
           .map(m => ({ role: m.role === 'ai' ? 'assistant' : 'user', content: String(m.content).slice(0, 1200) }))
       : [];
 
-    try{ 
-      const reqBody = {subject:state.subject,language:state.language,student_question:text,history,title:chat.title,email:'guest@student.com'};
-      const res= await (window.Api && window.Api.apiFetch ? window.Api.apiFetch('/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(reqBody)}) : fetch('/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(reqBody)}));
-      const data=await safeReadJson(res);
-      if(!res.ok){
-        throw new Error('AI request failed (HTTP ' + res.status + '): ' + getBackendErrorMessage(data));
+    try{
+      await ensurePuterReady(true);
+      const mainModel = getMainModel();
+      const systemPrompt =
+        'You are The Tutor, a helpful study tutor for Grade 9 students. ' +
+        'Keep answers accurate, clear, and practical. ' +
+        'Current subject: ' + state.subject + '. ' +
+        'Respond in ' + state.language + '.';
+      const chatMessages = [{ role: 'system', content: systemPrompt }].concat(history);
+      const puterResp = await window.puter.ai.chat(chatMessages, { model: mainModel });
+      const answerRaw = extractPuterText(puterResp);
+      if(!answerRaw){
+        throw new Error('Main AI returned an empty response.');
       }
       const lastAi=[...chat.messages].reverse().find(m=>m.role==='ai');
-      const answerRaw = (data && data.answer) ? String(data.answer) : '';
-      const answer = answerRaw ? stripAwardPointsLine(answerRaw) : '⚠️ AI returned an empty response.';
+      const answer = answerRaw ? stripAwardPointsLine(answerRaw) : 'AI returned an empty response.';
       if(lastAi) lastAi.content=answer; emitProgressEvent('g9:ai_response', { chatId: state.active, subject: state.subject, text: answer });
       renderActiveChat(); saveChats(); 
     }
@@ -911,6 +1022,9 @@
   });
 
   // Events
+  initMainModelSelector().catch((e)=>{
+    console.error('Main model selector init failed:', e);
+  });
   if(sendBtn) sendBtn.onclick=sendMessage;
   if(inputBox) inputBox.addEventListener('keydown',(e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(); } });
   if(newChatBtn) newChatBtn.onclick=()=>{ createChat('New Chat'); if(inputBox) inputBox.focus(); };
@@ -932,3 +1046,4 @@
 
   try { if(window.lucide && window.lucide.createIcons) window.lucide.createIcons(); } catch (e) {}
 })();
+
