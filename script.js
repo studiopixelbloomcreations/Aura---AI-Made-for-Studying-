@@ -44,8 +44,8 @@
   let examModePapersLoaded = false;
   let examModePdfLinks = [];
   const MAIN_MODEL_KEY = 'main_model';
-  const ADMIN_UNLOCK_KEY = 'g9_admin_unlock_uid';
-  const MAIN_MODEL_DEFAULT = 'google/gemini-2.5-flash';
+  const ADMIN_UNLOCK_MS = 15000;
+  const MAIN_MODEL_DEFAULT = 'gemini-3-pro-preview';
   const MAIN_MODEL_OPTIONS_FALLBACK = [
     { id: 'google/gemini-2.5-flash', label: 'google/gemini-2.5-flash' },
     { id: 'openai/gpt-5.2-chat', label: 'openai/gpt-5.2-chat' },
@@ -208,6 +208,9 @@
   tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       const tab = btn.dataset.tab;
+      if(tab !== 'settings' && adminUnlocked){
+        setAdminUnlocked(false);
+      }
       tabBtns.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
       btn.classList.add('active'); btn.setAttribute('aria-selected', 'true');
       tabContents.forEach(c => {
@@ -474,34 +477,34 @@
     return null;
   }
 
-  function isAdminUnlocked(){
-    const u = getFirebaseCurrentUser();
-    if(!u || !u.uid) return false;
-    try { return localStorage.getItem(ADMIN_UNLOCK_KEY) === String(u.uid); } catch (e) { return false; }
-  }
+  let adminUnlocked = false;
+  let adminUnlockTimer = null;
 
   function setAdminUnlocked(unlocked){
     const yes = !!unlocked;
+    adminUnlocked = yes;
+    if(adminUnlockTimer){
+      clearTimeout(adminUnlockTimer);
+      adminUnlockTimer = null;
+    }
     if(adminSettingsFields){
       adminSettingsFields.classList.toggle('is-locked', !yes);
       adminSettingsFields.style.display = yes ? '' : 'none';
     }
     if(adminSettingsStatus){
       adminSettingsStatus.textContent = yes
-        ? 'Unlocked for this signed-in account.'
+        ? 'Unlocked for 15 seconds.'
         : 'Locked. Re-authenticate to edit AI models.';
     }
     if(adminUnlockBtn){
       adminUnlockBtn.textContent = yes ? 'Unlocked' : 'Unlock';
     }
-    const u = getFirebaseCurrentUser();
-    try{
-      if(yes && u && u.uid){
-        localStorage.setItem(ADMIN_UNLOCK_KEY, String(u.uid));
-      } else {
-        localStorage.removeItem(ADMIN_UNLOCK_KEY);
-      }
-    } catch (e) {}
+    if(yes){
+      adminUnlockTimer = setTimeout(function(){
+        adminUnlockTimer = null;
+        setAdminUnlocked(false);
+      }, ADMIN_UNLOCK_MS);
+    }
   }
 
   function openAdminUnlockModal(){
@@ -629,10 +632,10 @@
   }
 
   function initAdministrativeSettingsLock(){
-    setAdminUnlocked(isAdminUnlocked());
+    setAdminUnlocked(false);
     if(adminUnlockBtn){
       adminUnlockBtn.addEventListener('click', function(){
-        if(isAdminUnlocked()) return;
+        if(adminUnlocked) return;
         openAdminUnlockModal();
       });
     }
@@ -647,7 +650,8 @@
     try{
       if(window.firebase && firebase.auth && firebase.apps && firebase.apps.length){
         firebase.auth().onAuthStateChanged(function(){
-          setAdminUnlocked(isAdminUnlocked());
+          setAdminUnlocked(false);
+          closeAdminUnlockModal();
         });
       }
     } catch (e) {}

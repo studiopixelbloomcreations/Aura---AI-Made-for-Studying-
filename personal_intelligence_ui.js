@@ -8,7 +8,7 @@
   const STT_TIMEOUT_MS = 22000;
   const STT_RECORD_MS = 8000;
   const PI_MODEL_KEY = "pi_model";
-  const PI_MODEL_DEFAULT = "openai/gpt-5.2-chat";
+  const PI_MODEL_DEFAULT = "gemini-3-pro-preview";
   const PI_ELEVENLABS_VOICE_KEY = "pi_elevenlabs_voice_id";
   const PI_ELEVENLABS_VOICE_DEFAULT = "21m00Tcm4TlvDq8ikWAM";
   const PI_MODEL_OPTIONS_FALLBACK = [
