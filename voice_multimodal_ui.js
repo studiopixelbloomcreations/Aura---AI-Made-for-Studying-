@@ -244,19 +244,29 @@
 
     // Prefer ElevenLabs TTS via backend proxy.
     try {
-      const payload = {
-        text: cleaned,
-        voiceId: getSelectedElevenLabsVoiceId(),
-        stability: 0.5,
-        similarity_boost: 0.75
+      const sendOnce = async (content) => {
+        const payload = {
+          text: String(content || ''),
+          voiceId: getSelectedElevenLabsVoiceId(),
+          stability: 0.5,
+          similarity_boost: 0.75
+        };
+        return apiFetch('/tts/elevenlabs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
       };
 
-      const res = await apiFetch('/tts/elevenlabs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw new Error('HTTP_' + res.status);
+      let res = await sendOnce(cleaned);
+      if (!res.ok && (res.status === 502 || res.status === 503 || res.status === 504)) {
+        res = await sendOnce(cleaned.slice(0, 900));
+      }
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        const detail = (errData && (errData.detail || errData.error)) ? String(errData.detail || errData.error) : ('HTTP_' + res.status);
+        throw new Error(detail);
+      }
       const blob = await res.blob();
       if(!blob || !blob.size) throw new Error('EMPTY_AUDIO');
       const url = URL.createObjectURL(blob);

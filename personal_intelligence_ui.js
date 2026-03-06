@@ -717,24 +717,38 @@
   async function playTutorTTS(text) {
     stopTutorAudio();
     try {
-      const payload = {
-        text: String(text || ""),
-        voiceId: getSelectedElevenLabsVoiceId(),
-        stability: 0.5,
-        similarity_boost: 0.75,
+      const cleanedText = String(text || "").replace(/\s+/g, " ").trim();
+      const sendOnce = async function (textToSpeak) {
+        const payload = {
+          text: String(textToSpeak || ""),
+          voiceId: getSelectedElevenLabsVoiceId(),
+          stability: 0.5,
+          similarity_boost: 0.75,
+        };
+        const r = await (window.Api && window.Api.apiFetch
+          ? window.Api.apiFetch("/tts/elevenlabs", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            })
+          : fetch("/tts/elevenlabs", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            }));
+        return r;
       };
-      const res = await (window.Api && window.Api.apiFetch
-        ? window.Api.apiFetch("/tts/elevenlabs", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          })
-        : fetch("/tts/elevenlabs", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          }));
-      if (!res.ok) throw new Error("ELEVENLABS_HTTP_" + res.status);
+
+      let res = await sendOnce(cleanedText);
+      if (!res.ok && (res.status === 502 || res.status === 503 || res.status === 504)) {
+        const shortened = cleanedText.slice(0, 900);
+        res = await sendOnce(shortened);
+      }
+      if (!res.ok) {
+        const errData = await res.json().catch(function () { return {}; });
+        const errMsg = (errData && (errData.detail || errData.error)) ? String(errData.detail || errData.error) : ("ELEVENLABS_HTTP_" + res.status);
+        throw new Error(errMsg);
+      }
       const blob = await res.blob();
       if (!blob || !blob.size) throw new Error("ELEVENLABS_EMPTY_AUDIO");
       const url = URL.createObjectURL(blob);
@@ -763,7 +777,6 @@
       }
     }
   }
-
   async function askTutorText(text) {
     const t = String(text || "").trim();
     if (!t || !enabled) return;

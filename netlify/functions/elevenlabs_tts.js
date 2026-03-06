@@ -23,6 +23,10 @@ function json(statusCode, obj) {
   );
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 exports.handler = async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return json(200, { ok: true });
   if (event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed' });
@@ -47,56 +51,95 @@ exports.handler = async function handler(event) {
 
   const stability = typeof payload.stability === 'number' ? payload.stability : 0.5;
   const similarity_boost = typeof payload.similarity_boost === 'number' ? payload.similarity_boost : 0.75;
+  const modelFromBody = payload && payload.modelId ? String(payload.modelId).trim() : '';
+  const modelFromEnv = String(process.env.ELEVENLABS_MODEL || '').trim();
+  const outputFormat = String(process.env.ELEVENLABS_OUTPUT_FORMAT || 'mp3_44100_128').trim();
+  const normalizedText = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 3800);
+  const modelsToTry = [];
+  if (modelFromBody) modelsToTry.push(modelFromBody);
+  if (modelFromEnv && !modelsToTry.includes(modelFromEnv)) modelsToTry.push(modelFromEnv);
+  if (!modelsToTry.includes('eleven_turbo_v2_5')) modelsToTry.push('eleven_turbo_v2_5');
+  if (!modelsToTry.includes('eleven_flash_v2_5')) modelsToTry.push('eleven_flash_v2_5');
+  if (!modelsToTry.includes('eleven_multilingual_v2')) modelsToTry.push('eleven_multilingual_v2');
 
   try {
-    const url = `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`;
-
-    const elevenRes = await axios.post(
-      url,
-      {
-        text,
-        voice_settings: {
-          stability,
-          similarity_boost
-        }
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'xi-api-key': ELEVENLABS_API_KEY,
-          Accept: 'audio/mpeg'
+    const requestOnce = async (modelId) => {
+      const url = `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=${encodeURIComponent(outputFormat)}`;
+      return axios.post(
+        url,
+        {
+          text: normalizedText,
+          model_id: modelId,
+          voice_settings: {
+            stability,
+            similarity_boost
+          }
         },
-        responseType: 'arraybuffer',
-        timeout: 60000,
-        validateStatus: () => true
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'xi-api-key': ELEVENLABS_API_KEY,
+            Accept: 'audio/mpeg'
+          },
+          responseType: 'arraybuffer',
+          timeout: 60000,
+          validateStatus: () => true
+        }
+      );
+    };
+
+    let lastStatus = 0;
+    let lastDetail = '';
+    let lastModel = '';
+    for (const modelId of modelsToTry) {
+      // Retry transient upstream failures for each model.
+      for (let attempt = 1; attempt <= 2; attempt += 1) {
+        const elevenRes = await requestOnce(modelId);
+        lastModel = modelId;
+        if (!elevenRes || typeof elevenRes.status !== 'number') {
+          lastStatus = 502;
+          lastDetail = 'Bad response from ElevenLabs';
+          if (attempt < 2) await sleep(220 * attempt);
+          continue;
+        }
+
+        if (elevenRes.status < 400) {
+          const buf = Buffer.from(elevenRes.data || []);
+          if (!buf.length) {
+            lastStatus = 502;
+            lastDetail = 'Empty audio from ElevenLabs';
+            if (attempt < 2) await sleep(220 * attempt);
+            continue;
+          }
+          return response(
+            200,
+            {
+              'content-type': 'audio/mpeg',
+              'cache-control': 'no-store'
+            },
+            buf.toString('base64'),
+            true
+          );
+        }
+
+        lastStatus = elevenRes.status;
+        lastDetail = elevenRes.data ? Buffer.from(elevenRes.data).toString('utf8').slice(0, 1200) : '';
+        // Only retry transient upstream errors. Otherwise break to next model.
+        if ([502, 503, 504, 429].includes(elevenRes.status) && attempt < 2) {
+          await sleep(220 * attempt);
+          continue;
+        }
+        break;
       }
-    );
-
-    if (!elevenRes || typeof elevenRes.status !== 'number') {
-      return json(502, { error: 'Bad response from ElevenLabs' });
     }
 
-    if (elevenRes.status >= 400) {
-      const detail = elevenRes.data ? Buffer.from(elevenRes.data).toString('utf8').slice(0, 1200) : '';
-      return json(502, {
-        error: 'ElevenLabs TTS failed',
-        status: elevenRes.status,
-        detail: detail || undefined
-      });
-    }
-
-    const buf = Buffer.from(elevenRes.data);
-
-    return response(
-      200,
-      {
-        'content-type': 'audio/mpeg',
-        'cache-control': 'no-store'
-      },
-      buf.toString('base64'),
-      true
-    );
+    return json(502, {
+      error: 'ElevenLabs TTS failed',
+      status: lastStatus || 502,
+      model: lastModel || undefined,
+      detail: lastDetail || undefined
+    });
   } catch (e) {
-    return json(500, { error: 'ElevenLabs TTS request failed' });
+    return json(500, { error: 'ElevenLabs TTS request failed', detail: String((e && e.message) || e || '') });
   }
 };
