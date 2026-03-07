@@ -1,63 +1,181 @@
 /* styles.css - MAX liquid glass, gradients, glows, and animations */
 :root {
+  /* Apple-style liquid glass/* vibrant liquid glass wallpaper */
   --wallpaper-url: url('https://images.unsplash.com/photo-1559827260-dc66d52bef19?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80');
+
+  /* Use the vibrant wallpaper directly as background */
   --bg: var(--wallpaper-url);
 
+  /* Advanced liquid glass with SVG distortion */
   --panel: rgba(255, 255, 255, 0.15);
+  /* main glass layer - more translucent */
   --panel-2: rgba(255, 255, 255, 0.08);
+  /* depth layer */
   --glass-blur: 12px;
+  /* intense blur for distortion */
   --glass-highlight: rgba(255, 255, 255, 0.60);
+  /* strong light dispersion */
   --glass-sheen: rgba(255, 255, 255, 0.40);
+  /* light refraction */
   --glass-backlight: radial-gradient(ellipse at 30% 25%, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.10) 40%, rgba(255, 255, 255, 0.00) 80%);
   --glass-border: rgba(255, 255, 255, 0.25);
   --glass-glow: 0 80px 240px rgba(255, 255, 255, 0.18);
   --liquid-anim-duration: 16s;
   --sheen-duration: 8s;
 
+  /* SVG glass distortion filter - realistic liquid glass */
+  svg[style*="display:none"],
+  svg[style*="display: none"] {
+    display: none;
+  }
+
+  /* Advanced liquid glass panel structure */
+  .liquidGlass-panel {
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 12px 12px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 0, 0, 0.2), 0 0 80px rgba(255, 255, 255, 0.1);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 2.2);
+  }
+
+  .liquidGlass-effect {
+    position: absolute;
+    z-index: 0;
+    inset: 0;
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.3) brightness(1.1);
+    filter: url(#glass-distortion) hue-rotate(0deg);
+    overflow: hidden;
+    isolation: isolate;
+    animation: liquidDepthFlow 16s infinite, liquidHueShift 20s infinite;
+  }
+
+  .liquidGlass-tint {
+    z-index: 1;
+    position: absolute;
+    inset: 0;
+    background: var(--glass-backlight);
+    animation: liquidLightDispersion 16s infinite;
+  }
+
+  .liquidGlass-shine {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    overflow: hidden;
+    box-shadow: inset 2px 2px 1px 0 rgba(255, 255, 255, 0.6),
+      inset -1px -1px 1px 1px rgba(255, 255, 255, 0.6),
+      inset 0 0 20px rgba(255, 255, 255, 0.3);
+    animation: liquidRefraction 8s infinite;
+  }
+
+  .liquidGlass-content {
+    z-index: 3;
+    position: relative;
+  }
+
+  /* Live liquid glass animations */
+  @keyframes liquidLightDispersion {
+    0% {
+      background-position: 0% 50%;
+    }
+
+    25% {
+      background-position: 100% 25%;
+    }
+
+    50% {
+      background-position: 100% 75%;
+    }
+
+    75% {
+      background-position: 0% 100%;
+    }
+
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  @keyframes liquidRefraction {
+    0% {
+      transform: translateX(0) translateY(0) rotate(0deg);
+    }
+
+    25% {
+      transform: translateX(10px) translateY(-5px) rotate(1deg);
+    }
+
+    50% {
+      transform: translateX(-5px) translateY(10px) rotate(-1deg);
+    }
+
+    75% {
+      transform: translateX(-10px) translateY(-8px) rotate(0.5deg);
+    }
+
+    100% {
+      transform: translateX(0) translateY(0) rotate(0deg);
+    }
+  }
+
+  @keyframes liquidDepthFlow {
+    0% {
+      backdrop-filter: blur(40px) saturate(1.2);
+    }
+
+    33% {
+      backdrop-filter: blur(60px) saturate(1.4);
+    }
+
+    66% {
+      backdrop-filter: blur(45px) saturate(1.1);
+    }
+
+    100% {
+      backdrop-filter: blur(40px) saturate(1.2);
+    }
+  }
+
+  @keyframes liquidHueShift {
+    0% {
+      filter: url(#glass-distortion) hue-rotate(0deg);
+    }
+
+    25% {
+      filter: url(#glass-distortion) hue-rotate(5deg);
+    }
+
+    50% {
+      filter: url(#glass-distortion) hue-rotate(10deg);
+    }
+
+    75% {
+      filter: url(#glass-distortion) hue-rotate(5deg);
+    }
+
+    100% {
+      filter: url(#glass-distortion) hue-rotate(0deg);
+    }
+  }
+
+  /* Evenly distributed, centered radial background (balanced, pleasant lighting) */
   --text:#041025;
   --muted:#4b5563;
   --accent1:#8b5cf6;
+  /* purple */
   --accent2:#06b6d4;
+  /* cyan */
   --accent3:#ff7ab6;
+  /* pink */
   --radius:22px;
   --shadow:0 30px 120px rgba(10, 20, 40, 0.08);
   --transition-fast:200ms cubic-bezier(.2, .9, .3, 1);
+
+  /* faint backlight to make liquid glass appear softly lit from behind */
   --glass-backlight: radial-gradient(circle at 20% 12%, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.00) 36%);
 }
 
-.liquidGlass-effect {
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-  backdrop-filter: blur(var(--glass-blur)) saturate(1.3) brightness(1.1);
-  filter: url(#glass-distortion) hue-rotate(0deg);
-  overflow: hidden;
-  isolation: isolate;
-}
-
-.liquidGlass-tint {
-  z-index: 1;
-  position: absolute;
-  inset: 0;
-  background: var(--glass-backlight);
-}
-
-.liquidGlass-shine {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  overflow: hidden;
-  box-shadow: inset 2px 2px 1px 0 rgba(255, 255, 255, 0.6),
-    inset -1px -1px 1px 1px rgba(255, 255, 255, 0.6),
-    inset 0 0 20px rgba(255, 255, 255, 0.3);
-}
-
-.liquidGlass-content {
-  z-index: 3;
-  position: relative;
-}
-
 :root[data-theme="dark"] {
+  /* Dark mode with deep space gradient overlay */
   --bg: linear-gradient(135deg,
       rgba(0, 10, 20, 0.8) 0%,
       rgba(0, 15, 30, 0.6) 30%,
@@ -65,6 +183,7 @@
       rgba(0, 5, 15, 0.9) 100%),
     var(--wallpaper-url);
 
+  /* Dark-mode liquid glass: subtle translucence with strong blur */
   --panel: rgba(15, 25, 35, 0.25);
   --panel-2: rgba(10, 20, 30, 0.12);
   --glass-blur: 100px;
@@ -79,28 +198,30 @@
   --accent3: #ff7ab6;
   --radius: 24px;
   --shadow: 0 50px 200px rgba(0, 0, 0, 0.8);
+
+  /* Enhanced backlight for dark mode panels */
   --glass-backlight: radial-gradient(circle at 15% 10%, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08), rgba(255, 255, 255, 0.00) 45%);
 }
 
 /* Full viewport layout */
 * {
-  box-sizing: border-box;
+  box-sizing: border-box
 }
 
+/* ensure the image is used directly, covers the viewport and does not repeat */
 html,
 body {
   height: 100%;
   width: 100%;
   margin: 0;
-  font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', Inter, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans Sinhala', sans-serif;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans Sinhala', sans-serif;
   color: var(--text);
   background-image: var(--bg);
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
   overflow: hidden;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+
 }
 
  .profile-card{
@@ -448,17 +569,18 @@ body {
 .app {
   position: relative;
   z-index: 1;
-  --sidebar-w: 340px;
+  --sidebar-w: 360px;
   width: 100vw;
   height: 100vh;
   display: grid;
   grid-template-columns: var(--sidebar-w) 1fr;
-  grid-template-rows: 80px 1fr;
+  grid-template-rows: 120px 1fr;
   grid-template-areas: "sidebar header" "sidebar main";
-  gap: 16px;
-  padding: 16px;
+  gap: 28px;
+  padding: 28px;
   overflow: hidden;
-  transition: grid-template-columns var(--transition-smooth);
+  transition: grid-template-columns 420ms cubic-bezier(.2, .9, .3, 1);
+  position: relative;
 }
 
 .app::before {
@@ -466,9 +588,12 @@ body {
   position: absolute;
   inset: 0;
   z-index: 0;
+  backdrop-filter: blur(var(--glass-blur));
+  filter: url(#glass-distortion);
+  overflow: hidden;
+  isolation: isolate;
   border-radius: var(--radius);
-  background: transparent;
-  pointer-events: none;
+  background: var(--panel);
 }
 
 .app::after {
@@ -476,6 +601,7 @@ body {
   position: absolute;
   inset: 0;
   z-index: 1;
+  box-shadow: inset 2px 2px 1px 0 rgba(255, 255, 255, 0.5), inset -1px -1px 1px 1px rgba(255, 255, 255, 0.5);
   border-radius: var(--radius);
   pointer-events: none;
 }
@@ -498,7 +624,7 @@ body {
   }
 }
 
-/* Background layer — static, clean */
+/* Enhanced animated background layer with parallax */
 .background-layer {
   position: fixed;
   inset: 0;
@@ -507,26 +633,51 @@ body {
   background-image: var(--wallpaper-url);
   background-size: cover;
   background-position: center center;
-  filter: brightness(1.05) contrast(1.02) saturate(1.08);
-  opacity: 0.7;
-  transform: translateZ(0) scale(1.02);
+  filter: brightness(1.1) contrast(1.05) saturate(1.1);
+  opacity: 0.6;
+  transform: translateZ(0);
+  /* Enhanced liquid movement with more organic flow */
+  animation: bg-liquid-flow var(--liquid-anim-duration) ease-in-out infinite;
+  will-change: transform, filter;
 }
 
-/* Header — Liquid Glass pill */
+/* Enhanced organic liquid flow animation */
+@keyframes bg-liquid-flow {
+  0% {
+    transform: scale(1.02) translate3d(-8px, 4px, 0) rotate(0.5deg);
+  }
+
+  20% {
+    transform: scale(1.03) translate3d(12px, -8px, 0) rotate(-0.3deg);
+  }
+
+  40% {
+    transform: scale(1.04) translate3d(-6px, 12px, 0) rotate(0.7deg);
+  }
+
+  60% {
+    transform: scale(1.035) translate3d(14px, -4px, 0) rotate(-0.4deg);
+  }
+
+  80% {
+    transform: scale(1.025) translate3d(-10px, 8px, 0) rotate(0.2deg);
+  }
+
+  100% {
+    transform: scale(1.02) translate3d(-8px, 4px, 0) rotate(0.5deg);
+  }
+}
+
+/* Header with perfect liquid glass */
 .app-header {
   grid-area: header;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
+  padding: 22px;
   border-radius: var(--radius);
   position: relative;
   overflow: hidden;
-  background: var(--glass-bg);
-  border: var(--glass-border);
-  box-shadow: var(--glass-edge), var(--glass-shadow);
-  backdrop-filter: var(--glass-filter);
-  -webkit-backdrop-filter: var(--glass-filter);
 }
 
 .app-header::before {
@@ -534,6 +685,9 @@ body {
   position: absolute;
   z-index: 0;
   inset: 0;
+  backdrop-filter: blur(var(--glass-blur));
+  filter: url(#glass-distortion);
+  overflow: hidden;
   border-radius: var(--radius);
   pointer-events: none;
 }
@@ -543,9 +697,8 @@ body {
   position: absolute;
   z-index: 1;
   inset: 0;
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.5),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.22));
+  box-shadow: inset 2px 2px 1px 0 rgba(255, 255, 255, 0.45), inset -1px -1px 1px 1px rgba(255, 255, 255, 0.35);
   border-radius: var(--radius);
   pointer-events: none;
 }
@@ -553,6 +706,11 @@ body {
 .app-header>* {
   position: relative;
   z-index: 2;
+}
+
+:root[data-theme="dark"] .app-header::after {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.24));
+  box-shadow: inset 2px 2px 1px 0 rgba(255, 255, 255, 0.55), inset -1px -1px 1px 1px rgba(255, 255, 255, 0.45);
 }
 
 .brand {
@@ -1469,7 +1627,7 @@ body {
   opacity: 0.7;
 }
 
-/* Sidebar — Liquid Glass */
+/* Original sidebar design with perfect liquid glass panel */
 .sidebar {
   grid-area: sidebar;
   border-radius: var(--radius);
@@ -1477,14 +1635,10 @@ body {
   flex-direction: column;
   position: relative;
   overflow: hidden;
-  background: var(--glass-bg);
-  border: var(--glass-border);
-  box-shadow: var(--glass-edge), var(--glass-shadow);
-  backdrop-filter: var(--glass-filter);
-  -webkit-backdrop-filter: var(--glass-filter);
-  transition: transform var(--transition-smooth), opacity 300ms ease;
-  padding: 18px;
-  gap: 14px;
+  box-shadow: 0 12px 12px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 0, 0, 0.2), 0 0 80px rgba(255, 255, 255, 0.1);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 2.2);
+  padding: 24px;
+  gap: 16px;
   min-height: 0;
 }
 
@@ -1492,28 +1646,28 @@ body {
   position: absolute;
   z-index: 0;
   inset: 0;
+  backdrop-filter: blur(var(--glass-blur));
+  filter: url(#glass-distortion);
+  overflow: hidden;
+  isolation: isolate;
   border-radius: var(--radius);
-  pointer-events: none;
 }
 
 .sidebar .liquidGlass-tint {
   z-index: 1;
   position: absolute;
   inset: 0;
-  background: var(--glass-bg);
+  background: var(--panel);
   border-radius: var(--radius);
-  pointer-events: none;
 }
 
 .sidebar .liquidGlass-shine {
   position: absolute;
   inset: 0;
   z-index: 2;
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.5),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  box-shadow: inset 2px 2px 1px 0 rgba(255, 255, 255, 0.5), inset -1px -1px 1px 1px rgba(255, 255, 255, 0.5);
   border-radius: var(--radius);
-  pointer-events: none;
 }
 
 .sidebar .liquidGlass-content {
@@ -1980,7 +2134,7 @@ body {
   display: inline-block
 }
 
-/* Chat area — Liquid Glass */
+/* Chat area with fixed bottom input */
 .chat {
   grid-area: main;
   border-radius: var(--radius);
@@ -1988,40 +2142,36 @@ body {
   flex-direction: column;
   position: relative;
   overflow: hidden;
-  background: var(--glass-bg);
-  border: var(--glass-border);
-  box-shadow: var(--glass-edge), var(--glass-shadow);
-  backdrop-filter: var(--glass-filter);
-  -webkit-backdrop-filter: var(--glass-filter);
-  transition: all var(--transition-smooth);
+  box-shadow: 0 12px 12px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 0, 0, 0.2), 0 0 80px rgba(255, 255, 255, 0.1);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 2.2);
 }
 
 .chat .liquidGlass-effect {
   position: absolute;
   z-index: 0;
   inset: 0;
+  backdrop-filter: blur(var(--glass-blur));
+  filter: url(#glass-distortion);
+  overflow: hidden;
+  isolation: isolate;
   border-radius: var(--radius);
-  pointer-events: none;
 }
 
 .chat .liquidGlass-tint {
   z-index: 1;
   position: absolute;
   inset: 0;
-  background: var(--glass-bg);
+  background: var(--panel);
   border-radius: var(--radius);
-  pointer-events: none;
 }
 
 .chat .liquidGlass-shine {
   position: absolute;
   inset: 0;
   z-index: 2;
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.5),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  box-shadow: inset 2px 2px 1px 0 rgba(255, 255, 255, 0.5), inset -1px -1px 1px 1px rgba(255, 255, 255, 0.5);
   border-radius: var(--radius);
-  pointer-events: none;
 }
 
 .chat .liquidGlass-content {
@@ -2507,22 +2657,22 @@ body {
   display: none !important;
 }
 
-/* Composer — floating glass pill */
+/* Composer with liquid glass inside chat - scaled properly */
 .composer {
-  padding: 10px 14px;
+  padding: 12px 18px 18px 18px;
   flex-shrink: 0;
   position: relative;
-  margin: 0 16px 16px 16px;
+  margin: 0 22px 22px 22px;
   margin-top: auto;
+}
+
+.composer {
+  position: relative;
   overflow: hidden;
-  border-radius: var(--radius-sm);
-  background: var(--glass-bg);
-  border: var(--glass-border);
-  box-shadow: var(--glass-edge), var(--glass-shadow);
-  backdrop-filter: var(--glass-filter-light);
-  -webkit-backdrop-filter: var(--glass-filter-light);
+  border-radius: 14px;
+  background: transparent;
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
 }
 
@@ -2536,8 +2686,11 @@ body {
   position: absolute;
   z-index: 0;
   inset: 0;
-  border-radius: var(--radius-sm);
-  pointer-events: none;
+  backdrop-filter: blur(var(--glass-blur));
+  filter: url(#glass-distortion);
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 14px;
 }
 
 .composer::after {
@@ -2545,16 +2698,19 @@ body {
   position: absolute;
   z-index: 1;
   inset: 0;
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.45),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.10);
-  border-radius: var(--radius-sm);
-  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.22));
+  box-shadow: inset 2px 2px 1px 0 rgba(255, 255, 255, 0.45), inset -1px -1px 1px 1px rgba(255, 255, 255, 0.35);
+  border-radius: 14px;
 }
 
 .composer>* {
   position: relative;
   z-index: 2;
+}
+
+:root[data-theme="dark"] .composer::after {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.24));
+  box-shadow: inset 2px 2px 1px 0 rgba(255, 255, 255, 0.55), inset -1px -1px 1px 1px rgba(255, 255, 255, 0.45);
 }
 
 .upload-btn {
@@ -3553,18 +3709,37 @@ body {
   }
 }
 
-/* Button hover — gentle iOS 26 lift */
-@keyframes btn-gentle-lift {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(-3px); }
+/* Button bounce animation (apply to hover in both themes) */
+@keyframes btn-bounce {
+  0% {
+    transform: translateY(0);
+  }
+
+  30% {
+    transform: translateY(-8px);
+  }
+
+  60% {
+    transform: translateY(0);
+  }
+
+  100% {
+    transform: translateY(0);
+  }
 }
 
 .btn-primary:hover,
 .btn-clear:hover,
 .send:hover,
 .icon-btn:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-elevated);
+  /* Remove conflicting transforms from earlier rules by overriding here */
+  transform: none;
+  /* animation will handle movement */
+  animation: btn-bounce 420ms cubic-bezier(.2, .9, .3, 1);
+  /* Keep a consistent, slightly stronger hover shadow */
+  box-shadow: 0 28px 120px rgba(99, 102, 241, 0.12);
+  /* Ensure background/gradient stays visible */
+  background-image: linear-gradient(90deg, var(--accent1), var(--accent2));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3997,11 +4172,11 @@ body {
   overflow: visible
 }
 
-/* Sidebar: glass background */
+/* Sidebar: layered translucent gradients for strong liquid-glass look */
 .sidebar {
-  background: var(--glass-bg);
-  border: var(--glass-border);
-  box-shadow: var(--glass-edge), var(--glass-shadow);
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.06), rgba(6, 182, 212, 0.03)), linear-gradient(180deg, var(--panel), var(--panel-2));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: var(--shadow);
 }
 
 /* Restore button gradients and ensure white text */
@@ -4184,7 +4359,8 @@ body {
   }
 }
 
-/* ── Button hover normalization: single smooth lift ── */
+/* === Button hover normalization: single smooth move-up (no animations/transparency) === */
+/* Hide decorative pseudo-elements used for shimmer/outline */
 .btn-primary::before,
 .btn-primary::after,
 .btn-clear::before,
@@ -4201,25 +4377,72 @@ body {
   content: none !important;
 }
 
+/* Ensure gradients remain visible for primary-like buttons */
 .btn-primary,
 .btn-clear,
 .send,
 .icon-btn,
 .sidebar-toggle,
 .lang-toggle button {
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  /* smooth transform transition for hover in/out */
+  transition: transform 260ms cubic-bezier(.2, .9, .3, 1), box-shadow 260ms ease;
+  /* remove any CSS animation to prevent double effects */
   animation: none !important;
 }
 
+/* Explicitly preserve gradient backgrounds (do not allow hover rules to clear them) */
+.btn-primary {
+  background-image: linear-gradient(90deg, var(--accent1), var(--accent2)) !important;
+}
+
+.btn-clear {
+  background-image: linear-gradient(90deg, var(--accent1), var(--accent2)) !important;
+}
+
+.send {
+  background-image: linear-gradient(90deg, var(--accent1), var(--accent2)) !important;
+}
+
+.icon-btn,
+.sidebar-toggle,
+.lang-toggle button {
+  background-image: none;
+  /* keep their existing background rules */
+}
+
+/* Single subtle move-up on hover; on leave it will transition back */
 .btn-primary:hover,
 .btn-clear:hover,
 .send:hover,
 .icon-btn:hover,
 .sidebar-toggle:hover,
 .lang-toggle button:hover {
-  transform: translateY(-3px) !important;
-  box-shadow: var(--shadow-elevated) !important;
+  transform: translateY(-6px) !important;
+  /* Preserve box-shadow and gradient; do not change opacity or background */
   animation: none !important;
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+
+  .btn-primary,
+  .btn-clear,
+  .send,
+  .icon-btn,
+  .sidebar-toggle,
+  .lang-toggle button {
+    transition: none !important;
+  }
+
+  .btn-primary:hover,
+  .btn-clear:hover,
+  .send:hover,
+  .icon-btn:hover,
+  .sidebar-toggle:hover,
+  .lang-toggle button:hover {
+    transform: none !important;
+    animation: none !important;
+  }
 }
 
 /* === Animation smoothing tweaks === */
@@ -5015,5 +5238,3 @@ body {
     border-radius: 20px !important;
   }
 }
-
-

@@ -1,0 +1,35 @@
+{
+  "hosting": [
+    {
+      "target": "tutorai-official",
+      "public": ".",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**",
+        "**/venv/**",
+        "**/__pycache__/**",
+        "**/*.py",
+        "**/*.pyc",
+        "api/**",
+        "functions/**",
+        "netlify/**",
+        "src/**",
+        "dist/**",
+        "ExamMode/**",
+        "exam_mode/**",
+        "desktop/**",
+        "tmp_media/**",
+        "**/*.ps1",
+        "**/*.bat",
+        "**/*.exe"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    }
+  ]
+}

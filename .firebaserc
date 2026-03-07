@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "g9-tutor"
+  },
+  "targets": {
+    "g9-tutor": {
+      "hosting": {
+        "tutorai-official": [
+          "tutorai-official"
+        ]
+      }
+    }
+  }
+}
