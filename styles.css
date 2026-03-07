@@ -5404,8 +5404,8 @@ body.liquid26 .lg-liquid-slider::after {
 body.liquid-full-ui {
   --ultra-edge: rgba(255, 255, 255, 0.62);
   --ultra-edge-soft: rgba(255, 255, 255, 0.28);
-  --ultra-fill-top: rgba(255, 255, 255, 0.36);
-  --ultra-fill-bottom: rgba(255, 255, 255, 0.10);
+  --ultra-fill-top: rgba(255, 255, 255, 0.14);
+  --ultra-fill-bottom: rgba(255, 255, 255, 0.03);
   --ultra-shadow: 0 18px 34px rgba(0, 0, 0, 0.32);
 }
 
@@ -5414,7 +5414,7 @@ body.liquid-full-ui .ultra-liquid {
   isolation: isolate;
   border: 1px solid var(--ultra-edge);
   background:
-    radial-gradient(180% 150% at 8% -20%, rgba(255, 255, 255, 0.56) 0%, rgba(255, 255, 255, 0.10) 42%, rgba(255, 255, 255, 0.02) 68%, rgba(255, 255, 255, 0.00) 100%),
+    radial-gradient(180% 150% at 8% -20%, rgba(255, 255, 255, 0.20) 0%, rgba(255, 255, 255, 0.05) 42%, rgba(255, 255, 255, 0.01) 68%, rgba(255, 255, 255, 0.00) 100%),
     linear-gradient(180deg, var(--ultra-fill-top) 0%, var(--ultra-fill-bottom) 100%);
   box-shadow: var(--ultra-shadow);
   overflow: hidden;
@@ -5431,8 +5431,8 @@ body.liquid-full-ui .ultra-liquid::after {
 
 /* Refraction + distortion layer */
 body.liquid-full-ui .ultra-liquid::before {
-  backdrop-filter: blur(6px) saturate(1.6) contrast(1.08);
-  -webkit-backdrop-filter: blur(6px) saturate(1.6) contrast(1.08);
+  backdrop-filter: blur(2px) saturate(1.85) contrast(1.18);
+  -webkit-backdrop-filter: blur(2px) saturate(1.85) contrast(1.18);
   filter: url(#glass-distortion);
   opacity: 0.96;
   z-index: 0;
@@ -5448,15 +5448,15 @@ body.liquid-full-ui .ultra-liquid::after {
     0 0 0 1px rgba(255, 255, 255, 0.14);
   background:
     conic-gradient(from 180deg at 50% 50%,
-      rgba(255, 70, 70, 0.09),
-      rgba(255, 180, 80, 0.09),
-      rgba(255, 255, 110, 0.08),
-      rgba(110, 255, 180, 0.08),
-      rgba(110, 190, 255, 0.09),
-      rgba(180, 120, 255, 0.10),
-      rgba(255, 70, 70, 0.09));
+      rgba(255, 60, 60, 0.18),
+      rgba(255, 170, 60, 0.18),
+      rgba(255, 255, 100, 0.16),
+      rgba(90, 255, 170, 0.16),
+      rgba(80, 180, 255, 0.18),
+      rgba(180, 100, 255, 0.20),
+      rgba(255, 60, 60, 0.18));
   mix-blend-mode: screen;
-  animation: ultraDispersion 8.5s linear infinite;
+  animation: ultraDispersion 5.4s linear infinite;
   z-index: 1;
 }
 
@@ -5466,8 +5466,8 @@ body.liquid-full-ui .ultra-liquid > * {
 }
 
 body.liquid-full-ui .ultra-liquid:hover::before {
-  backdrop-filter: blur(8px) saturate(1.78) contrast(1.1);
-  -webkit-backdrop-filter: blur(8px) saturate(1.78) contrast(1.1);
+  backdrop-filter: blur(3px) saturate(2.0) contrast(1.22);
+  -webkit-backdrop-filter: blur(3px) saturate(2.0) contrast(1.22);
 }
 
 body.liquid-full-ui .ultra-liquid:hover::after {
