@@ -657,6 +657,24 @@
     } catch (e) {}
   }
 
+  function initFrostedGlassUI(){
+    const selectors = [
+      '.app-header', '.sidebar', '.chat', '.welcome-panel', '.composer',
+      '.progress-card', '.summary-card', '.profile-card', '.gamification-card',
+      '.account-profile-card', '.modal-panel', '.admin-settings-card',
+      '.recent-chat-item', '.profile-pill-header', '.header-pills',
+      '.settings-section', '.tab-content', '.chat-messages',
+      '.icon-btn', '.send', '.tab-btn', '.study-goal-btn', '.header-tab',
+      '.theme-toggle-btn', '#adminUnlockBtn', '#adminUnlockConfirm', '#adminUnlockCancel',
+      '.input', '.select', 'input[type=\"text\"]', 'input[type=\"email\"]', 'textarea'
+    ];
+    selectors.forEach(function (s) {
+      document.querySelectorAll(s).forEach(function (el) {
+        el.classList.add('glass-ui');
+      });
+    });
+  }
+
   // Account wiring (Google identity + logout)
   try {
     if(window.Account && window.Account.initAccount){
@@ -1151,6 +1169,7 @@
   });
 
   // Events
+  initFrostedGlassUI();
   initAdministrativeSettingsLock();
   initMainModelSelector().catch((e)=>{
     console.error('Main model selector init failed:', e);

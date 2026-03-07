@@ -1,97 +1,96 @@
-/* Minimal modern login page — liquid glass card, bold gradient background, accessible */
+/* Login page — iOS 26 Liquid Glass */
 :root{
   --accent1:#7c3aed;
   --accent2:#06b6d4;
   --bg1:#e8f6ff;
   --bg2:#b6d4ea;
   --card-w:420px;
-  --radius:18px;
-  --glass: rgba(255,255,255,0.36);
-  --glass-2: rgba(255,255,255,0.12);
-  --glass-blur:36px;
-  --glass-highlight: rgba(255,255,255,0.12);
+  --radius:28px;
+  --radius-sm:16px;
+
+  /* Liquid glass tokens */
+  --panel: rgba(255,255,255,0.14);
+  --panel-2: rgba(255,255,255,0.06);
+  --glass-blur: 60px;
+  --glass-highlight: rgba(255,255,255,0.20);
+  --glass-sheen: rgba(255,255,255,0.12);
+  --glass-specular: rgba(255,255,255,0.50);
+  --glass-border: rgba(255,255,255,0.18);
+  --glass-glow: 0 8px 32px rgba(0,0,0,0.06);
+  --glass-backlight: radial-gradient(ellipse at 30% 0%, rgba(255,255,255,0.16), rgba(255,255,255,0.00) 55%);
+
   --text:#041025;
-  --muted:#6b7280;
-  --shadow: 0 24px 80px rgba(2,6,23,0.12);
+  --muted:#5a6478;
+  --shadow: 0 2px 12px rgba(0,0,0,0.06), 0 8px 32px rgba(0,0,0,0.04);
   --focus: 0 0 0 4px rgba(99,102,241,0.12);
 
-	/* wallpaper (direct link to image) */
-	--wallpaper-url: url('https://thumbs.dreamstime.com/b/abstract-liquid-glass-texture-fluid-blue-light-reflection-background-smooth-liquid-glass-surface-fluid-blue-light-326066693.jpg');
-
-	/* liquid glass tuning for iOS‑26 like feel */
-	--panel: rgba(255,255,255,0.18);   /* very translucent */
-	--panel-2: rgba(255,255,255,0.06);
-	--glass-blur: 72px;                /* strong frosted blur */
-	--glass-highlight: rgba(255,255,255,0.20);
-	--glass-sheen: rgba(255,255,255,0.16);
-	--glass-glow: 0 60px 220px rgba(99,102,241,0.10);
-	--liquid-anim-duration: 10s;
-	--sheen-duration: 6s;
+  --wallpaper-url: url('https://thumbs.dreamstime.com/b/abstract-liquid-glass-texture-fluid-blue-light-reflection-background-smooth-liquid-glass-surface-fluid-blue-light-326066693.jpg');
 }
 
-/* Full viewport layout */
+/* Layout */
 *{box-sizing:border-box}
-html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,Arial;color:var(--text);background:var(--bg1)}
-.login-root{min-height:100vh;display:grid;place-items:center;padding:28px;background:
-  radial-gradient(circle at 10% 10%, rgba(124,58,237,0.06), transparent 18%),
-  linear-gradient(180deg,var(--bg1) 0%, var(--bg2) 100%);}
+html,body{
+  height:100%;
+  margin:0;
+  font-family: -apple-system, 'SF Pro Display', Inter, system-ui, 'Segoe UI', Roboto, Arial;
+  color:var(--text);
+  background:var(--bg1);
+  -webkit-font-smoothing: antialiased;
+}
 
-/* soft animated background accent */
+.login-root{
+  min-height:100vh;
+  display:grid;
+  place-items:center;
+  padding:28px;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(124,58,237,0.04), transparent 18%),
+    linear-gradient(180deg,var(--bg1) 0%, var(--bg2) 100%);
+}
+
+/* Background */
 .background-layer{
   position:fixed;
   inset:0;
   z-index:-3;
   pointer-events:none;
   background-image:
-    linear-gradient(180deg, rgba(12,22,36,0.06), rgba(255,255,255,0.02)),
+    linear-gradient(180deg, rgba(12,22,36,0.04), rgba(255,255,255,0.01)),
     var(--wallpaper-url);
   background-size:cover;
   background-position:center center;
-  filter: contrast(1.05) saturate(1.12) blur(8px);
-  opacity:0.95;
-  transform:translateZ(0);
-  animation: bg-drift calc(var(--liquid-anim-duration) * 1.2) ease-in-out infinite;
+  filter: contrast(1.03) saturate(1.08);
+  opacity:0.9;
+  transform:translateZ(0) scale(1.02);
 }
 
-/* subtle parallax movement */
-@keyframes bg-drift{
-  0%{ transform: translate3d(-8px,0,0) scale(1.02); }
-  50%{ transform: translate3d(8px,-6px,0) scale(1.03); }
-  100%{ transform: translate3d(-8px,0,0) scale(1.02); }
-}
-
-/* Card */
-.login-card{width:100%;max-width:var(--card-w);padding:28px;border-radius:var(--radius);
+/* Card — iOS 26 Liquid Glass */
+.login-card{
+  width:100%;
+  max-width:var(--card-w);
+  padding:28px;
+  border-radius:var(--radius);
   position:relative;
-  overflow:hidden; /* required for animated overlays */
+  overflow:hidden;
   background:
-    linear-gradient(180deg, var(--glass-highlight), rgba(255,255,255,0.00)),
+    linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.04) 100%),
+    var(--glass-backlight),
     linear-gradient(180deg, var(--panel), var(--panel-2));
-  backdrop-filter: blur(var(--glass-blur)) saturate(130%);
-  border:1px solid rgba(255,255,255,0.10);
-  box-shadow: var(--glass-glow), 0 20px 60px rgba(2,6,23,0.12);
-  display:flex;flex-direction:column;gap:18px;align-items:stretch;
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%) brightness(1.04);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%) brightness(1.04);
+  border:1px solid var(--glass-border);
+  box-shadow:
+    var(--glass-glow),
+    inset 0 1px 0 0 var(--glass-specular),
+    inset 0 -1px 0 0 rgba(255,255,255,0.06);
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+  align-items:stretch;
 }
 
-/* soft liquid bokeh / shifting color wash (behind content) */
+/* Subtle sheen sweep */
 .login-card::before{
-  content: "";
-  position: absolute;
-  inset: -30% -20%;
-  background:
-    radial-gradient(35% 30% at 15% 25%, rgba(99,102,241,0.08), transparent 22%),
-    radial-gradient(25% 20% at 80% 70%, rgba(6,182,212,0.06), transparent 18%),
-    radial-gradient(40% 30% at 50% 10%, rgba(139,92,246,0.05), transparent 20%);
-  mix-blend-mode: screen;
-  filter: blur(32px) contrast(1.02);
-  opacity:0.95;
-  transform-origin:center;
-  animation: liquid-shift var(--liquid-anim-duration) ease-in-out infinite;
-  pointer-events:none;
-}
-
-/* glossy sheen sweep on top */
-.login-card::after{
   content: "";
   position: absolute;
   left:-60%;
@@ -100,66 +99,85 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,'Segoe 
   height:200%;
   background: linear-gradient(120deg,
      rgba(255,255,255,0.00) 0%,
-     rgba(255,255,255,0.06) 28%,
-     rgba(255,255,255,0.18) 50%,
-     rgba(255,255,255,0.06) 72%,
+     rgba(255,255,255,0.04) 28%,
+     rgba(255,255,255,0.10) 50%,
+     rgba(255,255,255,0.04) 72%,
      rgba(255,255,255,0.00) 100%);
   transform: skewX(-18deg);
-  filter: blur(10px) saturate(140%);
-  opacity:0.85;
-  animation: sheen-move var(--sheen-duration) ease-in-out infinite;
+  filter: blur(8px);
+  opacity:0.7;
+  animation: sheen-move 10s ease-in-out infinite;
   pointer-events:none;
 }
 
-/* liquid-shift: very slow organic movement */
-@keyframes liquid-shift{
-  0%{ transform: translate3d(-4%,0,0) scale(1); }
-  25%{ transform: translate3d(6%, -3%, 0) scale(1.02); }
-  50%{ transform: translate3d(-6%, 4%, 0) scale(1.01); }
-  75%{ transform: translate3d(3%, -2%, 0) scale(1.02); }
-  100%{ transform: translate3d(-4%,0,0) scale(1); }
-}
-
-/* sheen sweep: left→right sweep with fade */
 @keyframes sheen-move{
   0%{ transform: translateX(-120%) skewX(-18deg); opacity:0; }
-  10%{ opacity:0.6; }
-  50%{ transform: translateX(0%) skewX(-18deg); opacity:0.95; }
-  90%{ opacity:0.5; }
+  10%{ opacity:0.5; }
+  50%{ transform: translateX(0%) skewX(-18deg); opacity:0.8; }
+  90%{ opacity:0.4; }
   100%{ transform: translateX(120%) skewX(-18deg); opacity:0; }
 }
 
-/* Slight elevated hover pop to make glass feel responsive */
+/* Gentle hover lift */
 .login-card:hover{
-  transform: translateY(-6px) scale(1.002);
-  transition: transform 240ms cubic-bezier(.2,.9,.3,1);
+  transform: translateY(-4px);
+  transition: transform 260ms cubic-bezier(.2,.9,.3,1);
 }
 
 /* Header */
 .card-header{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px}
-.logo{width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,var(--accent1),var(--accent2));display:grid;place-items:center;color:white;font-weight:800;font-size:18px;box-shadow:0 8px 40px rgba(124,58,237,0.10)}
+.logo{
+  width:64px;height:64px;
+  border-radius:var(--radius-sm);
+  background:linear-gradient(135deg,var(--accent1),var(--accent2));
+  display:grid;place-items:center;
+  color:white;font-weight:800;font-size:18px;
+  box-shadow:0 8px 32px rgba(124,58,237,0.12);
+}
 .card-header h1{margin:0;font-size:20px}
 .muted{color:var(--muted);font-size:13px;margin:0}
 
 /* Form */
 .login-form{display:flex;flex-direction:column;gap:12px}
-/* make text (full-name) inputs use same styling as email/password */
 .login-form input[type="email"],
 .login-form input[type="password"],
 .login-form input[type="text"]{
-  width:100%;padding:12px 14px;border-radius:12px;border:none;background:rgba(255,255,255,0.7);
-  box-shadow:inset 0 6px 18px rgba(2,6,23,0.04);font-size:15px;color:var(--text)
+  width:100%;padding:12px 14px;
+  border-radius:var(--radius-xs);
+  border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.65);
+  backdrop-filter: blur(12px);
+  box-shadow:inset 0 2px 6px rgba(0,0,0,0.03);
+  font-size:15px;color:var(--text);
 }
-.login-form input:focus{outline:none;box-shadow:var(--focus);border-radius:12px}
+.login-form input:focus{outline:none;box-shadow:var(--focus);border-color:rgba(99,102,241,0.25)}
 
 .row.between{display:flex;justify-content:space-between;align-items:center}
 .remember{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px}
 .link{color:var(--accent1);text-decoration:none;font-size:14px}
 
 /* Buttons */
-.btn-primary{margin-top:6px;padding:12px 14px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--accent1),var(--accent2));color:white;font-weight:700;cursor:pointer;box-shadow:0 14px 60px rgba(99,102,241,0.12)}
-.btn-primary:hover{transform:translateY(-4px);transition:transform 180ms}
-.btn-social{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.9);cursor:pointer}
+.btn-primary{
+  margin-top:6px;padding:12px 14px;
+  border-radius:var(--radius-xs);
+  border:none;
+  background:linear-gradient(90deg,var(--accent1),var(--accent2));
+  color:white;font-weight:700;cursor:pointer;
+  box-shadow:0 8px 32px rgba(99,102,241,0.12);
+  transition: transform 200ms cubic-bezier(.2,.9,.3,1), box-shadow 200ms;
+}
+.btn-primary:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(99,102,241,0.16)}
+
+.btn-social{
+  flex:1;padding:10px;
+  border-radius:var(--radius-xs);
+  border:1px solid var(--glass-border);
+  background:rgba(255,255,255,0.8);
+  backdrop-filter: blur(12px);
+  cursor:pointer;
+  transition: transform 200ms cubic-bezier(.2,.9,.3,1);
+}
+.btn-social:hover{transform:translateY(-2px)}
 
 /* Divider */
 .divider{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13px;margin-top:6px}
@@ -169,7 +187,7 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,'Segoe 
 .small{font-size:13px;text-align:center;color:var(--muted)}
 
 /* Toast */
-.toast{position:relative;margin-top:8px;padding:10px 12px;border-radius:10px;background:rgba(7,16,36,0.9);color:white;font-size:14px;display:inline-block}
+.toast{position:relative;margin-top:8px;padding:10px 12px;border-radius:var(--radius-xs);background:rgba(7,16,36,0.9);color:white;font-size:14px;display:inline-block}
 
 /* Responsive */
 @media (max-width:480px){

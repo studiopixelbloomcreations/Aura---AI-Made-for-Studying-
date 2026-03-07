@@ -16,7 +16,7 @@
   <meta name="twitter:title" content="The Tutor — Grade 9 AI Tutor" />
   <meta name="twitter:description" content="A sweet, friendly AI tutor for Sri Lankan Grade 9 students. Textbook-aligned help with Math, Science, English, and more." />
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="styles.css?v=20260304siri1">
+  <link rel="stylesheet" href="styles.css?v=20260307frosted1">
   <script src="loginRedirect.js"></script>
 </head>
 
@@ -558,13 +558,39 @@
   <script src="ExamModeToggle/ExamModeContext.js?v=20251225"></script>
   <script src="ExamModeToggle/ExamModeUI.js?v=20251225"></script>
   <script src="ExamModeToggle/ExamModeToggle.js?v=20251225"></script>
-  <script src="script.js?v=20260306admin2"></script>
+  <script src="script.js?v=20260307frosted1"></script>
   <script src="personal_intelligence_ui.js?v=20260306puterbrain2"></script>
-  <svg style="display:none">
+  <svg style="display:none" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <filter id="glass-distortion">
-        <feTurbulence baseFrequency="0.08" numOctaves="5" result="noise" />
-        <feDisplacementMap in="SourceGraphic" in2="noise" scale="20" />
+      <!-- Frosted Liquid Glass filter -->
+      <filter id="frosted" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+        <!-- 1. Blur the background for frosted effect -->
+        <feGaussianBlur in="SourceGraphic" stdDeviation="18" result="blur" />
+        <!-- 2. Generate organic noise for refraction distortion -->
+        <feTurbulence type="fractalNoise" baseFrequency="0.012 0.016" numOctaves="3" seed="5" result="noise" />
+        <feGaussianBlur in="noise" stdDeviation="2" result="softNoise" />
+        <!-- 3. Displace the blurred image through noise → refraction -->
+        <feDisplacementMap in="blur" in2="softNoise" scale="12" xChannelSelector="R" yChannelSelector="G" result="refracted" />
+        <!-- 4. Boost brightness + saturation for glass vibrancy -->
+        <feColorMatrix in="refracted" type="matrix"
+          values="1.08 0    0    0 0.02
+                  0    1.08 0    0 0.02
+                  0    0    1.08 0 0.02
+                  0    0    0    1 0" result="bright" />
+        <!-- 5. Blend with original for composite -->
+        <feBlend in="bright" in2="SourceGraphic" mode="normal" />
+      </filter>
+      <!-- Lighter frosted variant for smaller elements -->
+      <filter id="frosted-light" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+        <feTurbulence type="fractalNoise" baseFrequency="0.02 0.024" numOctaves="2" seed="3" result="noise" />
+        <feGaussianBlur in="noise" stdDeviation="1.5" result="softNoise" />
+        <feDisplacementMap in="blur" in2="softNoise" scale="6" xChannelSelector="R" yChannelSelector="G" result="refracted" />
+        <feColorMatrix in="refracted" type="matrix"
+          values="1.05 0    0    0 0.01
+                  0    1.05 0    0 0.01
+                  0    0    1.05 0 0.01
+                  0    0    0    1 0" />
       </filter>
     </defs>
   </svg>
