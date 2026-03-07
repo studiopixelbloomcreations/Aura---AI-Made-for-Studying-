@@ -16,7 +16,7 @@
   <meta name="twitter:title" content="The Tutor — Grade 9 AI Tutor" />
   <meta name="twitter:description" content="A sweet, friendly AI tutor for Sri Lankan Grade 9 students. Textbook-aligned help with Math, Science, English, and more." />
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="styles.css?v=20260307liquidfull2">
+  <link rel="stylesheet" href="styles.css?v=20260304siri1">
   <script src="loginRedirect.js"></script>
 </head>
 
@@ -558,23 +558,13 @@
   <script src="ExamModeToggle/ExamModeContext.js?v=20251225"></script>
   <script src="ExamModeToggle/ExamModeUI.js?v=20251225"></script>
   <script src="ExamModeToggle/ExamModeToggle.js?v=20251225"></script>
-  <script src="script.js?v=20260307liquidfull1"></script>
+  <script src="script.js?v=20260306admin2"></script>
   <script src="personal_intelligence_ui.js?v=20260306puterbrain2"></script>
   <svg style="display:none">
     <defs>
-      <filter id="glass-distortion" x="0%" y="0%" width="100%" height="100%" filterUnits="objectBoundingBox">
-        <feTurbulence type="fractalNoise" baseFrequency="0.001 0.005" numOctaves="1" seed="17" result="turbulence" />
-        <feComponentTransfer in="turbulence" result="mapped">
-          <feFuncR type="gamma" amplitude="1" exponent="10" offset="0.5" />
-          <feFuncG type="gamma" amplitude="0" exponent="1" offset="0" />
-          <feFuncB type="gamma" amplitude="0" exponent="1" offset="0.5" />
-        </feComponentTransfer>
-        <feGaussianBlur in="turbulence" stdDeviation="3" result="softMap" />
-        <feSpecularLighting in="softMap" surfaceScale="5" specularConstant="1" specularExponent="100" lighting-color="white" result="specLight">
-          <fePointLight x="-200" y="-200" z="300" />
-        </feSpecularLighting>
-        <feComposite in="specLight" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="litImage" />
-        <feDisplacementMap in="SourceGraphic" in2="softMap" scale="200" xChannelSelector="R" yChannelSelector="G" />
+      <filter id="glass-distortion">
+        <feTurbulence baseFrequency="0.08" numOctaves="5" result="noise" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="20" />
       </filter>
     </defs>
   </svg>
