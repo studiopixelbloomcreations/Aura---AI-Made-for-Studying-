@@ -16,12 +16,168 @@
   <meta name="twitter:title" content="The Tutor — Grade 9 AI Tutor" />
   <meta name="twitter:description" content="A sweet, friendly AI tutor for Sri Lankan Grade 9 students. Textbook-aligned help with Math, Science, English, and more." />
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="styles.css?v=20260304siri1">
+  <link rel="stylesheet" href="styles.css?v=20260307landing3">
   <script src="loginRedirect.js"></script>
 </head>
 
-<body>
+<body class="lp-gate">
   <noscript>This app needs JavaScript enabled to work.</noscript>
+  <script>
+    (function () {
+      if (sessionStorage.getItem('tutor-landing-seen') === '1') {
+        document.body.classList.remove('lp-gate');
+        document.body.classList.add('lp-entered');
+      }
+    })();
+  </script>
+  <section class="lp-shell" id="landingPage" aria-label="Tutor AI Landing Page">
+    <div class="lp-noise" aria-hidden="true"></div>
+    <div class="lp-orb lp-orb-a" aria-hidden="true"></div>
+    <div class="lp-orb lp-orb-b" aria-hidden="true"></div>
+    <div class="lp-orb lp-orb-c" aria-hidden="true"></div>
+
+    <header class="lp-nav">
+      <div class="lp-brand">
+        <span class="lp-brand-mark">T9</span>
+        <span class="lp-brand-text">The Tutor AI</span>
+      </div>
+      <nav class="lp-links" aria-label="Landing page navigation">
+        <a href="#lpFeatures">Features</a>
+        <a href="#lpDemo">Live Demo</a>
+        <a href="#lpFlow">How It Works</a>
+        <a href="#lpPricing">Pricing</a>
+        <a href="#lpVoices">Voices</a>
+        <a href="#lpProof">Results</a>
+      </nav>
+      <button class="lp-nav-cta" id="lpEnterTopBtn" type="button">Launch Tutor</button>
+    </header>
+
+    <div class="lp-hero lp-reveal">
+      <p class="lp-eyebrow">The Tutor AI | Built for Grade 9 in Sri Lanka</p>
+      <h1>AI tutoring that feels personal, fast, and actually useful.</h1>
+      <p class="lp-sub">
+        The Tutor AI explains hard topics in simple steps, adapts to your level, and keeps your momentum high with quizzes, voice, and progress tracking.
+      </p>
+      <div class="lp-actions">
+        <button class="lp-btn-primary" id="lpEnterBtn" type="button">Start Learning Now</button>
+        <a class="lp-btn-ghost" href="#lpFeatures">See Features</a>
+      </div>
+      <div class="lp-proof-row" id="lpProof">
+        <div class="lp-proof-item">
+          <span>24/7</span>
+          <small>Instant AI help</small>
+        </div>
+        <div class="lp-proof-item">
+          <span>4 Core</span>
+          <small>Subjects supported</small>
+        </div>
+        <div class="lp-proof-item">
+          <span>Progress</span>
+          <small>Streaks, points, badges</small>
+        </div>
+      </div>
+    </div>
+
+    <section class="lp-grid" id="lpFeatures" aria-label="Key features">
+      <article class="lp-card lp-reveal">
+        <h3>Adaptive Explain Mode</h3>
+        <p>Concepts are explained at your level, then upgraded step-by-step as your confidence rises.</p>
+      </article>
+      <article class="lp-card lp-reveal">
+        <h3>Exam Ready Drills</h3>
+        <p>Practice prompts aligned to school-level outcomes with immediate corrections and strategy tips.</p>
+      </article>
+      <article class="lp-card lp-reveal">
+        <h3>Voice + Text Intelligence</h3>
+        <p>Speak or type naturally. The tutor responds in clear, structured steps so learning stays focused.</p>
+      </article>
+    </section>
+
+    <section class="lp-demo lp-reveal" id="lpDemo" aria-label="Live tutor demo">
+      <div class="lp-demo-copy">
+        <p class="lp-demo-kicker">Live Demo</p>
+        <h3>See how a real tutoring moment unfolds</h3>
+        <p>Ask. Understand. Improve. The Tutor AI breaks a topic down, checks your understanding, and gives a focused next step.</p>
+      </div>
+      <div class="lp-demo-window" role="presentation">
+        <div class="lp-demo-head">
+          <span></span><span></span><span></span>
+          <strong>The Tutor AI Session</strong>
+        </div>
+        <div class="lp-demo-chat">
+          <div class="lp-bubble lp-user">Can you explain balancing chemical equations?</div>
+          <div class="lp-bubble lp-ai">Absolutely. Start by counting atoms on both sides, then change coefficients only, never subscripts.</div>
+          <div class="lp-bubble lp-ai">Try this: <em>__ H2 + __ O2 -> __ H2O</em>. Want me to solve it with you step-by-step?</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="lp-flow" id="lpFlow" aria-label="How Tutor AI works">
+      <div class="lp-flow-item lp-reveal">
+        <span>01</span>
+        <h4>Ask Anything</h4>
+        <p>Drop a question, upload material, or request a topic review.</p>
+      </div>
+      <div class="lp-flow-item lp-reveal">
+        <span>02</span>
+        <h4>Learn Faster</h4>
+        <p>Receive guided explanations, examples, and follow-up checks instantly.</p>
+      </div>
+      <div class="lp-flow-item lp-reveal">
+        <span>03</span>
+        <h4>Track Mastery</h4>
+        <p>Watch your streak, points, and profile insights improve every day.</p>
+      </div>
+    </section>
+
+    <section class="lp-pricing lp-reveal" id="lpPricing" aria-label="Pricing plans">
+      <div class="lp-pricing-head">
+        <p>Simple plans</p>
+        <h3>Start free. Upgrade when you want deeper learning support.</h3>
+      </div>
+      <div class="lp-pricing-grid">
+        <article class="lp-plan">
+          <div class="lp-plan-tag">Starter</div>
+          <h4>Free</h4>
+          <p class="lp-plan-price">$0<span>/month</span></p>
+          <ul>
+            <li>Daily AI chat support</li>
+            <li>Core subject guidance</li>
+            <li>Basic progress tracking</li>
+          </ul>
+          <button class="lp-plan-btn" id="lpEnterFreeBtn" type="button">Start Free</button>
+        </article>
+        <article class="lp-plan lp-plan-featured">
+          <div class="lp-plan-tag">Most Popular</div>
+          <h4>Scholar Pro</h4>
+          <p class="lp-plan-price">$7<span>/month</span></p>
+          <ul>
+            <li>Everything in Starter</li>
+            <li>Advanced exam drill sets</li>
+            <li>Priority voice tutoring</li>
+            <li>Detailed mastery analytics</li>
+          </ul>
+          <button class="lp-plan-btn" id="lpEnterProBtn" type="button">Choose Pro</button>
+        </article>
+      </div>
+    </section>
+
+    <section class="lp-testimonials lp-reveal" id="lpVoices" aria-label="Student testimonials">
+      <div class="lp-testimonial">
+        <p>"I used to avoid algebra. Now I can solve and explain it myself."</p>
+        <strong>Amaya, Grade 9</strong>
+      </div>
+      <div class="lp-testimonial">
+        <p>"The voice explanations are clear and calm. It feels like a real tutor."</p>
+        <strong>Nethum, Grade 9</strong>
+      </div>
+      <div class="lp-testimonial">
+        <p>"The progress dashboard keeps me consistent. My streak motivates me every day."</p>
+        <strong>Shanuki, Grade 9</strong>
+      </div>
+    </section>
+  </section>
+
   <div class="app" role="application" aria-label="Grade 9 AI Tutor">
     <aside class="sidebar" aria-label="Sidebar" role="region">
       <div class="liquidGlass-effect"></div>
@@ -568,6 +724,48 @@
       </filter>
     </defs>
   </svg>
+  <script>
+    (function () {
+      var body = document.body;
+      var landing = document.getElementById('landingPage');
+      var enterButtons = [
+        document.getElementById('lpEnterBtn'),
+        document.getElementById('lpEnterTopBtn'),
+        document.getElementById('lpEnterFreeBtn'),
+        document.getElementById('lpEnterProBtn')
+      ];
+      if (!landing) return;
+
+      function enterApp() {
+        body.classList.remove('lp-gate');
+        body.classList.add('lp-entered');
+        sessionStorage.setItem('tutor-landing-seen', '1');
+      }
+
+      enterButtons.forEach(function (btn) {
+        if (btn) btn.addEventListener('click', enterApp);
+      });
+
+      var reveals = document.querySelectorAll('.lp-reveal');
+      if ('IntersectionObserver' in window && reveals.length) {
+        var observer = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('lp-reveal-on');
+              observer.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.18 });
+
+        reveals.forEach(function (node, idx) {
+          node.style.transitionDelay = (idx * 90) + 'ms';
+          observer.observe(node);
+        });
+      } else {
+        reveals.forEach(function (node) { node.classList.add('lp-reveal-on'); });
+      }
+    })();
+  </script>
 </body>
 
 </html>

@@ -1,11 +1,14 @@
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
+const {defineSecret} = require('firebase-functions/params');
 const axios = require('axios');
 
 // CORS middleware
 const cors = require('cors')({origin: true});
 
-// Your Groq API key (set in Firebase console)
-const GROQ_API_KEY = functions.config().groq.api_key;
+// Secrets (set in Firebase Secret Manager via CLI)
+const GROQ_API_KEY = defineSecret('GROQ_API_KEY');
+const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
+const ELEVENLABS_API_KEY = defineSecret('ELEVENLABS_API_KEY');
 
 // Health check endpoint
 exports.health = functions.https.onRequest((req, res) => {
@@ -15,7 +18,7 @@ exports.health = functions.https.onRequest((req, res) => {
 });
 
 // Main AI chat endpoint
-exports.ask = functions.https.onRequest(async (req, res) => {
+exports.ask = functions.runWith({secrets: [GROQ_API_KEY, GEMINI_API_KEY, ELEVENLABS_API_KEY]}).https.onRequest(async (req, res) => {
   cors(req, res, async () => {
     if (req.method !== 'POST') {
       return res.status(405).json({ error: 'Method not allowed' });
@@ -30,7 +33,7 @@ exports.ask = functions.https.onRequest(async (req, res) => {
         messages: [
           {
             role: 'system',
-            content: `You are 'The Tutor' — a real, warm Grade 9 teacher in Sri Lanka. Your teaching must be strictly aligned to the official 2024 Sri Lankan Grade 9 print textbooks. Speak in ${language}.`
+            content: `You are 'The Tutor' - a real, warm Grade 9 teacher in Sri Lanka. Your teaching must be strictly aligned to the official 2024 Sri Lankan Grade 9 print textbooks. Speak in ${language}.`
           },
           {
             role: 'user',
@@ -40,7 +43,7 @@ exports.ask = functions.https.onRequest(async (req, res) => {
         temperature: 0.45
       }, {
         headers: {
-          'Authorization': `Bearer ${GROQ_API_KEY}`,
+          'Authorization': `Bearer ${GROQ_API_KEY.value()}`,
           'Content-Type': 'application/json'
         }
       });
@@ -56,7 +59,7 @@ exports.ask = functions.https.onRequest(async (req, res) => {
 });
 
 // Title generation endpoint
-exports.generate_title = functions.https.onRequest(async (req, res) => {
+exports.generate_title = functions.runWith({secrets: [GROQ_API_KEY, GEMINI_API_KEY, ELEVENLABS_API_KEY]}).https.onRequest(async (req, res) => {
   cors(req, res, async () => {
     if (req.method !== 'POST') {
       return res.status(405).json({ error: 'Method not allowed' });
@@ -69,12 +72,12 @@ exports.generate_title = functions.https.onRequest(async (req, res) => {
         model: 'llama-3.1-8b-instant',
         messages: [{
           role: 'user',
-          content: `Generate a short, clear topic title (2–5 words) for this Grade 9 student question: "${question}". Return ONLY the title, no punctuation or quotes.`
+          content: `Generate a short, clear topic title (2-5 words) for this Grade 9 student question: "${question}". Return ONLY the title, no punctuation or quotes.`
         }],
         temperature: 0.5
       }, {
         headers: {
-          'Authorization': `Bearer ${GROQ_API_KEY}`,
+          'Authorization': `Bearer ${GROQ_API_KEY.value()}`,
           'Content-Type': 'application/json'
         }
       });
