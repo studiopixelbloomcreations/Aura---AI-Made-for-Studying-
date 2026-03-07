@@ -657,6 +657,42 @@
     } catch (e) {}
   }
 
+  function initLiquidGlassComponents(){
+    try { document.body.classList.add('liquid26'); } catch (e) {}
+    const surfaceSelectors = [
+      '.app-header', '.sidebar', '.chat', '.welcome-panel', '.composer',
+      '.progress-card', '.summary-card', '.profile-card', '.gamification-card',
+      '.account-profile-card', '.modal-panel', '.admin-settings-card',
+      '.recent-chat-item', '.profile-pill-header', '.header-pills'
+    ];
+    const buttonSelectors = [
+      '.icon-btn', '.send', '.tab-btn', '.study-goal-btn', '.header-tab',
+      '.theme-toggle-btn', '#adminUnlockBtn', '#adminUnlockConfirm', '#adminUnlockCancel'
+    ];
+    const inputSelectors = ['.input', '.select', 'input[type=\"text\"]', 'input[type=\"email\"]', 'textarea'];
+    const menuSelectors = ['.sidebar-tabs', '.header-actions', '.profile-pills-header'];
+
+    surfaceSelectors.forEach(function (s) {
+      document.querySelectorAll(s).forEach(function (el) { el.classList.add('lg-liquid-surface'); });
+    });
+    buttonSelectors.forEach(function (s) {
+      document.querySelectorAll(s).forEach(function (el) { el.classList.add('lg-liquid-btn'); });
+    });
+    inputSelectors.forEach(function (s) {
+      document.querySelectorAll(s).forEach(function (el) { el.classList.add('lg-liquid-input'); });
+    });
+    menuSelectors.forEach(function (s) {
+      document.querySelectorAll(s).forEach(function (el) { el.classList.add('lg-liquid-menu'); });
+    });
+
+    const themeBtn = document.querySelector('.theme-toggle-btn');
+    if(themeBtn) themeBtn.classList.add('lg-liquid-theme-toggle');
+    const modalPanel = document.querySelector('.modal-panel');
+    if(modalPanel) modalPanel.classList.add('lg-liquid-modal');
+    const sliderButtons = document.querySelectorAll('.send, #adminUnlockConfirm');
+    sliderButtons.forEach(function (el) { el.classList.add('lg-liquid-slider'); });
+  }
+
   // Account wiring (Google identity + logout)
   try {
     if(window.Account && window.Account.initAccount){
@@ -1151,6 +1187,7 @@
   });
 
   // Events
+  initLiquidGlassComponents();
   initAdministrativeSettingsLock();
   initMainModelSelector().catch((e)=>{
     console.error('Main model selector init failed:', e);
