@@ -1095,18 +1095,23 @@
       autoLocalEvolutionLastSig = sig;
       autoLocalEvolutionLastAt = now;
 
-      const payloadCode = String(generatedCode || "").trim() || buildFallbackEvolutionCode(userText, updates);
       const out = await window.DesktopAssistant.startEvolution({
-        file_path: "netlify/functions/personal_intelligence_evolution/generated/live_local_test.js",
-        instruction: "Auto-evolve local helper from latest personal info updates while keeping exports safe.",
-        puter_generated_code: payloadCode,
+        file_path: "netlify/functions/personal_intelligence_evolution/Fact Evolution.json",
+        instruction: "Update Fact Evolution JSON from latest personal facts.",
+        fact_evolution: true,
+        user_id: EMAIL,
+        message: String(userText || ""),
+        facts: updates && typeof updates === "object" ? updates : {},
+        puter_generated_code: String(generatedCode || "").trim() || buildFallbackEvolutionCode(userText, updates),
         puter_model: getPIModel(),
         deploy_local: true,
         deploy_cloud: false,
       });
       dbg("local evolution result", out);
-      if (out && out.ok) {
-        addLog("assistant", "Tutor: Local evolution wrote code to generated/live_local_test.js");
+      if (out && out.skipped) {
+        addLog("assistant", "Tutor: Fact already exists. Skipped duplicate update.");
+      } else if (out && out.ok) {
+        addLog("assistant", "Tutor: Local evolution updated Fact Evolution.json");
       } else {
         addLog("assistant", "Tutor: Local evolution did not write code (" + String((out && (out.error || out.stage)) || "unknown") + ").");
       }

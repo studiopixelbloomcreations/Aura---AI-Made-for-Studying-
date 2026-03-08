@@ -37,6 +37,94 @@ function stripCodeFences(text) {
   return src;
 }
 
+function safeJsonParse(text, fallback) {
+  try {
+    return JSON.parse(String(text || ""));
+  } catch (e) {
+    return fallback;
+  }
+}
+
+function sanitizeFactUserId(v) {
+  return String(v || "guest@student.com")
+    .toLowerCase()
+    .replace(/[^a-z0-9._@-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 80) || "guest-student.com";
+}
+
+function normalizeFactMap(input) {
+  const src = input && typeof input === "object" ? input : {};
+  const out = {};
+  const keys = ["name", "school", "city", "home_address", "zip_code", "country", "goal", "preferred_language", "grade"];
+  keys.forEach((k) => {
+    if (typeof src[k] === "boolean") {
+      out[k] = src[k];
+      return;
+    }
+    const v = String(src[k] || "").trim();
+    if (v) out[k] = v.slice(0, 240);
+  });
+  return out;
+}
+
+function normalizeCompareValue(v) {
+  return String(v || "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function buildFactEvolutionJson(existingText, payload) {
+  const base = safeJsonParse(existingText, {}) || {};
+  const users = base.users && typeof base.users === "object" ? base.users : {};
+  const userId = sanitizeFactUserId(payload && payload.user_id);
+  const facts = normalizeFactMap(payload && payload.facts);
+  const msg = String(payload && payload.message || "").slice(0, 900);
+  const prior = users[userId] && typeof users[userId] === "object" ? users[userId] : {};
+  const priorFacts = prior.latest_facts && typeof prior.latest_facts === "object" ? prior.latest_facts : {};
+  const priorEvents = Array.isArray(prior.fact_events) ? prior.fact_events : [];
+  const changedFacts = {};
+  Object.keys(facts).forEach((k) => {
+    const prev = priorFacts[k];
+    const next = facts[k];
+    if (typeof prev === "boolean" || typeof next === "boolean") {
+      if (prev !== next) changedFacts[k] = next;
+      return;
+    }
+    if (normalizeCompareValue(prev) !== normalizeCompareValue(next)) {
+      changedFacts[k] = next;
+    }
+  });
+
+  const mergedFacts = Object.assign({}, priorFacts, changedFacts);
+
+  if (Object.keys(changedFacts).length > 0) {
+    priorEvents.push({
+      id: makeId("fact_evt"),
+      at: toIso(),
+      message: msg,
+      updates: changedFacts,
+    });
+  }
+
+  users[userId] = {
+    user_id: userId,
+    latest_facts: mergedFacts,
+    fact_events: priorEvents.slice(-500),
+    updated_at: toIso(),
+  };
+
+  return {
+    changed: Object.keys(changedFacts).length > 0,
+    changed_facts: changedFacts,
+    text: JSON.stringify({
+      schema_version: 1,
+      file_kind: "Fact Evolution",
+      updated_at: toIso(),
+      users,
+    }, null, 2) + "\n",
+  };
+}
+
 class LiveEvolutionManager {
   constructor(options) {
     this.repoRoot = path.resolve(options.repoRoot);
@@ -132,6 +220,19 @@ class LiveEvolutionManager {
     }
     checks.push({ name: "protected_path", passed: true, detail: "ok" });
 
+    if (extension === ".json") {
+      try {
+        const parsed = JSON.parse(content);
+        const ok = !!(parsed && typeof parsed === "object");
+        checks.push({ name: "json_parse", passed: ok, detail: ok ? "ok" : "json shape invalid" });
+        if (!ok) return { ok: false, checks };
+      } catch (e) {
+        checks.push({ name: "json_parse", passed: false, detail: String(e && e.message ? e.message : e) });
+        return { ok: false, checks };
+      }
+      return { ok: true, checks };
+    }
+
     const forbiddenPatterns = [
       /require\(['"]child_process['"]\)/,
       /\bexec\s*\(/,
@@ -157,16 +258,6 @@ class LiveEvolutionManager {
         detail: syntax.ok ? "ok" : (syntax.stderr || syntax.error || "syntax failed").slice(0, 800),
       });
       if (!syntax.ok) return { ok: false, checks };
-    }
-
-    if (extension === ".json") {
-      try {
-        JSON.parse(content);
-        checks.push({ name: "json_parse", passed: true, detail: "ok" });
-      } catch (e) {
-        checks.push({ name: "json_parse", passed: false, detail: String(e && e.message ? e.message : e) });
-        return { ok: false, checks };
-      }
     }
 
     return { ok: true, checks };
@@ -238,9 +329,34 @@ class LiveEvolutionManager {
     }
 
     const current = fs.existsSync(target.absolute) ? fs.readFileSync(target.absolute, "utf-8") : "";
+    const factEvolutionMode = !!req.fact_evolution;
     const puterCode = stripCodeFences(req.puter_generated_code);
     const modelUsed = String(req.puter_model || process.env.PI_LIVE_MODEL || "gemini-3-pro-preview").trim();
-    if (!puterCode) {
+    let proposedContent = "";
+    if (factEvolutionMode) {
+      const factOut = buildFactEvolutionJson(current, {
+        user_id: req.user_id,
+        message: req.message,
+        facts: req.facts,
+      });
+      if (!factOut.changed) {
+        this._notify("fact_ignored_duplicate", {
+          file_path: target.relative,
+          user_id: req.user_id || "guest@student.com",
+        });
+        return {
+          ok: true,
+          skipped: true,
+          reason: "fact_already_exists",
+          file_path: target.relative,
+        };
+      }
+      proposedContent = factOut.text;
+    } else {
+      proposedContent = puterCode;
+    }
+
+    if (!proposedContent) {
       const err = "PUTER_REQUIRED: pass puter_generated_code from renderer";
       this._notify("failed", { stage: "generate", file_path: target.relative, error: err });
       return { ok: false, stage: "generate", error: err, model_used: modelUsed };
@@ -255,8 +371,8 @@ class LiveEvolutionManager {
       instruction,
       model_used: modelUsed,
       current_content: current,
-      proposed_content: puterCode,
-      inspect: this._inspectDiff(current, puterCode),
+      proposed_content: proposedContent,
+      inspect: this._inspectDiff(current, proposedContent),
       security: null,
       deploy: null,
     };
