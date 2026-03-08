@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "file_kind": "PI Graph Store",
+  "updated_at": "2026-03-08T18:12:28.708Z",
+  "nodes": {
+    "user:self": {
+      "id": "user:self",
+      "type": "user",
+      "payload": {
+        "label": "self"
+      },
+      "updated_at": "2026-03-08T18:12:28.708Z"
+    },
+    "fact:name": {
+      "id": "fact:name",
+      "type": "fact",
+      "payload": {
+        "key": "name",
+        "value": "T H E N U J A."
+      },
+      "updated_at": "2026-03-08T18:12:28.708Z"
+    },
+    "fact:school": {
+      "id": "fact:school",
+      "type": "fact",
+      "payload": {
+        "key": "school",
+        "value": "Saint Anne's College. Got that"
+      },
+      "updated_at": "2026-03-08T18:12:28.708Z"
+    },
+    "fact:best_friend_name": {
+      "id": "fact:best_friend_name",
+      "type": "fact",
+      "payload": {
+        "key": "best_friend_name",
+        "value": "B A V I N D U got that"
+      },
+      "updated_at": "2026-03-08T18:12:28.708Z"
+    },
+    "fact:fact_favorite_subject": {
+      "id": "fact:fact_favorite_subject",
+      "type": "fact",
+      "payload": {
+        "key": "fact_favorite_subject",
+        "value": "ICT"
+      },
+      "updated_at": "2026-03-08T18:12:28.708Z"
+    },
+    "fact:fact_favorite_learning_language": {
+      "id": "fact:fact_favorite_learning_language",
+      "type": "fact",
+      "payload": {
+        "key": "fact_favorite_learning_language",
+        "value": "Python"
+      },
+      "updated_at": "2026-03-08T18:12:28.708Z"
+    },
+    "fact:fact_third_best_friend": {
+      "id": "fact:fact_third_best_friend",
+      "type": "fact",
+      "payload": {
+        "key": "fact_third_best_friend",
+        "value": "M A T H A"
+      },
+      "updated_at": "2026-03-08T18:12:28.708Z"
+    }
+  },
+  "edges": [
+    {
+      "from": "user:self",
+      "relation": "has_fact",
+      "to": "fact:name",
+      "at": "2026-03-08T18:12:28.708Z"
+    },
+    {
+      "from": "user:self",
+      "relation": "has_fact",
+      "to": "fact:school",
+      "at": "2026-03-08T18:12:28.708Z"
+    },
+    {
+      "from": "user:self",
+      "relation": "has_fact",
+      "to": "fact:best_friend_name",
+      "at": "2026-03-08T18:12:28.708Z"
+    },
+    {
+      "from": "user:self",
+      "relation": "has_fact",
+      "to": "fact:fact_favorite_subject",
+      "at": "2026-03-08T18:12:28.708Z"
+    },
+    {
+      "from": "user:self",
+      "relation": "has_fact",
+      "to": "fact:fact_favorite_learning_language",
+      "at": "2026-03-08T18:12:28.708Z"
+    },
+    {
+      "from": "user:self",
+      "relation": "has_fact",
+      "to": "fact:fact_third_best_friend",
+      "at": "2026-03-08T18:12:28.708Z"
+    }
+  ]
+}
