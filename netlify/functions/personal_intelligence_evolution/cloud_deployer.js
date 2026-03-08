@@ -140,6 +140,9 @@ function extractPersonalFacts(knownFacts, memoryUpdates) {
     "zip_code",
     "city",
     "school",
+    "favorite_sport",
+    "favorite_color",
+    "hobbies",
     "country",
     "goal",
     "preferred_language",
@@ -153,6 +156,12 @@ function extractPersonalFacts(knownFacts, memoryUpdates) {
     }
     const v = String(src[k] || "").trim();
     if (v) out[k] = v.slice(0, 240);
+  });
+  Object.keys(src).forEach((k) => {
+    if (/^fact_[a-z0-9_]{1,32}$/i.test(k)) {
+      const v = String(src[k] || "").trim();
+      if (v) out[k] = v.slice(0, 240);
+    }
   });
   return out;
 }

@@ -44,8 +44,19 @@ function sanitizeKnownFacts(input) {
   if (src.zip_code) out.zip_code = sanitizeFactValue(src.zip_code, 20);
   if (src.city) out.city = sanitizeFactValue(src.city, 80);
   if (src.school) out.school = sanitizeFactValue(src.school, 120);
+  if (src.favorite_sport) out.favorite_sport = sanitizeFactValue(src.favorite_sport, 80);
+  if (src.favorite_color) out.favorite_color = sanitizeFactValue(src.favorite_color, 60);
+  if (src.hobbies) out.hobbies = sanitizeFactValue(src.hobbies, 140);
+  if (src.goal) out.goal = sanitizeFactValue(src.goal, 160);
+  if (src.preferred_language) out.preferred_language = sanitizeFactValue(src.preferred_language, 20);
+  if (src.grade) out.grade = sanitizeFactValue(src.grade, 8);
   if (src.country) out.country = sanitizeFactValue(src.country, 80);
   if (typeof src.spotify_connected === "boolean") out.spotify_connected = src.spotify_connected;
+  Object.keys(src).forEach((k) => {
+    if (/^fact_[a-z0-9_]{1,32}$/i.test(k)) {
+      out[k] = sanitizeFactValue(src[k], 180);
+    }
+  });
   return out;
 }
 
@@ -65,10 +76,29 @@ function detectMemoryUpdates(message) {
 
   m = text.match(/\b(?:my school is|i study at)\s+([A-Za-z0-9 .,'&()-]{2,120})/i);
   if (m && m[1]) updates.school = sanitizeFactValue(m[1], 120);
+  m = text.match(/\b(?:my (?:favorite|favourite|fav) sport is|i like to play)\s+([A-Za-z][A-Za-z .'-]{2,60})/i);
+  if (m && m[1]) updates.favorite_sport = sanitizeFactValue(m[1], 80);
+  m = text.match(/\b(?:my (?:favorite|favourite|fav) color is)\s+([A-Za-z][A-Za-z .'-]{2,40})/i);
+  if (m && m[1]) updates.favorite_color = sanitizeFactValue(m[1], 60);
+  m = text.match(/\b(?:my hobby is|my hobbies are|i like)\s+([A-Za-z0-9 ,.'&()-]{2,120})/i);
+  if (m && m[1]) updates.hobbies = sanitizeFactValue(m[1], 140);
+  m = text.match(/\b(?:my country is|i am from)\s+([A-Za-z .'-]{2,80})/i);
+  if (m && m[1]) updates.country = sanitizeFactValue(m[1], 80);
+  m = text.match(/\b(?:i am in grade|my grade is)\s+([0-9]{1,2})/i);
+  if (m && m[1]) updates.grade = sanitizeFactValue(m[1], 8);
+  m = text.match(/\b(?:i prefer|my preferred language is)\s+([A-Za-z]{3,20})/i);
+  if (m && m[1]) updates.preferred_language = sanitizeFactValue(m[1], 20);
 
   m = text.match(/\b(?:my name is|i am|i'm)\s+([A-Za-z][A-Za-z .'-]{1,60})$/i);
   if (m && m[1] && !low.startsWith("i am doing") && !low.startsWith("i am studying")) {
     updates.name = sanitizeFactValue(m[1], 80);
+  }
+
+  m = text.match(/\bmy\s+([A-Za-z][A-Za-z0-9 _-]{1,30})\s+is\s+(.{1,120})$/i);
+  if (m && m[1] && m[2]) {
+    const rawKey = String(m[1]).trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+    const key = rawKey ? ("fact_" + rawKey).slice(0, 42) : "";
+    if (key && !updates[key]) updates[key] = sanitizeFactValue(m[2], 180);
   }
 
   return updates;

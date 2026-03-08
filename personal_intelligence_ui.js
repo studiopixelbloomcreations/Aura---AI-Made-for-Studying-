@@ -543,8 +543,28 @@
     if (m && m[1]) updates.city = String(m[1]).trim().slice(0, 80);
     m = text.match(/\b(?:my school is|i study at)\s+([A-Za-z0-9 .,'&()-]{2,120})/i);
     if (m && m[1]) updates.school = String(m[1]).trim().slice(0, 120);
+    m = text.match(/\b(?:my (?:favorite|favourite|fav) sport is|i like to play)\s+([A-Za-z][A-Za-z .'-]{2,60})/i);
+    if (m && m[1]) updates.favorite_sport = String(m[1]).trim().slice(0, 80);
+    m = text.match(/\b(?:my (?:favorite|favourite|fav) color is)\s+([A-Za-z][A-Za-z .'-]{2,40})/i);
+    if (m && m[1]) updates.favorite_color = String(m[1]).trim().slice(0, 60);
+    m = text.match(/\b(?:my hobby is|my hobbies are|i like)\s+([A-Za-z0-9 ,.'&()-]{2,120})/i);
+    if (m && m[1]) updates.hobbies = String(m[1]).trim().slice(0, 140);
+    m = text.match(/\b(?:my country is|i am from)\s+([A-Za-z .'-]{2,80})/i);
+    if (m && m[1]) updates.country = String(m[1]).trim().slice(0, 80);
+    m = text.match(/\b(?:i am in grade|my grade is)\s+([0-9]{1,2})/i);
+    if (m && m[1]) updates.grade = String(m[1]).trim().slice(0, 4);
+    m = text.match(/\b(?:i prefer|my preferred language is)\s+([A-Za-z]{3,20})/i);
+    if (m && m[1]) updates.preferred_language = String(m[1]).trim().slice(0, 20);
     m = text.match(/\b(?:set home to|set home as|my home is at|home address is|i live at)\s+([A-Za-z0-9 ,./#'-]{6,220})/i);
     if (m && m[1]) updates.home_address = String(m[1]).trim().replace(/\.$/, "").slice(0, 220);
+
+    // Generic personal fact: "my X is Y" -> fact_x
+    m = text.match(/\bmy\s+([A-Za-z][A-Za-z0-9 _-]{1,30})\s+is\s+(.{1,120})$/i);
+    if (m && m[1] && m[2]) {
+      const rawKey = String(m[1]).trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+      const key = rawKey ? ("fact_" + rawKey).slice(0, 42) : "";
+      if (key && !updates[key]) updates[key] = String(m[2]).trim().replace(/\.$/, "").slice(0, 180);
+    }
     return updates;
   }
 
@@ -997,7 +1017,7 @@
     const t = String(text || "").toLowerCase();
     const u = updates && typeof updates === "object" ? updates : {};
     if (Object.keys(u).length > 0) return true;
-    return /my name is|i live|set home|my city|my school|my goal|i prefer/i.test(t);
+    return /my name is|i live|set home|my city|my school|my goal|i prefer|my favorite|my favourite|my hobby|my country|i am from|my\s+[a-z0-9 _-]+\s+is/i.test(t);
   }
 
   async function generatePuterEvolutionCode(userText, language, subject) {
@@ -1095,7 +1115,7 @@
       autoLocalEvolutionLastSig = sig;
       autoLocalEvolutionLastAt = now;
 
-      const out = await window.DesktopAssistant.startEvolution({
+      let out = await window.DesktopAssistant.startEvolution({
         file_path: "netlify/functions/personal_intelligence_evolution/Fact Evolution.json",
         instruction: "Update Fact Evolution JSON from latest personal facts.",
         fact_evolution: true,
@@ -1107,6 +1127,21 @@
         deploy_local: true,
         deploy_cloud: false,
       });
+      if (out && !out.ok && /ENOTDIR/i.test(String(out.error || ""))) {
+        // Fallback for edge path issues in stale desktop builds/filesystems.
+        out = await window.DesktopAssistant.startEvolution({
+          file_path: "netlify/functions/personal_intelligence_evolution/Fact_Evolution.json",
+          instruction: "Update Fact Evolution JSON from latest personal facts.",
+          fact_evolution: true,
+          user_id: EMAIL,
+          message: String(userText || ""),
+          facts: updates && typeof updates === "object" ? updates : {},
+          puter_generated_code: String(generatedCode || "").trim() || buildFallbackEvolutionCode(userText, updates),
+          puter_model: getPIModel(),
+          deploy_local: true,
+          deploy_cloud: false,
+        });
+      }
       dbg("local evolution result", out);
       if (out && out.skipped) {
         addLog("assistant", "Tutor: Fact already exists. Skipped duplicate update.");
