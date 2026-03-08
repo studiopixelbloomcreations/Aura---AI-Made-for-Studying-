@@ -83,6 +83,20 @@
         "rollout_mode": "auto_promote",
         "rollout_risk": 0
       }
+    },
+    {
+      "id": "obs_mmi33tuf_nexxi",
+      "at": "2026-03-08T18:27:10.167Z",
+      "type": "ask_response",
+      "payload": {
+        "ai_provider": "none",
+        "ai_ok": false,
+        "latency_ms": 2,
+        "action_type": "",
+        "evolution": true,
+        "phase2": true,
+        "phase3to9": true
+      }
     }
   ]
 }
