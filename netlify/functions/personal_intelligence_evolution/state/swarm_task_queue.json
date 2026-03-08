@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "file_kind": "PI Swarm Queue",
-  "updated_at": "2026-03-08T18:13:43.563Z",
+  "updated_at": "2026-03-08T18:15:31.030Z",
   "tasks": [
     {
       "id": "research_mmi2mhxf_6nkgab",
@@ -60,11 +60,36 @@
         "leased_at": "2026-03-08T18:13:42.044Z",
         "lease_expires_at": "2026-03-08T18:14:12.044Z"
       }
+    },
+    {
+      "id": "research_mmi2oudy_rry86e",
+      "type": "research",
+      "status": "pending",
+      "priority": 9,
+      "attempts": 0,
+      "max_retries": 3,
+      "created_at": "2026-03-08T18:15:31.030Z",
+      "updated_at": "2026-03-08T18:15:31.030Z",
+      "available_at": "2026-03-08T18:15:31.030Z",
+      "payload": {
+        "message": "research methodology for 12 weeks research in ICT exam strategy for milestone create a study plan and compare two approaches generator skill building work profile algorithms",
+        "known_facts": {
+          "name": "T H E N U J A.",
+          "school": "Saint Anne's College. Got that",
+          "best_friend_name": "B A V I N D U got that",
+          "fact_favorite_subject": "ICT",
+          "fact_favorite_learning_language": "Python",
+          "fact_third_best_friend": "M A T H A"
+        },
+        "created_from": "interaction"
+      },
+      "result": null,
+      "error": ""
     }
   ],
   "dead_letter": [],
   "metrics": {
-    "enqueued": 1,
+    "enqueued": 2,
     "done": 1,
     "retried": 0,
     "failed_terminal": 0
