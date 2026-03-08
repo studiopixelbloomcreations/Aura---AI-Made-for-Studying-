@@ -1,46 +1,28 @@
 {
   "schema_version": 1,
   "file_kind": "Fact Evolution",
-<<<<<<< HEAD
-  "updated_at": "2026-03-08T06:21:29.059Z",
-=======
-  "updated_at": "2026-03-08T06:25:17.039Z",
->>>>>>> ae4eecd (Updating the new Files)
+  "updated_at": "2026-03-08T06:54:42.535Z",
   "users": {
     "guest@student.com": {
       "user_id": "guest@student.com",
       "latest_facts": {
-<<<<<<< HEAD
         "name": "T H E N U J A.",
-        "school": "Saint Anne's College. Got that"
+        "school": "Saint Anne's College. Got that",
+        "fact_favorite_subject": "ICT."
       },
       "fact_events": [
         {
-          "id": "fact_evt_mmhd6lb7_pv0q5l",
-          "at": "2026-03-08T06:21:29.059Z",
-          "message": "Alright, so my name is T H E N U J A.",
+          "id": "fact_evt_mmhedbhj_7exnxd",
+          "at": "2026-03-08T06:54:42.535Z",
+          "message": "So my favorite subject is ICT.",
           "updates": {
             "name": "T H E N U J A.",
-            "school": "Saint Anne's College. Got that"
+            "school": "Saint Anne's College. Got that",
+            "fact_favorite_subject": "ICT."
           }
         }
       ],
-      "updated_at": "2026-03-08T06:21:29.059Z"
-=======
-        "school": "abc"
-      },
-      "fact_events": [
-        {
-          "id": "fact_evt_mmhdbh7w_ylfxies",
-          "at": "2026-03-08T06:25:17.036Z",
-          "message": "my school is abc",
-          "updates": {
-            "school": "abc"
-          }
-        }
-      ],
-      "updated_at": "2026-03-08T06:25:17.038Z"
->>>>>>> ae4eecd (Updating the new Files)
+      "updated_at": "2026-03-08T06:54:42.535Z"
     }
   }
 }
