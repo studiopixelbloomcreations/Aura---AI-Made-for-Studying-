@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, session } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const os = require("os");
 const { exec } = require("child_process");
 const { autoUpdater } = require("electron-updater");
 const { LiveEvolutionManager } = require("./live_evolution_manager");
@@ -53,6 +54,31 @@ function getStartTarget() {
   const envUrl = String(process.env.APP_START_URL || "").trim();
   if (envUrl) return { type: "url", value: envUrl };
   return { type: "url", value: DEFAULT_START_URL };
+}
+
+function resolveRepoRoot() {
+  const candidates = [];
+  const envRoot = String(process.env.TUTOR_REPO_ROOT || "").trim();
+  if (envRoot) candidates.push(envRoot);
+
+  // Common local dev locations.
+  candidates.push(path.resolve(process.cwd()));
+  candidates.push(path.join(os.homedir(), "grade9_ai"));
+  candidates.push("c:\\Users\\thenu\\grade9_ai");
+
+  // Packaged app fallback (often read-only/asar, least preferred).
+  candidates.push(path.resolve(__dirname, ".."));
+
+  for (const c of candidates) {
+    try {
+      const root = path.resolve(c);
+      const hasGit = fs.existsSync(path.join(root, ".git"));
+      const hasNetlifyFns = fs.existsSync(path.join(root, "netlify", "functions"));
+      if (hasGit && hasNetlifyFns) return root;
+    } catch (e) {}
+  }
+
+  return path.resolve(__dirname, "..");
 }
 
 function createWindow() {
@@ -270,6 +296,7 @@ ipcMain.handle("assistant:execute_action", async (_event, action) => {
 });
 
 ipcMain.handle("assistant:evolution_capabilities", async () => {
+  const repoRoot = resolveRepoRoot();
   return {
     ok: true,
     live_code_write: true,
@@ -277,6 +304,7 @@ ipcMain.handle("assistant:evolution_capabilities", async () => {
     supports_local_repo_deploy: true,
     supports_cloud_repo_push: true,
     default_model: String(process.env.PI_LIVE_MODEL || "gemini-3-pro-preview"),
+    repo_root: repoRoot,
   };
 });
 
@@ -344,8 +372,10 @@ app.whenReady().then(() => {
     return allowed.has(permission);
   });
 
+  const repoRoot = resolveRepoRoot();
+
   liveEvolution = new LiveEvolutionManager({
-    repoRoot: path.resolve(__dirname, ".."),
+    repoRoot: repoRoot,
     loadStore,
     saveStore,
     pushAudit,
@@ -362,7 +392,7 @@ app.whenReady().then(() => {
   });
 
   cloudMirror = new CloudRepoMirror({
-    repoRoot: path.resolve(__dirname, ".."),
+    repoRoot: repoRoot,
     emitEvent: (event, payload) => {
       if (mainWindow && mainWindow.webContents) {
         mainWindow.webContents.send("desktop:evolution-event", {
