@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "layers": {
+    "user": {
+      "nodes": {
+        "self": {
+          "id": "self",
+          "payload": {
+            "name": "T H E N U J A.",
+            "school": "Saint Anne's College. Got that",
+            "city": ""
+          },
+          "updated_at": "2026-03-08T18:12:31.407Z"
+        }
+      },
+      "edges": []
+    },
+    "skills": {
+      "nodes": {},
+      "edges": []
+    },
+    "tasks": {
+      "nodes": {
+        "active_context": {
+          "id": "active_context",
+          "payload": {
+            "size": 20
+          },
+          "updated_at": "2026-03-08T18:12:31.407Z"
+        }
+      },
+      "edges": []
+    },
+    "interests": {
+      "nodes": {},
+      "edges": []
+    },
+    "emotion": {
+      "nodes": {},
+      "edges": []
+    }
+  },
+  "updated_at": "2026-03-08T18:12:31.407Z"
+}
