@@ -543,6 +543,8 @@
     if (m && m[1]) updates.city = String(m[1]).trim().slice(0, 80);
     m = text.match(/\b(?:my school is|i study at)\s+([A-Za-z0-9 .,'&()-]{2,120})/i);
     if (m && m[1]) updates.school = String(m[1]).trim().slice(0, 120);
+    m = text.match(/\b(?:my best friend(?:'s)? name is|my bff(?:'s)? name is)\s+([A-Za-z][A-Za-z .'-]{1,80})/i);
+    if (m && m[1]) updates.best_friend_name = String(m[1]).trim().slice(0, 80);
     m = text.match(/\b(?:my (?:favorite|favourite|fav) sport is|i like to play)\s+([A-Za-z][A-Za-z .'-]{2,60})/i);
     if (m && m[1]) updates.favorite_sport = String(m[1]).trim().slice(0, 80);
     m = text.match(/\b(?:my (?:favorite|favourite|fav) subject is)\s+([A-Za-z][A-Za-z0-9 .'-]{1,60})/i);
@@ -1065,6 +1067,60 @@
     ].join("\n");
   }
 
+  function toSchemaCandidatesFromUpdates(updates) {
+    const src = updates && typeof updates === "object" ? updates : {};
+    const candidates = [];
+    Object.keys(src).forEach(function (k) {
+      if (/^fact_[a-z0-9_]{1,64}$/i.test(k)) {
+        const key = String(k).replace(/^fact_/i, "").toLowerCase().trim();
+        if (!key) return;
+        candidates.push({ key: key, category: "custom", source_key: k });
+      }
+    });
+    return candidates;
+  }
+
+  async function inferAdditionalFactsWithPuter(userText, updates) {
+    try {
+      await ensurePuterReady(false);
+      const model = getPIModel();
+      const prompt = [
+        "Extract personal facts from the user message.",
+        "Return strict JSON object only.",
+        "Format: {\"facts\": {\"fact_key\": \"value\"}}",
+        "Use keys like: favorite_subject, favorite_color, favorite_sport, best_friend_name, career_goal, etc.",
+        "If unknown relation appears, use key prefix fact_.",
+        "Do not include anything except JSON.",
+        "Message:",
+        String(userText || "").slice(0, 900),
+        "Known extracted facts:",
+        JSON.stringify(updates || {}).slice(0, 1200),
+      ].join("\n");
+      const resp = await window.puter.ai.chat([{ role: "user", content: prompt }], { model: model });
+      const raw = String(extractPuterText(resp) || "").trim();
+      const s = raw.indexOf("{");
+      const e = raw.lastIndexOf("}");
+      if (s < 0 || e <= s) return {};
+      const parsed = JSON.parse(raw.slice(s, e + 1));
+      const facts = parsed && parsed.facts && typeof parsed.facts === "object" ? parsed.facts : {};
+      const out = {};
+      Object.keys(facts).forEach(function (k) {
+        const keyRaw = String(k || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "_").replace(/^_+|_+$/g, "");
+        if (!keyRaw) return;
+        const val = String(facts[k] || "").trim();
+        if (!val) return;
+        const key = /^(name|school|city|country|grade|preferred_language|favorite_subject|favorite_color|favorite_sport|hobbies|goal|best_friend_name)$/.test(keyRaw)
+          ? keyRaw
+          : (keyRaw.startsWith("fact_") ? keyRaw : ("fact_" + keyRaw));
+        out[key.slice(0, 64)] = val.slice(0, 180);
+      });
+      return out;
+    } catch (e) {
+      dbg("puter fact inference failed", e && e.message);
+      return {};
+    }
+  }
+
   async function sendCloudEvolutionFromPuter(userText, puterAnswer, generatedCodeFromCaller, updatesFromCaller) {
     try {
       const updates = updatesFromCaller && typeof updatesFromCaller === "object"
@@ -1093,6 +1149,7 @@
           },
           puter_generated_code: generatedCode,
           puter_model: getPIModel(),
+          schema_candidates: toSchemaCandidatesFromUpdates(updates),
           memory_context: buildLongTermMemoryContext(),
         }),
       });
@@ -1147,6 +1204,19 @@
           deploy_cloud: false,
         });
       }
+      const schemaCandidates = toSchemaCandidatesFromUpdates(updates);
+      if (schemaCandidates.length > 0) {
+        const schemaOut = await window.DesktopAssistant.startEvolution({
+          file_path: "netlify/functions/personal_intelligence_evolution/Fact Schema.json",
+          instruction: "Update Fact Schema JSON with new custom personal fact keys.",
+          fact_schema: true,
+          schema_candidates: schemaCandidates,
+          puter_model: getPIModel(),
+          deploy_local: true,
+          deploy_cloud: false,
+        });
+        dbg("local schema evolution result", schemaOut);
+      }
       dbg("local evolution result", out);
       if (out && out.skipped) {
         addLog("assistant", "Tutor: Fact already exists. Skipped duplicate update.");
@@ -1165,7 +1235,9 @@
 
   async function triggerAutoEvolutionLocalAndCloud(userText, puterAnswer) {
     try {
-      const updates = detectMemoryUpdatesLocal(userText);
+      let updates = detectMemoryUpdatesLocal(userText);
+      const inferred = await inferAdditionalFactsWithPuter(userText, updates);
+      updates = Object.assign({}, updates, inferred);
       if (!shouldTriggerCloudEvolution(userText, updates)) return;
       const language = localStorage.getItem("g9_language") || "English";
       const subject = localStorage.getItem("g9_subject") || "General";

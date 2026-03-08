@@ -57,7 +57,7 @@ function sanitizeFactUserId(v) {
 function normalizeFactMap(input) {
   const src = input && typeof input === "object" ? input : {};
   const out = {};
-  const keys = ["name", "school", "favorite_sport", "favorite_subject", "favorite_color", "hobbies", "city", "home_address", "zip_code", "country", "goal", "preferred_language", "grade"];
+  const keys = ["name", "school", "best_friend_name", "favorite_sport", "favorite_subject", "favorite_color", "hobbies", "city", "home_address", "zip_code", "country", "goal", "preferred_language", "grade"];
   keys.forEach((k) => {
     if (typeof src[k] === "boolean") {
       out[k] = src[k];
@@ -132,6 +132,43 @@ function buildFactEvolutionJson(existingText, payload) {
       file_kind: "Fact Evolution",
       updated_at: toIso(),
       users,
+    }, null, 2) + "\n",
+  };
+}
+
+function buildFactSchemaJson(existingText, payload) {
+  const base = safeJsonParse(existingText, {}) || {};
+  const categories = base.categories && typeof base.categories === "object" ? base.categories : {};
+  const aliases = base.aliases && typeof base.aliases === "object" ? { ...base.aliases } : {};
+  const custom = Array.isArray(categories.custom) ? categories.custom.slice() : [];
+  const known = new Set();
+  Object.keys(categories).forEach((cat) => {
+    const arr = Array.isArray(categories[cat]) ? categories[cat] : [];
+    arr.forEach((k) => known.add(String(k).toLowerCase()));
+  });
+  custom.forEach((k) => known.add(String(k).toLowerCase()));
+
+  const candidates = Array.isArray(payload && payload.schema_candidates) ? payload.schema_candidates : [];
+  let changed = false;
+  candidates.forEach((entry) => {
+    const key = String(entry && entry.key ? entry.key : "").toLowerCase().trim();
+    if (!key) return;
+    if (known.has(key)) return;
+    custom.push(key);
+    known.add(key);
+    changed = true;
+  });
+
+  categories.custom = custom;
+
+  return {
+    changed,
+    text: JSON.stringify({
+      schema_version: 1,
+      file_kind: "Fact Schema",
+      updated_at: toIso(),
+      categories,
+      aliases,
     }, null, 2) + "\n",
   };
 }
@@ -341,6 +378,7 @@ class LiveEvolutionManager {
 
     const current = fs.existsSync(target.absolute) ? fs.readFileSync(target.absolute, "utf-8") : "";
     const factEvolutionMode = !!req.fact_evolution;
+    const factSchemaMode = !!req.fact_schema;
     const puterCode = stripCodeFences(req.puter_generated_code);
     const modelUsed = String(req.puter_model || process.env.PI_LIVE_MODEL || "gemini-3-pro-preview").trim();
     let proposedContent = "";
@@ -363,6 +401,22 @@ class LiveEvolutionManager {
         };
       }
       proposedContent = factOut.text;
+    } else if (factSchemaMode) {
+      const schemaOut = buildFactSchemaJson(current, {
+        schema_candidates: req.schema_candidates,
+      });
+      if (!schemaOut.changed) {
+        this._notify("schema_ignored_duplicate", {
+          file_path: target.relative,
+        });
+        return {
+          ok: true,
+          skipped: true,
+          reason: "schema_already_exists",
+          file_path: target.relative,
+        };
+      }
+      proposedContent = schemaOut.text;
     } else {
       proposedContent = puterCode;
     }

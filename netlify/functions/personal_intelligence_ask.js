@@ -44,6 +44,7 @@ function sanitizeKnownFacts(input) {
   if (src.zip_code) out.zip_code = sanitizeFactValue(src.zip_code, 20);
   if (src.city) out.city = sanitizeFactValue(src.city, 80);
   if (src.school) out.school = sanitizeFactValue(src.school, 120);
+  if (src.best_friend_name) out.best_friend_name = sanitizeFactValue(src.best_friend_name, 80);
   if (src.favorite_sport) out.favorite_sport = sanitizeFactValue(src.favorite_sport, 80);
   if (src.favorite_color) out.favorite_color = sanitizeFactValue(src.favorite_color, 60);
   if (src.hobbies) out.hobbies = sanitizeFactValue(src.hobbies, 140);
@@ -76,6 +77,8 @@ function detectMemoryUpdates(message) {
 
   m = text.match(/\b(?:my school is|i study at)\s+([A-Za-z0-9 .,'&()-]{2,120})/i);
   if (m && m[1]) updates.school = sanitizeFactValue(m[1], 120);
+  m = text.match(/\b(?:my best friend(?:'s)? name is|my bff(?:'s)? name is)\s+([A-Za-z][A-Za-z .'-]{1,80})/i);
+  if (m && m[1]) updates.best_friend_name = sanitizeFactValue(m[1], 80);
   m = text.match(/\b(?:my (?:favorite|favourite|fav) sport is|i like to play)\s+([A-Za-z][A-Za-z .'-]{2,60})/i);
   if (m && m[1]) updates.favorite_sport = sanitizeFactValue(m[1], 80);
   m = text.match(/\b(?:my (?:favorite|favourite|fav) subject is)\s+([A-Za-z][A-Za-z0-9 .'-]{1,60})/i);
@@ -364,6 +367,7 @@ exports.handler = async function handler(event) {
         memory_updates: mergeKnownFacts(extractedUpdates, actionUpdates),
         puter_generated_code: payload && payload.puter_generated_code,
         puter_model: payload && payload.puter_model,
+        schema_candidates: payload && payload.schema_candidates,
       });
     }
   } catch (e) {

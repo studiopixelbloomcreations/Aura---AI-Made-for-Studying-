@@ -16,6 +16,9 @@ function sanitizeSegment(v) {
 function buildFactsFilePath() {
   return String(process.env.PI_FACT_EVOLUTION_PATH || "netlify/functions/personal_intelligence_evolution/Fact Evolution.json").trim();
 }
+function buildSchemaFilePath() {
+  return String(process.env.PI_FACT_SCHEMA_PATH || "netlify/functions/personal_intelligence_evolution/Fact Schema.json").trim();
+}
 
 function safeJsonParse(text, fallback) {
   try {
@@ -140,6 +143,7 @@ function extractPersonalFacts(knownFacts, memoryUpdates) {
     "zip_code",
     "city",
     "school",
+    "best_friend_name",
     "favorite_sport",
     "favorite_subject",
     "favorite_color",
@@ -164,6 +168,38 @@ function extractPersonalFacts(knownFacts, memoryUpdates) {
       if (v) out[k] = v.slice(0, 240);
     }
   });
+  return out;
+}
+
+function extractSchemaCandidates(facts) {
+  const src = facts && typeof facts === "object" ? facts : {};
+  const out = [];
+  Object.keys(src).forEach((k) => {
+    if (/^fact_[a-z0-9_]{1,64}$/i.test(k)) {
+      const raw = String(k).replace(/^fact_/i, "");
+      if (!raw) return;
+      out.push({
+        key: String(raw).toLowerCase(),
+        category: "custom",
+        source_key: k,
+      });
+    }
+  });
+  return out;
+}
+
+function mergeSchemaCandidates(fromFacts, fromPayload) {
+  const out = [];
+  const seen = new Set();
+  const push = (entry) => {
+    const key = String(entry && entry.key ? entry.key : "").toLowerCase().trim();
+    if (!key) return;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({ key, category: String(entry && entry.category ? entry.category : "custom"), source_key: String(entry && entry.source_key ? entry.source_key : "") });
+  };
+  (Array.isArray(fromFacts) ? fromFacts : []).forEach(push);
+  (Array.isArray(fromPayload) ? fromPayload : []).forEach(push);
   return out;
 }
 
@@ -230,6 +266,40 @@ function buildNextFactEvolutionDoc(existingDoc, data) {
   };
 }
 
+function buildNextFactSchemaDoc(existingDoc, schemaCandidates) {
+  const base = existingDoc && typeof existingDoc === "object" ? existingDoc : {};
+  const categories = base.categories && typeof base.categories === "object" ? base.categories : {};
+  const custom = Array.isArray(categories.custom) ? categories.custom.slice() : [];
+  const aliases = base.aliases && typeof base.aliases === "object" ? { ...base.aliases } : {};
+
+  const known = new Set();
+  Object.keys(categories).forEach((cat) => {
+    const arr = Array.isArray(categories[cat]) ? categories[cat] : [];
+    arr.forEach((k) => known.add(String(k).toLowerCase()));
+  });
+  custom.forEach((k) => known.add(String(k).toLowerCase()));
+
+  let changed = false;
+  (Array.isArray(schemaCandidates) ? schemaCandidates : []).forEach((entry) => {
+    const key = String(entry && entry.key ? entry.key : "").toLowerCase().trim();
+    if (!key) return;
+    if (known.has(key)) return;
+    custom.push(key);
+    known.add(key);
+    changed = true;
+  });
+
+  categories.custom = custom;
+  const doc = {
+    schema_version: 1,
+    file_kind: "Fact Schema",
+    updated_at: new Date().toISOString(),
+    categories,
+    aliases,
+  };
+  return { changed, doc };
+}
+
 async function autoEvolveToGitHub(input) {
   const payload = input && typeof input === "object" ? input : {};
   const userId = sanitizeSegment(payload.user_id || payload.email || payload.uid || "guest@student.com");
@@ -247,6 +317,7 @@ async function autoEvolveToGitHub(input) {
   }
 
   const filePath = buildFactsFilePath();
+  const schemaPath = buildSchemaFilePath();
   const inspect = {
     file_path: filePath,
     user_id: userId,
@@ -307,12 +378,51 @@ async function autoEvolveToGitHub(input) {
     return { ok: false, trace_id: traceId, stages, stage: "deploy", inspect, error: deploy.error || "deploy failed" };
   }
 
+  let schemaDeploy = { ok: true, skipped: true };
+  const schemaCandidates = mergeSchemaCandidates(
+    extractSchemaCandidates(facts),
+    payload && payload.schema_candidates
+  );
+  if (schemaCandidates.length > 0) {
+    const schemaCurrent = await githubGetFile({ token, owner, repo, branch, filePath: schemaPath });
+    if (schemaCurrent.ok) {
+      const schemaExisting = schemaCurrent.exists ? safeJsonParse(schemaCurrent.content, {}) : {};
+      const schemaNext = buildNextFactSchemaDoc(schemaExisting, schemaCandidates);
+      if (schemaNext.changed) {
+        const schemaJson = JSON.stringify(schemaNext.doc, null, 2) + "\n";
+        schemaDeploy = await githubPutFile({
+          token,
+          owner,
+          repo,
+          branch,
+          filePath: schemaPath,
+          content: schemaJson,
+          sha: schemaCurrent.exists ? schemaCurrent.sha : "",
+          commitMessage: `fact-schema(${userId}): add custom fact keys`,
+        });
+      } else {
+        schemaDeploy = { ok: true, skipped: true, reason: "no_new_schema_keys" };
+      }
+    } else {
+      schemaDeploy = { ok: false, error: schemaCurrent.error || "schema load failed" };
+    }
+  }
+  stages.push({
+    stage: "schema_deploy",
+    ok: !!schemaDeploy.ok,
+    skipped: !!schemaDeploy.skipped,
+    commit_sha: schemaDeploy.commit_sha || "",
+    commit_url: schemaDeploy.commit_url || "",
+    error: schemaDeploy.error || "",
+  });
+
   return {
     ok: true,
     trace_id: traceId,
     file_path: filePath,
     inspect,
     deploy,
+    schema_deploy: schemaDeploy,
     stages,
   };
 }

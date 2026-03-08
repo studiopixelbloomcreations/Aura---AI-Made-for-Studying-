@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "file_kind": "Fact Schema",
+  "updated_at": "2026-03-08T00:00:00.000Z",
+  "categories": {
+    "identity": [
+      "name", "full_name", "nickname", "gender", "pronouns", "birth_date", "age", "nationality", "religion", "ethnicity", "blood_type"
+    ],
+    "contact_location": [
+      "home_address", "city", "state", "province", "country", "zip_code", "timezone", "phone", "email"
+    ],
+    "education": [
+      "school", "grade", "favorite_subject", "least_favorite_subject", "learning_style", "preferred_language", "favorite_learning_language", "target_exam", "study_goal"
+    ],
+    "career_finance": [
+      "career_goal", "dream_job", "current_job", "skills", "income_goal", "side_hustle", "business_idea"
+    ],
+    "health_wellbeing": [
+      "allergies", "medical_conditions", "medications", "diet", "sleep_schedule", "fitness_goal", "mental_health_notes"
+    ],
+    "preferences": [
+      "favorite_color", "favorite_food", "favorite_drink", "favorite_movie", "favorite_song", "favorite_music_genre", "favorite_book", "favorite_sport", "favorite_team", "favorite_game", "favorite_animal", "favorite_season", "favorite_place"
+    ],
+    "habits_routines": [
+      "wake_time", "bed_time", "morning_routine", "evening_routine", "weekday_routine", "weekend_routine", "productivity_style"
+    ],
+    "personality_values": [
+      "personality_type", "communication_style", "core_values", "strengths", "weaknesses", "fears", "motivations"
+    ],
+    "relationships_family": [
+      "mother_name", "father_name", "sibling_names", "guardian_name", "best_friend_name", "partner_name", "mentor_name", "family_members", "friend_group"
+    ],
+    "social_life": [
+      "social_handles", "community_groups", "favorite_hangout", "social_anxiety_notes"
+    ],
+    "technology_apps": [
+      "device_type", "favorite_app", "frequently_used_apps", "os", "browser", "coding_languages", "ai_tool_preferences"
+    ],
+    "goals_plans": [
+      "short_term_goals", "long_term_goals", "year_goal", "month_goal", "week_goal", "life_goal", "bucket_list"
+    ],
+    "events_memories": [
+      "important_dates", "birthday", "anniversary", "achievements", "failures_lessons", "memorable_moments"
+    ],
+    "beliefs_worldview": [
+      "political_view", "ethical_beliefs", "spiritual_beliefs"
+    ],
+    "logistics": [
+      "transport_mode", "commute_route", "home_lat_lng", "emergency_contact"
+    ],
+    "custom": []
+  },
+  "aliases": {
+    "fav_subject": "favorite_subject",
+    "favourite_subject": "favorite_subject",
+    "fav_color": "favorite_color",
+    "favourite_color": "favorite_color",
+    "fav_sport": "favorite_sport",
+    "favourite_sport": "favorite_sport",
+    "best_friend": "best_friend_name"
+  }
+}
