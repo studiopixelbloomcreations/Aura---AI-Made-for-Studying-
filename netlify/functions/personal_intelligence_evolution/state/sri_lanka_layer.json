@@ -12,6 +12,19 @@
         "Tamil",
         "English"
       ]
+    },
+    {
+      "at": "2026-03-08T18:13:46.289Z",
+      "locale_hints": {
+        "hasSinhala": false,
+        "hasTamil": false,
+        "hasLk": false
+      },
+      "supported_languages": [
+        "Sinhala",
+        "Tamil",
+        "English"
+      ]
     }
   ]
 }
