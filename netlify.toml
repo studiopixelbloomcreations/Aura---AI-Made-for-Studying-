@@ -42,6 +42,11 @@
   status = 200
 
 [[redirects]]
+  from = "/public-config"
+  to = "/.netlify/functions/public_config"
+  status = 200
+
+[[redirects]]
   from = "/check_answer"
   to = "/.netlify/functions/check_answer"
   status = 200

@@ -1,15 +1,5 @@
 // auth.js
 (function(){
-  const FIREBASE_CONFIG = {
-    apiKey: "AIzaSyAcsiGSQdTK4IokTpphDkphvQ7QbcndvZA",
-    authDomain: "g9-tutor.firebaseapp.com",
-    projectId: "g9-tutor",
-    storageBucket: "g9-tutor.firebasestorage.app",
-    messagingSenderId: "141457677515",
-    appId: "1:141457677515:web:62d2b0e50899fc218f0f4e",
-    measurementId: "G-BNLE95KJF8"
-  };
-
   function toast(msg){
     try {
       if(window.AppToast) return window.AppToast(msg, {duration: 5000});
@@ -28,10 +18,17 @@
   }
 
   function ensureFirebase(){
+    if(window.FirebaseRuntimeConfig && window.FirebaseRuntimeConfig.getFirebase){
+      const fbFromRuntime = window.FirebaseRuntimeConfig.getFirebase();
+      if(fbFromRuntime && fbFromRuntime.apps && fbFromRuntime.apps.length){
+        return fbFromRuntime;
+      }
+    }
     if(!window.firebase) return null;
     try {
       if(!firebase.apps || !firebase.apps.length){
-        firebase.initializeApp(FIREBASE_CONFIG);
+        if(!window.__FIREBASE_CONFIG__) return null;
+        firebase.initializeApp(window.__FIREBASE_CONFIG__);
       }
     } catch (e) {}
     return firebase;
@@ -141,7 +138,14 @@
     if(state.readyPromise) return state.readyPromise;
     state.readyPromise = new Promise((resolve)=>{ state.readyResolve = resolve; });
 
-    const fb = ensureFirebase();
+    let fb = null;
+    try {
+      if(window.FirebaseRuntimeConfig && window.FirebaseRuntimeConfig.ensureInitialized){
+        const runtime = await window.FirebaseRuntimeConfig.ensureInitialized();
+        fb = runtime && runtime.firebase ? runtime.firebase : null;
+      }
+    } catch (e) {}
+    if(!fb) fb = ensureFirebase();
     if(!fb){
       state.ready = true;
       state.user = null;

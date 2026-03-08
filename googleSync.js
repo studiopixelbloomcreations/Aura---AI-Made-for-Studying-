@@ -1,15 +1,5 @@
 // googleSync.js
 (function(){
-  const CONFIG = {
-    apiKey: "AIzaSyAcsiGSQdTK4IokTpphDkphvQ7QbcndvZA",
-    authDomain: "g9-tutor.firebaseapp.com",
-    projectId: "g9-tutor",
-    storageBucket: "g9-tutor.firebasestorage.app",
-    messagingSenderId: "141457677515",
-    appId: "1:141457677515:web:62d2b0e50899fc218f0f4e",
-    measurementId: "G-BNLE95KJF8"
-  };
-
   function toast(msg){
     if(window.AppToast) return window.AppToast(msg);
   }
@@ -26,10 +16,17 @@
   }
 
   function ensureFirebase(){
+    if(window.FirebaseRuntimeConfig && window.FirebaseRuntimeConfig.getFirebase){
+      const fbFromRuntime = window.FirebaseRuntimeConfig.getFirebase();
+      if(fbFromRuntime && fbFromRuntime.apps && fbFromRuntime.apps.length){
+        return fbFromRuntime;
+      }
+    }
     if(!window.firebase) return null;
     try {
       if(!firebase.apps || !firebase.apps.length){
-        firebase.initializeApp(CONFIG);
+        if(!window.__FIREBASE_CONFIG__) return null;
+        firebase.initializeApp(window.__FIREBASE_CONFIG__);
       }
     } catch (e) {}
     return firebase;
@@ -312,7 +309,13 @@
     }, 800);
   }
 
-  function initAuthListener(){
+  async function initAuthListener(){
+    try {
+      if(window.FirebaseRuntimeConfig && window.FirebaseRuntimeConfig.ensureInitialized){
+        await window.FirebaseRuntimeConfig.ensureInitialized();
+      }
+    } catch (e) {}
+
     const refs = getRefs();
     // Backend load should happen even without Firebase available
     try { loadBackend(getUserEmail()); } catch (e) {}
