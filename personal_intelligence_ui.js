@@ -7,6 +7,8 @@
   const TTS_TIMEOUT_MS = 12000;
   const STT_TIMEOUT_MS = 22000;
   const STT_RECORD_MS = 8000;
+  const PI_BATCH_WAIT_MS = 10000;
+  const PI_BATCH_MAX_MESSAGES = 10;
   const PI_MODEL_KEY = "pi_model";
   const PI_MODEL_DEFAULT = "gemini-3-pro-preview";
   const PI_TTS_VOICE_KEY = (window.PuterVoiceCatalog && window.PuterVoiceCatalog.storageKey) ? String(window.PuterVoiceCatalog.storageKey) : "g9_tts_voice";
@@ -54,6 +56,10 @@
   let autoLocalEvolutionBusy = false;
   let autoLocalEvolutionLastSig = "";
   let autoLocalEvolutionLastAt = 0;
+  let pendingPiMessages = [];
+  let pendingPiTimer = null;
+  let pendingPiFlushBusy = false;
+  let pendingPiFlushAgain = false;
   const SILENT_WAV_DATA_URI = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=";
 
   const panel = document.createElement("div");
@@ -436,6 +442,20 @@
       clearTimeout(idleTimer);
       idleTimer = null;
     }
+  }
+
+  function clearPiBatchTimer() {
+    try {
+      if (pendingPiTimer) clearTimeout(pendingPiTimer);
+    } catch (e) {}
+    pendingPiTimer = null;
+  }
+
+  function schedulePiBatchFlush() {
+    clearPiBatchTimer();
+    pendingPiTimer = setTimeout(function () {
+      flushPiBatch("silence_window");
+    }, PI_BATCH_WAIT_MS);
   }
 
   function armIdleTimer() {
@@ -1450,12 +1470,9 @@
       }
     }
   }
-  async function askTutorText(text) {
+  async function runTutorResponseForText(text) {
     const t = String(text || "").trim();
     if (!t || !enabled) return;
-    addLog("user", "You: " + t);
-    pushHistory("user", t);
-    mergeKnownFacts(detectMemoryUpdatesLocal(t));
     setAssistantState("thinking", "Thinking");
     armIdleTimer();
     try {
@@ -1541,6 +1558,54 @@
         setAssistantState("idle", "Idle");
       }
     }
+  }
+
+  async function flushPiBatch(reason) {
+    if (pendingPiFlushBusy) {
+      pendingPiFlushAgain = true;
+      return;
+    }
+    if (!enabled) return;
+    clearPiBatchTimer();
+    if (!pendingPiMessages.length) return;
+
+    pendingPiFlushBusy = true;
+    const batch = pendingPiMessages.slice(0, PI_BATCH_MAX_MESSAGES);
+    pendingPiMessages = pendingPiMessages.slice(batch.length);
+    const combined = batch.map(function (m) { return String(m.text || ""); }).join("\n");
+
+    try {
+      if (batch.length > 1) {
+        addLog("assistant", "Tutor: Processing " + String(batch.length) + " queued messages together.");
+      }
+      await runTutorResponseForText(combined);
+    } finally {
+      pendingPiFlushBusy = false;
+      const needsAgain = pendingPiFlushAgain;
+      pendingPiFlushAgain = false;
+      if (pendingPiMessages.length >= PI_BATCH_MAX_MESSAGES || needsAgain) {
+        flushPiBatch("max_or_again");
+      } else if (pendingPiMessages.length) {
+        schedulePiBatchFlush();
+      }
+    }
+  }
+
+  async function askTutorText(text) {
+    const t = String(text || "").trim();
+    if (!t || !enabled) return;
+    addLog("user", "You: " + t);
+    pushHistory("user", t);
+    mergeKnownFacts(detectMemoryUpdatesLocal(t));
+    pendingPiMessages.push({ text: t, at: Date.now() });
+
+    if (pendingPiMessages.length >= PI_BATCH_MAX_MESSAGES) {
+      flushPiBatch("max_messages");
+      return;
+    }
+    schedulePiBatchFlush();
+    setAssistantState("listening", "Listening");
+    armIdleTimer();
   }
 
   async function startServerListening() {
