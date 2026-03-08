@@ -545,6 +545,8 @@
     if (m && m[1]) updates.school = String(m[1]).trim().slice(0, 120);
     m = text.match(/\b(?:my (?:favorite|favourite|fav) sport is|i like to play)\s+([A-Za-z][A-Za-z .'-]{2,60})/i);
     if (m && m[1]) updates.favorite_sport = String(m[1]).trim().slice(0, 80);
+    m = text.match(/\b(?:my (?:favorite|favourite|fav) subject is)\s+([A-Za-z][A-Za-z0-9 .'-]{1,60})/i);
+    if (m && m[1]) updates.favorite_subject = String(m[1]).trim().slice(0, 80);
     m = text.match(/\b(?:my (?:favorite|favourite|fav) color is)\s+([A-Za-z][A-Za-z .'-]{2,40})/i);
     if (m && m[1]) updates.favorite_color = String(m[1]).trim().slice(0, 60);
     m = text.match(/\b(?:my hobby is|my hobbies are|i like)\s+([A-Za-z0-9 ,.'&()-]{2,120})/i);
@@ -561,9 +563,12 @@
     // Generic personal fact: "my X is Y" -> fact_x
     m = text.match(/\bmy\s+([A-Za-z][A-Za-z0-9 _-]{1,30})\s+is\s+(.{1,120})$/i);
     if (m && m[1] && m[2]) {
-      const rawKey = String(m[1]).trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+      let rawKey = String(m[1]).trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+      if (/^(fav|favourite|favorite)_subject$/.test(rawKey)) rawKey = "favorite_subject";
+      if (/^(fav|favourite|favorite)_color$/.test(rawKey)) rawKey = "favorite_color";
+      if (/^(fav|favourite|favorite)_sport$/.test(rawKey)) rawKey = "favorite_sport";
       const key = rawKey ? ("fact_" + rawKey).slice(0, 42) : "";
-      if (key && !updates[key]) updates[key] = String(m[2]).trim().replace(/\.$/, "").slice(0, 180);
+      if (key && !updates[key] && !updates[rawKey]) updates[key] = String(m[2]).trim().replace(/\.$/, "").slice(0, 180);
     }
     return updates;
   }

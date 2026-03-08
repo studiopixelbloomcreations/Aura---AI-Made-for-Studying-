@@ -141,6 +141,7 @@ function extractPersonalFacts(knownFacts, memoryUpdates) {
     "city",
     "school",
     "favorite_sport",
+    "favorite_subject",
     "favorite_color",
     "hobbies",
     "country",
@@ -167,7 +168,12 @@ function extractPersonalFacts(knownFacts, memoryUpdates) {
 }
 
 function normalizeCompareValue(v) {
-  return String(v || "").trim().replace(/\s+/g, " ").toLowerCase();
+  return String(v || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function buildNextFactEvolutionDoc(existingDoc, data) {

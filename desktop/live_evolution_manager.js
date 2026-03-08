@@ -57,7 +57,7 @@ function sanitizeFactUserId(v) {
 function normalizeFactMap(input) {
   const src = input && typeof input === "object" ? input : {};
   const out = {};
-  const keys = ["name", "school", "favorite_sport", "favorite_color", "hobbies", "city", "home_address", "zip_code", "country", "goal", "preferred_language", "grade"];
+  const keys = ["name", "school", "favorite_sport", "favorite_subject", "favorite_color", "hobbies", "city", "home_address", "zip_code", "country", "goal", "preferred_language", "grade"];
   keys.forEach((k) => {
     if (typeof src[k] === "boolean") {
       out[k] = src[k];
@@ -76,7 +76,12 @@ function normalizeFactMap(input) {
 }
 
 function normalizeCompareValue(v) {
-  return String(v || "").trim().replace(/\s+/g, " ").toLowerCase();
+  return String(v || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function buildFactEvolutionJson(existingText, payload) {

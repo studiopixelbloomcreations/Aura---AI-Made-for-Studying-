@@ -1,7 +1,11 @@
 {
   "schema_version": 1,
   "file_kind": "Fact Evolution",
+<<<<<<< HEAD
   "updated_at": "2026-03-08T07:06:35.964Z",
+=======
+  "updated_at": "2026-03-08T07:06:34.251Z",
+>>>>>>> c46e3b0 (Updating the new Files)
   "users": {
     "guest@student.com": {
       "user_id": "guest@student.com",
@@ -9,7 +13,11 @@
         "name": "T H E N U J A.",
         "school": "Saint Anne's College. Got that",
         "fact_favorite_subject": "ICT",
+<<<<<<< HEAD
         "fact_favorite_learning_language": "Python."
+=======
+        "fact_favorite_learning_language": "Python"
+>>>>>>> c46e3b0 (Updating the new Files)
       },
       "fact_events": [
         {
@@ -23,6 +31,7 @@
           }
         },
         {
+<<<<<<< HEAD
           "id": "fact_evt_mmheslz0_f7jv1i",
           "at": "2026-03-08T07:06:35.964Z",
           "message": "Alright, so my favorite learning language is Python.",
@@ -33,6 +42,25 @@
         }
       ],
       "updated_at": "2026-03-08T07:06:35.964Z"
+=======
+          "id": "fact_evt_mmheprd7_5y9xfhm",
+          "at": "2026-03-08T07:04:22.987Z",
+          "message": "Alright, so my favorite subject is ICT.",
+          "updates": {
+            "fact_favorite_subject": "ICT"
+          }
+        },
+        {
+          "id": "fact_evt_mmheskne_z62kttg",
+          "at": "2026-03-08T07:06:34.251Z",
+          "message": "Alright, so my favorite learning language is Python.",
+          "updates": {
+            "fact_favorite_learning_language": "Python"
+          }
+        }
+      ],
+      "updated_at": "2026-03-08T07:06:34.251Z"
+>>>>>>> c46e3b0 (Updating the new Files)
     }
   }
 }
