@@ -73,9 +73,43 @@ function createWindow() {
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    try {
-      if (url) shell.openExternal(url);
-    } catch (e) {}
+    const target = String(url || "").trim();
+    if (!target) return { action: "deny" };
+
+    // Keep auth/provider popups inside desktop app instead of launching external browser.
+    const isHttp = /^https?:\/\//i.test(target);
+    const isTrusted =
+      /accounts\.google\.com/i.test(target) ||
+      /appleid\.apple\.com/i.test(target) ||
+      /github\.com\/login/i.test(target) ||
+      /auth/i.test(target) ||
+      /puter\.com/i.test(target) ||
+      /tutoraiv3\.netlify\.app/i.test(target) ||
+      /g9-tutor\.firebaseapp\.com/i.test(target);
+
+    if (isHttp && isTrusted) {
+      return {
+        action: "allow",
+        overrideBrowserWindowOptions: {
+          width: 520,
+          height: 760,
+          minWidth: 420,
+          minHeight: 620,
+          autoHideMenuBar: true,
+          parent: mainWindow,
+          modal: false,
+          webPreferences: {
+            contextIsolation: true,
+            nodeIntegration: false,
+            sandbox: true,
+            spellcheck: true,
+          },
+        },
+      };
+    }
+
+    // For unknown external links, keep prior safe behavior.
+    try { shell.openExternal(target); } catch (e) {}
     return { action: "deny" };
   });
 
