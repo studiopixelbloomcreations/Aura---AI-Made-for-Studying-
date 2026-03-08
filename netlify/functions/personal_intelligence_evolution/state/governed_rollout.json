@@ -20,6 +20,13 @@
       "mode": "auto_promote",
       "risk_score": 0,
       "reason": "Low risk"
+    },
+    {
+      "id": "rollout_mmi33syi",
+      "at": "2026-03-08T18:27:09.018Z",
+      "mode": "auto_promote",
+      "risk_score": 0,
+      "reason": "Low risk"
     }
   ]
 }
