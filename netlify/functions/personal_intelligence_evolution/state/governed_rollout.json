@@ -6,6 +6,13 @@
       "mode": "auto_promote",
       "risk_score": 0,
       "reason": "Low risk"
+    },
+    {
+      "id": "rollout_mmi2mlyb",
+      "at": "2026-03-08T18:13:46.787Z",
+      "mode": "auto_promote",
+      "risk_score": 0,
+      "reason": "Low risk"
     }
   ]
 }
