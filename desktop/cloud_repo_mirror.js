@@ -29,24 +29,27 @@ class CloudRepoMirror {
 
   async syncNow() {
     const before = await execAsync("git rev-parse HEAD", this.repoRoot);
-    const pull = await execAsync("git pull --ff-only", this.repoRoot);
+    const fetch = await execAsync("git fetch --all --prune", this.repoRoot);
+    const pull = await execAsync("git pull --rebase --autostash", this.repoRoot);
     const after = await execAsync("git rev-parse HEAD", this.repoRoot);
 
     const changed = before.ok && after.ok && before.stdout.trim() !== after.stdout.trim();
     let files = [];
     if (changed) {
-      const diff = await execAsync("git diff --name-only HEAD@{1} HEAD", this.repoRoot);
+      const diff = await execAsync(`git diff --name-only ${before.stdout.trim()} ${after.stdout.trim()}`, this.repoRoot);
       if (diff.ok) {
         files = diff.stdout.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
       }
     }
 
     const payload = {
-      ok: !!pull.ok,
+      ok: !!(fetch.ok && pull.ok),
       changed,
       before_head: before.ok ? before.stdout.trim() : "",
       after_head: after.ok ? after.stdout.trim() : "",
       files,
+      fetch_stdout: fetch.stdout.slice(0, 1500),
+      fetch_error: fetch.ok ? "" : (fetch.stderr || fetch.error || "git fetch failed").slice(0, 1500),
       pull_stdout: pull.stdout.slice(0, 1500),
       pull_error: pull.ok ? "" : (pull.stderr || pull.error || "git pull failed").slice(0, 1500),
       at: new Date().toISOString(),

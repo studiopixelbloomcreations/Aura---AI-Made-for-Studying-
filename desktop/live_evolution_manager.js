@@ -45,6 +45,22 @@ function safeJsonParse(text, fallback) {
   }
 }
 
+function writeFileAtomicValidated(targetPath, content) {
+  const absolutePath = String(targetPath || "");
+  const text = String(content || "");
+  if (path.extname(absolutePath).toLowerCase() === ".json") {
+    JSON.parse(text);
+  }
+  const dir = path.dirname(absolutePath);
+  fs.mkdirSync(dir, { recursive: true });
+  const temp = path.join(
+    dir,
+    `.tmp_${path.basename(absolutePath)}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+  );
+  fs.writeFileSync(temp, text, "utf-8");
+  fs.renameSync(temp, absolutePath);
+}
+
 function sanitizeFactUserId(v) {
   return String(v || "guest@student.com")
     .toLowerCase()
@@ -510,8 +526,7 @@ class LiveEvolutionManager {
     }
 
     if (deployLocal) {
-      fs.mkdirSync(path.dirname(p.absolute_path), { recursive: true });
-      fs.writeFileSync(p.absolute_path, p.proposed_content, "utf-8");
+      writeFileAtomicValidated(p.absolute_path, p.proposed_content);
     }
 
     let gitInfo = null;

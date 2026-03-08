@@ -7,7 +7,7 @@ const { autoUpdater } = require("electron-updater");
 const { LiveEvolutionManager } = require("./live_evolution_manager");
 const { CloudRepoMirror } = require("./cloud_repo_mirror");
 
-const DEFAULT_START_URL = "https://tutoraiv3.netlify.app/";
+const DEFAULT_START_URL = "https://tutorv4.netlify.app/";
 
 let mainWindow = null;
 let updateNoticeShown = false;
@@ -110,7 +110,7 @@ function createWindow() {
       /github\.com\/login/i.test(target) ||
       /auth/i.test(target) ||
       /puter\.com/i.test(target) ||
-      /tutoraiv3\.netlify\.app/i.test(target) ||
+      /tutorv4\.netlify\.app/i.test(target) ||
       /g9-tutor\.firebaseapp\.com/i.test(target);
 
     if (isHttp && isTrusted) {
