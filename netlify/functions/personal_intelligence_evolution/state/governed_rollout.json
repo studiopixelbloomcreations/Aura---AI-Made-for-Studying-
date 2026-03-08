@@ -1,0 +1,11 @@
+{
+  "events": [
+    {
+      "id": "rollout_mmi2l1dw",
+      "at": "2026-03-08T18:12:33.476Z",
+      "mode": "auto_promote",
+      "risk_score": 0,
+      "reason": "Low risk"
+    }
+  ]
+}
