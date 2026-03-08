@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "file_kind": "PI Swarm Queue",
-  "updated_at": "2026-03-08T18:15:31.030Z",
+  "updated_at": "2026-03-08T18:15:31.832Z",
   "tasks": [
     {
       "id": "research_mmi2mhxf_6nkgab",
@@ -64,13 +64,13 @@
     {
       "id": "research_mmi2oudy_rry86e",
       "type": "research",
-      "status": "pending",
+      "status": "done",
       "priority": 9,
       "attempts": 0,
       "max_retries": 3,
       "created_at": "2026-03-08T18:15:31.030Z",
-      "updated_at": "2026-03-08T18:15:31.030Z",
-      "available_at": "2026-03-08T18:15:31.030Z",
+      "updated_at": "2026-03-08T18:15:31.832Z",
+      "available_at": "2026-03-08T18:15:31.832Z",
       "payload": {
         "message": "research methodology for 12 weeks research in ICT exam strategy for milestone create a study plan and compare two approaches generator skill building work profile algorithms",
         "known_facts": {
@@ -83,14 +83,47 @@
         },
         "created_from": "interaction"
       },
-      "result": null,
-      "error": ""
+      "result": {
+        "ok": true,
+        "executed_at": "2026-03-08T18:15:31.832Z",
+        "task_id": "research_mmi2oudy_rry86e",
+        "task_type": "research",
+        "stages": [
+          {
+            "step": 1,
+            "label": "collect_sources"
+          },
+          {
+            "step": 2,
+            "label": "extract_key_points"
+          },
+          {
+            "step": 3,
+            "label": "compare_options"
+          },
+          {
+            "step": 4,
+            "label": "compose_recommendations"
+          }
+        ],
+        "findings": [
+          "Pipeline executed for: research methodology for 12 weeks research in ICT exam strategy for milestone create a study plan and compare two approaches generator skill building work profile algorithms",
+          "Graph context nodes=7, edges=6"
+        ],
+        "output": "Research execution pipeline completed in cloud mode."
+      },
+      "error": "",
+      "lease": {
+        "worker_id": "w_1_o2jdbl",
+        "leased_at": "2026-03-08T18:15:31.832Z",
+        "lease_expires_at": "2026-03-08T18:16:01.832Z"
+      }
     }
   ],
   "dead_letter": [],
   "metrics": {
     "enqueued": 2,
-    "done": 1,
+    "done": 2,
     "retried": 0,
     "failed_terminal": 0
   }
