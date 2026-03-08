@@ -1,18 +1,18 @@
 {
   "schema_version": 1,
   "file_kind": "PI Swarm Queue",
-  "updated_at": "2026-03-08T18:13:41.571Z",
+  "updated_at": "2026-03-08T18:13:42.045Z",
   "tasks": [
     {
       "id": "research_mmi2mhxf_6nkgab",
       "type": "research",
-      "status": "pending",
+      "status": "done",
       "priority": 9,
       "attempts": 0,
       "max_retries": 3,
       "created_at": "2026-03-08T18:13:41.571Z",
-      "updated_at": "2026-03-08T18:13:41.571Z",
-      "available_at": "2026-03-08T18:13:41.571Z",
+      "updated_at": "2026-03-08T18:13:42.045Z",
+      "available_at": "2026-03-08T18:13:42.045Z",
       "payload": {
         "message": "Research and compare three best weekly grade 9 science revision strategies",
         "known_facts": {
@@ -25,14 +25,47 @@
         },
         "created_from": "interaction"
       },
-      "result": null,
-      "error": ""
+      "result": {
+        "ok": true,
+        "executed_at": "2026-03-08T18:13:42.045Z",
+        "task_id": "research_mmi2mhxf_6nkgab",
+        "task_type": "research",
+        "stages": [
+          {
+            "step": 1,
+            "label": "collect_sources"
+          },
+          {
+            "step": 2,
+            "label": "extract_key_points"
+          },
+          {
+            "step": 3,
+            "label": "compare_options"
+          },
+          {
+            "step": 4,
+            "label": "compose_recommendations"
+          }
+        ],
+        "findings": [
+          "Pipeline executed for: Research and compare three best weekly grade 9 science revision strategies",
+          "Graph context nodes=7, edges=6"
+        ],
+        "output": "Research execution pipeline completed in cloud mode."
+      },
+      "error": "",
+      "lease": {
+        "worker_id": "single_worker",
+        "leased_at": "2026-03-08T18:13:42.044Z",
+        "lease_expires_at": "2026-03-08T18:14:12.044Z"
+      }
     }
   ],
   "dead_letter": [],
   "metrics": {
     "enqueued": 1,
-    "done": 0,
+    "done": 1,
     "retried": 0,
     "failed_terminal": 0
   }
