@@ -1,7 +1,11 @@
 {
   "schema_version": 1,
   "file_kind": "Fact Evolution",
+<<<<<<< HEAD
   "updated_at": "2026-03-08T08:05:40.335Z",
+=======
+  "updated_at": "2026-03-08T08:05:39.877Z",
+>>>>>>> 1ddd1d3 (Updating the new Files)
   "users": {
     "guest@student.com": {
       "user_id": "guest@student.com",
@@ -10,7 +14,11 @@
         "school": "Saint Anne's College. Got that",
         "fact_favorite_subject": "ICT",
         "fact_favorite_learning_language": "Python",
+<<<<<<< HEAD
         "best_friend_name": "B A V I N D U got that"
+=======
+        "best_friend_name": "Bavindu"
+>>>>>>> 1ddd1d3 (Updating the new Files)
       },
       "fact_events": [
         {
@@ -32,6 +40,7 @@
           }
         },
         {
+<<<<<<< HEAD
           "id": "fact_evt_mmhgwktr_l24lz6",
           "at": "2026-03-08T08:05:40.335Z",
           "message": "so my best friend's name is B A V I N D U got that",
@@ -41,6 +50,17 @@
         }
       ],
       "updated_at": "2026-03-08T08:05:40.335Z"
+=======
+          "id": "fact_evt_mmhgwkh1_xzprtem",
+          "at": "2026-03-08T08:05:39.877Z",
+          "message": "so my best friend's name is B A V I N D U got that",
+          "updates": {
+            "best_friend_name": "Bavindu"
+          }
+        }
+      ],
+      "updated_at": "2026-03-08T08:05:39.877Z"
+>>>>>>> 1ddd1d3 (Updating the new Files)
     }
   }
 }

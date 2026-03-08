@@ -9,8 +9,8 @@
   const STT_RECORD_MS = 8000;
   const PI_MODEL_KEY = "pi_model";
   const PI_MODEL_DEFAULT = "gemini-3-pro-preview";
-  const PI_ELEVENLABS_VOICE_KEY = "pi_elevenlabs_voice_id";
-  const PI_ELEVENLABS_VOICE_DEFAULT = "21m00Tcm4TlvDq8ikWAM";
+  const PI_TTS_VOICE_KEY = (window.PuterVoiceCatalog && window.PuterVoiceCatalog.storageKey) ? String(window.PuterVoiceCatalog.storageKey) : "g9_tts_voice";
+  const PI_TTS_VOICE_DEFAULT = (window.PuterVoiceCatalog && window.PuterVoiceCatalog.defaultId) ? String(window.PuterVoiceCatalog.defaultId) : "openai:alloy";
   const PI_MODEL_OPTIONS_FALLBACK = [
     { id: "openai/gpt-5.2-chat", label: "openai/gpt-5.2-chat" },
     { id: "google/gemini-2.5-flash", label: "google/gemini-2.5-flash" },
@@ -470,24 +470,36 @@
     return true;
   }
 
-  function getSelectedElevenLabsVoiceId() {
+  function getSelectedVoiceKey() {
     try {
-      const id = String(localStorage.getItem(PI_ELEVENLABS_VOICE_KEY) || "").trim();
-      return id || PI_ELEVENLABS_VOICE_DEFAULT;
+      const id = String(localStorage.getItem(PI_TTS_VOICE_KEY) || "").trim();
+      return id || PI_TTS_VOICE_DEFAULT;
     } catch (e) {
-      return PI_ELEVENLABS_VOICE_DEFAULT;
+      return PI_TTS_VOICE_DEFAULT;
     }
   }
 
   function getSelectedVoiceId() {
-    return getSelectedElevenLabsVoiceId();
+    return getSelectedVoiceKey();
   }
 
   function setSelectedVoiceId(id) {
     const v = String(id || "").trim();
     if (!v) return false;
-    try { localStorage.setItem(PI_ELEVENLABS_VOICE_KEY, v); } catch (e) {}
+    try { localStorage.setItem(PI_TTS_VOICE_KEY, v); } catch (e) {}
     return true;
+  }
+
+  function getSelectedPuterVoiceOptions() {
+    const key = getSelectedVoiceKey();
+    const catalog = window.PuterVoiceCatalog;
+    if (catalog && typeof catalog.getById === "function") {
+      const hit = catalog.getById(key);
+      if (hit && hit.options) return hit.options;
+      const fallback = catalog.getDefault && catalog.getDefault();
+      if (fallback && fallback.options) return fallback.options;
+    }
+    return { provider: "openai", model: "gpt-4o-mini-tts", voice: "alloy" };
   }
 
   async function ensurePuterReady(interactive) {
@@ -663,27 +675,12 @@
     return [corePersona, principles, modeInstructions, styleRules, knownFactsLine].join("\n");
   }
 
-  function fallbackVoiceList() {
-    return [
-      { voice_id: "21m00Tcm4TlvDq8ikWAM", name: "Rachel", category: "premade" },
-      { voice_id: "pNInz6obpgDQGcFmaJgB", name: "Adam", category: "premade" },
-      { voice_id: "Xb7hH8MSUJpSbSDYk0k2", name: "Alice", category: "premade" },
-    ];
-  }
-
-  async function fetchElevenVoices() {
-    try {
-      const res = await (window.Api && window.Api.apiFetch
-        ? window.Api.apiFetch("/tts/elevenlabs/voices", { method: "GET" })
-        : fetch("/tts/elevenlabs/voices", { method: "GET" }));
-      if (!res.ok) throw new Error("HTTP_" + res.status);
-      const data = await res.json().catch(function () { return {}; });
-      const voices = Array.isArray(data && data.voices) ? data.voices : [];
-      if (!voices.length) return fallbackVoiceList();
-      return voices.slice(0, 120);
-    } catch (e) {
-      return fallbackVoiceList();
+  async function fetchPuterVoices() {
+    const catalog = window.PuterVoiceCatalog;
+    if (catalog && Array.isArray(catalog.voices) && catalog.voices.length) {
+      return catalog.voices.slice(0, 200);
     }
+    return [{ id: "openai:alloy", label: "OpenAI - alloy", options: { provider: "openai", model: "gpt-4o-mini-tts", voice: "alloy" } }];
   }
 
   async function initPISettingsSelectors() {
@@ -711,23 +708,23 @@
     }
 
     if (voiceSelect) {
-      voiceSelect.innerHTML = "<option value=''>Loading ElevenLabs voices...</option>";
-      const voices = await fetchElevenVoices();
+      voiceSelect.innerHTML = "<option value=''>Loading Puter voices...</option>";
+      const voices = await fetchPuterVoices();
       voiceSelect.innerHTML = "";
       for (let i = 0; i < voices.length; i += 1) {
         const v = voices[i];
-        const id = String(v && v.voice_id ? v.voice_id : "").trim();
+        const id = String(v && v.id ? v.id : "").trim();
         if (!id) continue;
-        const name = String(v && v.name ? v.name : "Voice");
-        const category = String(v && v.category ? v.category : "");
+        const name = String(v && v.label ? v.label : "Voice");
+        const category = "";
         const o = document.createElement("option");
         o.value = id;
         o.textContent = category ? (name + " (" + category + ")") : name;
         voiceSelect.appendChild(o);
       }
-      const selectedVoice = getSelectedElevenLabsVoiceId();
+      const selectedVoice = getSelectedVoiceKey();
       const hasVoice = Array.from(voiceSelect.options).some(function (o) { return o.value === selectedVoice; });
-      voiceSelect.value = hasVoice ? selectedVoice : PI_ELEVENLABS_VOICE_DEFAULT;
+      voiceSelect.value = hasVoice ? selectedVoice : PI_TTS_VOICE_DEFAULT;
       if (!hasVoice) setSelectedVoiceId(voiceSelect.value);
       voiceSelect.addEventListener("change", function () {
         const v = String(voiceSelect.value || "").trim();
@@ -1255,41 +1252,34 @@
     try {
       await primeAudioPlayback();
       const cleanedText = String(text || "").replace(/\s+/g, " ").trim();
-      const sendOnce = async function (textToSpeak) {
-        const payload = {
-          text: String(textToSpeak || ""),
-          voiceId: getSelectedElevenLabsVoiceId(),
-          stability: 0.5,
-          similarity_boost: 0.75,
-        };
-        const r = await (window.Api && window.Api.apiFetch
-          ? window.Api.apiFetch("/tts/elevenlabs", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload),
-            })
-          : fetch("/tts/elevenlabs", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload),
-            }));
-        return r;
-      };
+      await ensurePuterReady(false);
+      const voiceOptions = getSelectedPuterVoiceOptions();
+      const ai = window.puter && window.puter.ai;
+      if (!ai) throw new Error("PUTER_NOT_LOADED");
+      let out = null;
+      if (typeof ai.txt2speech === "function") out = await ai.txt2speech(cleanedText, voiceOptions);
+      else if (typeof ai.text2speech === "function") out = await ai.text2speech(cleanedText, voiceOptions);
+      else if (typeof ai.tts === "function") out = await ai.tts(cleanedText, voiceOptions);
+      else throw new Error("PUTER_TTS_UNAVAILABLE");
 
-      let res = await sendOnce(cleanedText);
-      if (!res.ok && (res.status === 502 || res.status === 503 || res.status === 504)) {
-        const shortened = cleanedText.slice(0, 900);
-        res = await sendOnce(shortened);
+      let url = "";
+      let revokeUrl = false;
+      if (typeof out === "string") {
+        url = out;
+      } else if (out instanceof Blob) {
+        url = URL.createObjectURL(out);
+        revokeUrl = true;
+      } else if (out && typeof out === "object" && typeof out.url === "string") {
+        url = String(out.url);
+      } else if (out && typeof out === "object" && typeof out.audio_url === "string") {
+        url = String(out.audio_url);
+      } else if (out && typeof out === "object" && out.audio instanceof Blob) {
+        url = URL.createObjectURL(out.audio);
+        revokeUrl = true;
       }
-      if (!res.ok) {
-        const errData = await res.json().catch(function () { return {}; });
-        const errMsg = (errData && (errData.detail || errData.error)) ? String(errData.detail || errData.error) : ("ELEVENLABS_HTTP_" + res.status);
-        throw new Error(errMsg);
-      }
-      const blob = await res.blob();
-      if (!blob || !blob.size) throw new Error("ELEVENLABS_EMPTY_AUDIO");
-      const url = URL.createObjectURL(blob);
+      if (!url) throw new Error("PUTER_EMPTY_AUDIO");
       tutorAudio = new Audio(url);
+      tutorAudio.__revoke = revokeUrl;
       tutorAudio.preload = "auto";
       tutorAudio.playsInline = true;
       stopSpeakerAnalyser();
@@ -1298,7 +1288,7 @@
       tutorAudio.onended = function () {
         setAssistantState("listening", "Listening");
         armIdleTimer();
-        try { URL.revokeObjectURL(url); } catch (e) {}
+        try { if (tutorAudio && tutorAudio.__revoke) URL.revokeObjectURL(url); } catch (e) {}
       };
       try {
         await tutorAudio.play();
@@ -1310,7 +1300,7 @@
         throw playErr;
       }
     } catch (e) {
-      dbg("ElevenLabs TTS failed, fallback to browser TTS", e && e.message);
+      dbg("Puter TTS failed, fallback to browser TTS", e && e.message);
       addLog("assistant", "Tutor: Voice engine fallback (" + String((e && e.message) || "TTS error") + ").");
       try {
         const u = new SpeechSynthesisUtterance(String(text || ""));
