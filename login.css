@@ -167,6 +167,14 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,'Segoe 
 
 /* Small */
 .small{font-size:13px;text-align:center;color:var(--muted)}
+.continue-tutor-link{
+  font-weight:700;
+  color:var(--accent1);
+  text-decoration:none;
+}
+.continue-tutor-link:hover{
+  text-decoration:underline;
+}
 
 /* Toast */
 .toast{position:relative;margin-top:8px;padding:10px 12px;border-radius:10px;background:rgba(7,16,36,0.9);color:white;font-size:14px;display:inline-block}

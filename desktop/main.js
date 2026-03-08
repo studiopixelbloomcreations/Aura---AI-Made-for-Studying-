@@ -3,11 +3,15 @@ const path = require("path");
 const fs = require("fs");
 const { exec } = require("child_process");
 const { autoUpdater } = require("electron-updater");
+const { LiveEvolutionManager } = require("./live_evolution_manager");
+const { CloudRepoMirror } = require("./cloud_repo_mirror");
 
-const DEFAULT_START_URL = "https://newtutorai.netlify.app/";
+const DEFAULT_START_URL = "https://tutoraiv3.netlify.app/";
 
 let mainWindow = null;
 let updateNoticeShown = false;
+let liveEvolution = null;
+let cloudMirror = null;
 
 app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
 app.commandLine.appendSwitch("enable-speech-dispatcher");
@@ -231,6 +235,56 @@ ipcMain.handle("assistant:execute_action", async (_event, action) => {
   return result;
 });
 
+ipcMain.handle("assistant:evolution_capabilities", async () => {
+  return {
+    ok: true,
+    live_code_write: true,
+    stages: ["generate", "inspect", "security_check", "deploy"],
+    supports_local_repo_deploy: true,
+    supports_cloud_repo_push: true,
+    default_model: String(process.env.PI_LIVE_MODEL || "gemini-3-pro-preview"),
+  };
+});
+
+ipcMain.handle("assistant:evolution_start", async (_event, payload) => {
+  if (!liveEvolution) return { ok: false, error: "Live evolution manager not initialized" };
+  return liveEvolution.startPipeline(payload || {});
+});
+
+ipcMain.handle("assistant:evolution_list", async () => {
+  if (!liveEvolution) return { ok: false, error: "Live evolution manager not initialized" };
+  return liveEvolution.listProposals();
+});
+
+ipcMain.handle("assistant:evolution_get", async (_event, proposalId) => {
+  if (!liveEvolution) return { ok: false, error: "Live evolution manager not initialized" };
+  return liveEvolution.getProposal(proposalId);
+});
+
+ipcMain.handle("assistant:evolution_deploy", async (_event, payload) => {
+  if (!liveEvolution) return { ok: false, error: "Live evolution manager not initialized" };
+  const req = payload && typeof payload === "object" ? payload : {};
+  return liveEvolution.deployProposal(req.proposal_id, {
+    deploy_local: req.deploy_local !== false,
+    deploy_cloud: !!req.deploy_cloud,
+  });
+});
+
+ipcMain.handle("assistant:cloud_sync_now", async () => {
+  if (!cloudMirror) return { ok: false, error: "Cloud mirror not initialized" };
+  return cloudMirror.syncNow();
+});
+
+ipcMain.handle("assistant:cloud_sync_start", async (_event, intervalMs) => {
+  if (!cloudMirror) return { ok: false, error: "Cloud mirror not initialized" };
+  return cloudMirror.start(intervalMs);
+});
+
+ipcMain.handle("assistant:cloud_sync_stop", async () => {
+  if (!cloudMirror) return { ok: false, error: "Cloud mirror not initialized" };
+  return cloudMirror.stop();
+});
+
 app.whenReady().then(() => {
   const ses = session.defaultSession;
   ses.setPermissionRequestHandler((_webContents, permission, callback) => {
@@ -254,6 +308,36 @@ app.whenReady().then(() => {
       "pointerLock",
     ]);
     return allowed.has(permission);
+  });
+
+  liveEvolution = new LiveEvolutionManager({
+    repoRoot: path.resolve(__dirname, ".."),
+    loadStore,
+    saveStore,
+    pushAudit,
+    promptApproval: promptCreatorApproval,
+    emitEvent: (event, payload) => {
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send("desktop:evolution-event", {
+          event: String(event || ""),
+          payload: payload || {},
+          at: new Date().toISOString(),
+        });
+      }
+    },
+  });
+
+  cloudMirror = new CloudRepoMirror({
+    repoRoot: path.resolve(__dirname, ".."),
+    emitEvent: (event, payload) => {
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send("desktop:evolution-event", {
+          event: String(event || ""),
+          payload: payload || {},
+          at: new Date().toISOString(),
+        });
+      }
+    },
   });
 
   createWindow();

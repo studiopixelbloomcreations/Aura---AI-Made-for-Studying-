@@ -1,3 +1,6 @@
+const { EvolutionEngine } = require("./personal_intelligence_evolution/evolution_engine");
+const { autoEvolveToGitHub } = require("./personal_intelligence_evolution/cloud_deployer");
+
 function json(statusCode, obj) {
   return {
     statusCode,
@@ -226,112 +229,28 @@ function sanitizeModelId(v) {
   return s;
 }
 
-async function geminiChatReply(message, history, language, subject, knownFacts, opts) {
-  const apiKey = String(process.env.GEMINI_API_KEY || "").trim();
-  if (!apiKey) {
+async function puterChatReplyFromPayload(message, payload) {
+  const p = payload && typeof payload === "object" ? payload : {};
+  const puterReply = p.puter_reply && typeof p.puter_reply === "object" ? p.puter_reply : {};
+  const answer = String(puterReply.answer || "").trim();
+  const model = sanitizeModelId(puterReply.model || p.model || "gemini-3-pro-preview");
+  if (!answer) {
     return {
       ok: false,
-      error: "GEMINI_API_KEY missing in Netlify environment.",
+      error: "PUTER_REQUIRED: send puter_reply.answer from frontend Puter call",
       answer: fallbackReply(message),
+      speak_text: buildSpeakText(fallbackReply(message)),
       provider: "none",
+      model,
     };
   }
-
-  const reqModel = sanitizeModelId(opts && opts.model);
-  const envModel = sanitizeModelId(process.env.GEMINI_PERSONAL_MODEL || "gemini-2.5-flash");
-  const maxOutputTokens = Number(process.env.GEMINI_PERSONAL_MAX_TOKENS || 140);
-  const baseUrl = String(process.env.GEMINI_API_BASE || "https://generativelanguage.googleapis.com").trim();
-  const memoryContext = String((opts && opts.memory_context) || "").trim();
-  const defaultSystemInstruction =
-    `You are Tutor, a warm and capable personal assistant for a student. Speak in ${language}. ` +
-    `Keep replies short, natural, and practical. Default to 1-2 short sentences unless the user asks for detailed steps. ` +
-    `Help with daily tasks and study support in ${subject}. ` +
-    `Use known user facts when relevant to personalize responses naturally.`;
-  const baseSystemInstruction = String((opts && opts.system_prompt) || "").trim() || defaultSystemInstruction;
-  const systemInstruction = memoryContext
-    ? `${baseSystemInstruction}\n\nLong-term memory context:\n${memoryContext.slice(0, 3500)}`
-    : baseSystemInstruction;
-
-  const contents = [];
-  const h = Array.isArray(history) ? history.slice(-120) : [];
-  for (const item of h) {
-    if (!item || !item.role || !item.content) continue;
-    contents.push({
-      role: item.role === "assistant" ? "model" : "user",
-      parts: [{ text: String(item.content).slice(0, 1200) }],
-    });
-  }
-  contents.push({ role: "user", parts: [{ text: String(message || "") }] });
-
-  const payloadBody = {
-    system_instruction: { parts: [{ text: systemInstruction }] },
-    contents: [
-      {
-        role: "user",
-        parts: [{ text: `Known user facts:\n${knownFactsToPrompt(knownFacts)}` }],
-      },
-      ...contents,
-    ],
-    generationConfig: {
-      temperature: 0.6,
-      maxOutputTokens: Number.isFinite(maxOutputTokens) ? maxOutputTokens : 140,
-    },
-  };
-
-  const modelCandidates = [];
-  const pushModel = (m) => {
-    const s = sanitizeModelId(m);
-    if (!s) return;
-    if (!modelCandidates.includes(s)) modelCandidates.push(s);
-  };
-  pushModel(reqModel);
-  pushModel(envModel);
-  pushModel("gemini-2.5-flash");
-  pushModel("gemini-2.0-flash");
-  pushModel("gemini-1.5-pro");
-
-  const errors = [];
-  for (const model of modelCandidates) {
-    try {
-      const endpoint = `${baseUrl}/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payloadBody),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const detail =
-          (data && data.error && data.error.message) ? String(data.error.message) : `HTTP ${res.status}`;
-        errors.push(`${model}: ${detail}`);
-        continue;
-      }
-
-      const parts =
-        data &&
-        data.candidates &&
-        data.candidates[0] &&
-        data.candidates[0].content &&
-        Array.isArray(data.candidates[0].content.parts)
-          ? data.candidates[0].content.parts
-          : [];
-      const answer = parts.map((p) => (p && p.text ? String(p.text) : "")).join("").trim();
-      if (!answer) {
-        errors.push(`${model}: empty answer`);
-        continue;
-      }
-      return { ok: true, answer, speak_text: buildSpeakText(answer), error: "", provider: `gemini:${model}` };
-    } catch (e) {
-      errors.push(`${model}: ${String(e && e.message ? e.message : e)}`);
-    }
-  }
-
   return {
-    ok: false,
-    error: `Gemini request failed for all models: ${errors.join(" | ").slice(0, 1400)}`,
-    answer: fallbackReply(message),
-    speak_text: buildSpeakText(fallbackReply(message)),
-    provider: "none",
+    ok: true,
+    error: "",
+    answer,
+    speak_text: buildSpeakText(answer),
+    provider: `puter:${model || "gemini-3-pro-preview"}`,
+    model,
   };
 }
 
@@ -352,6 +271,8 @@ exports.handler = async function handler(event) {
   const subject = String((payload && payload.subject) || "General");
   const incomingKnownFacts = sanitizeKnownFacts(payload && payload.known_facts);
   if (!message) return json(200, { error: "Message cannot be empty" });
+  const startedAt = Date.now();
+  const cloudEvolveOnly = !!(payload && payload.cloud_evolve_only);
 
   const extractedUpdates = detectMemoryUpdates(message);
   const combinedKnownFacts = mergeKnownFacts(incomingKnownFacts, extractedUpdates);
@@ -359,20 +280,71 @@ exports.handler = async function handler(event) {
   const actionUpdates = {};
   if (action && action.home_address) actionUpdates.home_address = String(action.home_address);
   const mergedKnownFacts = mergeKnownFacts(combinedKnownFacts, actionUpdates);
-  const llm = action ? null : await geminiChatReply(message, history, language, subject, mergedKnownFacts, {
-    model: payload && payload.model,
-    system_prompt: payload && payload.system_prompt,
-    memory_context: payload && payload.memory_context,
-  });
-  const answer = action && action.message ? String(action.message) : llm.answer;
-  const speakText = action && action.message ? buildSpeakText(action.message) : String(llm.speak_text || buildSpeakText(answer));
+  const llm = action || cloudEvolveOnly ? null : await puterChatReplyFromPayload(message, payload);
+  const answer = cloudEvolveOnly
+    ? String(((payload && payload.puter_reply && payload.puter_reply.answer) || "Cloud evolution sync accepted.")).trim()
+    : (action && action.message ? String(action.message) : llm.answer);
+  const speakText = cloudEvolveOnly
+    ? buildSpeakText(answer)
+    : (action && action.message ? buildSpeakText(action.message) : String(llm.speak_text || buildSpeakText(answer)));
+  const aiProvider = cloudEvolveOnly ? "puter_client" : (action ? "local_action" : String(llm.provider || "puter"));
+  const aiOk = cloudEvolveOnly ? true : (action ? true : !!llm.ok);
+  const aiError = cloudEvolveOnly ? "" : (action ? "" : String(llm.error || ""));
+  const latencyMs = Math.max(0, Date.now() - startedAt);
+
+  let evolutionMeta = null;
+  try {
+    evolutionMeta = await EvolutionEngine.processInteraction({
+      timestamp: new Date().toISOString(),
+      message,
+      response: answer,
+      success: aiOk,
+      corrected: false,
+      latency_ms: latencyMs,
+      module_id: action && action.type ? String(action.type) : "brain.main",
+      action,
+      ai_provider: aiProvider,
+      ai_error: aiError,
+      language,
+      subject,
+      history,
+      known_facts: mergedKnownFacts,
+      profile: payload && payload.profile,
+      current_task: action && action.type ? String(action.type) : "conversation",
+    });
+  } catch (e) {
+    evolutionMeta = null;
+  }
+
+  let cloudEvolution = null;
+  try {
+    const cloudEnabled = String(process.env.PI_CLOUD_AUTO_EVOLVE || "").trim().toLowerCase() === "true";
+    if (cloudEnabled) {
+      cloudEvolution = await autoEvolveToGitHub({
+        uid: payload && payload.uid,
+        email: payload && payload.email,
+        user_id: payload && payload.user_id,
+        message,
+        known_facts: mergedKnownFacts,
+        memory_updates: mergeKnownFacts(extractedUpdates, actionUpdates),
+        puter_generated_code: payload && payload.puter_generated_code,
+        puter_model: payload && payload.puter_model,
+      });
+    }
+  } catch (e) {
+    cloudEvolution = {
+      ok: false,
+      stage: "runtime",
+      error: String(e && e.message ? e.message : e),
+    };
+  }
 
   return json(200, {
     answer,
     speak_text: speakText,
-    ai_provider: action ? "local_action" : String(llm.provider || "gemini"),
-    ai_ok: action ? true : !!llm.ok,
-    ai_error: action ? "" : String(llm.error || ""),
+    ai_provider: aiProvider,
+    ai_ok: aiOk,
+    ai_error: aiError,
     used_google_context: false,
     google_results: [],
     learned_facts: mergedKnownFacts,
@@ -383,5 +355,9 @@ exports.handler = async function handler(event) {
       google_maps_connected: true,
       home_address: sanitizeFactValue(mergedKnownFacts.home_address, 220) || findHomeFromHistory(history) || "",
     },
+    evolution_status: evolutionMeta && evolutionMeta.evolution_status ? evolutionMeta.evolution_status : undefined,
+    active_module_versions: evolutionMeta && evolutionMeta.active_module_versions ? evolutionMeta.active_module_versions : undefined,
+    proposal_trace_id: evolutionMeta && evolutionMeta.proposal_trace_id ? evolutionMeta.proposal_trace_id : undefined,
+    cloud_evolution: cloudEvolution || undefined,
   });
 };

@@ -51,6 +51,9 @@
   let memoryUid = "";
   let memoryCloudLoaded = false;
   let pendingFactsSaveTimer = null;
+  let autoLocalEvolutionBusy = false;
+  let autoLocalEvolutionLastSig = "";
+  let autoLocalEvolutionLastAt = 0;
   const SILENT_WAV_DATA_URI = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=";
 
   const panel = document.createElement("div");
@@ -990,6 +993,117 @@
     return cleaned;
   }
 
+  function shouldTriggerCloudEvolution(text, updates) {
+    const t = String(text || "").toLowerCase();
+    const u = updates && typeof updates === "object" ? updates : {};
+    if (Object.keys(u).length > 0) return true;
+    return /my name is|i live|set home|my city|my school|my goal|i prefer/i.test(t);
+  }
+
+  async function generatePuterEvolutionCode(userText, language, subject) {
+    await ensurePuterReady(false);
+    const model = getPIModel();
+    const prompt = [
+      "Generate safe JavaScript module code only.",
+      "No shell/system commands. No process env mutation.",
+      "Required export: module.exports = { id, describe, run }",
+      `Language: ${String(language || "English")}`,
+      `Subject: ${String(subject || "General")}`,
+      "User message:",
+      String(userText || "").slice(0, 900),
+      "Known facts:",
+      JSON.stringify(knownFacts || {}).slice(0, 2200),
+    ].join("\n");
+    const resp = await window.puter.ai.chat([{ role: "user", content: prompt }], { model: model });
+    return String(extractPuterText(resp) || "").trim();
+  }
+
+  async function sendCloudEvolutionFromPuter(userText, puterAnswer, generatedCodeFromCaller, updatesFromCaller) {
+    try {
+      const updates = updatesFromCaller && typeof updatesFromCaller === "object"
+        ? updatesFromCaller
+        : detectMemoryUpdatesLocal(userText);
+      if (!shouldTriggerCloudEvolution(userText, updates)) return;
+      const language = localStorage.getItem("g9_language") || "English";
+      const subject = localStorage.getItem("g9_subject") || "General";
+      const generatedCode = String(generatedCodeFromCaller || "").trim() || await generatePuterEvolutionCode(userText, language, subject);
+      if (!generatedCode) return;
+      const data = await fetchJson("/personal-intelligence/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cloud_evolve_only: true,
+          message: String(userText || ""),
+          email: EMAIL,
+          language: language,
+          subject: subject,
+          title: "Personal Intelligence",
+          history: getRecentHistory(HISTORY_BACKEND_WINDOW),
+          known_facts: knownFacts,
+          puter_reply: {
+            answer: String(puterAnswer || ""),
+            model: getPIModel(),
+          },
+          puter_generated_code: generatedCode,
+          puter_model: getPIModel(),
+          memory_context: buildLongTermMemoryContext(),
+        }),
+      });
+      dbg("cloud evolution sync", data && data.cloud_evolution ? data.cloud_evolution : data);
+    } catch (e) {
+      dbg("cloud evolution sync failed", e && e.message);
+    }
+  }
+
+  function signatureForAutoEvolution(text, updates) {
+    const t = String(text || "").trim().toLowerCase().slice(0, 300);
+    const u = updates && typeof updates === "object" ? updates : {};
+    return t + "::" + JSON.stringify(u);
+  }
+
+  async function sendLocalEvolutionFromPuter(userText, generatedCode, updates) {
+    try {
+      if (!window.DesktopAssistant || !window.DesktopAssistant.startEvolution) return;
+      if (!shouldTriggerCloudEvolution(userText, updates)) return;
+      const now = Date.now();
+      const sig = signatureForAutoEvolution(userText, updates);
+      if (autoLocalEvolutionBusy) return;
+      if (sig === autoLocalEvolutionLastSig && (now - autoLocalEvolutionLastAt) < 30000) return;
+      autoLocalEvolutionBusy = true;
+      autoLocalEvolutionLastSig = sig;
+      autoLocalEvolutionLastAt = now;
+
+      const out = await window.DesktopAssistant.startEvolution({
+        file_path: "netlify/functions/personal_intelligence_evolution/generated/live_local_test.js",
+        instruction: "Auto-evolve local helper from latest personal info updates while keeping exports safe.",
+        puter_generated_code: String(generatedCode || ""),
+        puter_model: getPIModel(),
+        deploy_local: true,
+        deploy_cloud: false,
+      });
+      dbg("local evolution result", out);
+    } catch (e) {
+      dbg("local evolution failed", e && e.message);
+    } finally {
+      autoLocalEvolutionBusy = false;
+    }
+  }
+
+  async function triggerAutoEvolutionLocalAndCloud(userText, puterAnswer) {
+    try {
+      const updates = detectMemoryUpdatesLocal(userText);
+      if (!shouldTriggerCloudEvolution(userText, updates)) return;
+      const language = localStorage.getItem("g9_language") || "English";
+      const subject = localStorage.getItem("g9_subject") || "General";
+      const generatedCode = await generatePuterEvolutionCode(userText, language, subject);
+      if (!generatedCode) return;
+      await sendLocalEvolutionFromPuter(userText, generatedCode, updates);
+      await sendCloudEvolutionFromPuter(userText, puterAnswer, generatedCode, updates);
+    } catch (e) {
+      dbg("auto evolution trigger failed", e && e.message);
+    }
+  }
+
   async function playTutorTTS(text) {
     stopTutorAudio();
     try {
@@ -1122,6 +1236,7 @@
       addLog("assistant", "Tutor: " + answer);
       pushHistory("assistant", answer);
       dbg("AI provider:", "puter", "ok:", true, "model:", model);
+      triggerAutoEvolutionLocalAndCloud(t, answer);
       await playTutorTTS(speakText);
     } catch (e) {
       dbg("puter ask failed, fallback to backend", e && e.message);
