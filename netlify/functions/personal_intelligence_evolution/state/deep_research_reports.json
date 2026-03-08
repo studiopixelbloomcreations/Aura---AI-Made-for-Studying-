@@ -1,0 +1,36 @@
+{
+  "reports": [
+    {
+      "id": "research_mmi2mk3i",
+      "at": "2026-03-08T18:13:44.382Z",
+      "query": "Research and compare three best weekly grade 9 science revision strategies",
+      "stages": [
+        "collect_sources",
+        "rank_sources",
+        "synthesize_findings",
+        "emit_citations"
+      ],
+      "summary": "Deep research report generated with ranked sources and citations.",
+      "citations": [
+        {
+          "title": "National Institute of Education Sri Lanka",
+          "url": "https://nie.lk",
+          "score": 2,
+          "source_type": "catalog"
+        },
+        {
+          "title": "Khan Academy",
+          "url": "https://www.khanacademy.org",
+          "score": 1,
+          "source_type": "catalog"
+        },
+        {
+          "title": "Sri Lanka Ministry of Education",
+          "url": "https://moe.gov.lk",
+          "score": 0,
+          "source_type": "catalog"
+        }
+      ]
+    }
+  ]
+}
