@@ -97,6 +97,20 @@
         "phase2": true,
         "phase3to9": true
       }
+    },
+    {
+      "id": "obs_mmi3683y_jsx8s",
+      "at": "2026-03-08T18:29:01.966Z",
+      "type": "phase_3_to_9_cycle",
+      "payload": {
+        "phase3_ok": true,
+        "phase4_triggered": false,
+        "phase5_graph_ok": true,
+        "phase6_ok": true,
+        "phase8_ok": true,
+        "rollout_mode": "auto_promote",
+        "rollout_risk": 0
+      }
     }
   ]
 }
