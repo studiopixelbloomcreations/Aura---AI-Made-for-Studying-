@@ -28,7 +28,7 @@
   const VIS_PROFILE_EXTENSION = ".piuser.json";
   const VIS_RECOGNITION_THRESHOLD = 0.93;
   const VIS_MATCH_STABLE_COUNT = 3;
-  const VIS_SCAN_INTERVAL_MS = 220;
+  const VIS_SCAN_INTERVAL_MS = 120;
   const VIS_SCAN_FRAME_COUNT = 18;
   const VIS_PROFILE_DOC_LIMIT = 100;
   let enabled = false;
@@ -702,6 +702,8 @@
       if (v) merged[k] = v;
     });
     knownFacts = merged;
+    updateVisPersonalizationFromKnownFacts();
+    updateVisBehaviorConfigurationFromKnownFacts();
     saveMemory();
     scheduleKnownFactsCloudSave();
     scheduleVisProfileSave();
@@ -715,9 +717,62 @@
       ts: ts,
     });
     if (convoHistory.length > HISTORY_MAX_ITEMS) convoHistory = convoHistory.slice(-HISTORY_MAX_ITEMS);
+    updateVisPersonalizationFromHistory();
     saveMemory();
     saveHistoryEntryToCloud(role, content, ts);
     scheduleVisProfileSave();
+  }
+
+  function updateVisPersonalizationFromKnownFacts() {
+    const facts = knownFacts && typeof knownFacts === "object" ? knownFacts : {};
+    const topics = [];
+    ["favorite_subject", "favorite_sport", "hobbies", "goal", "school", "country", "city"].forEach(function (k) {
+      const v = String(facts[k] || "").trim();
+      if (v) topics.push(v);
+    });
+    const uniqueTopics = Array.from(new Set(topics)).slice(0, 20);
+    visPersonalizationProfile = Object.assign({}, visPersonalizationProfile || {}, {
+      frequently_discussed_topics: uniqueTopics.length ? uniqueTopics : (visPersonalizationProfile.frequently_discussed_topics || []),
+      interests: uniqueTopics.length ? uniqueTopics.slice(0, 12) : (visPersonalizationProfile.interests || []),
+    });
+  }
+
+  function updateVisBehaviorConfigurationFromKnownFacts() {
+    const facts = knownFacts && typeof knownFacts === "object" ? knownFacts : {};
+    const cfg = Object.assign({}, visBehaviorConfig || {});
+    const lang = String(facts.preferred_language || "").toLowerCase();
+    if (lang.includes("english")) cfg.formality_level = cfg.formality_level || "balanced";
+    const grade = Number(facts.grade || 0);
+    if (Number.isFinite(grade) && grade > 0) {
+      cfg.technical_explanation_depth = grade <= 9 ? "medium" : (cfg.technical_explanation_depth || "adaptive");
+    }
+    visBehaviorConfig = Object.assign({
+      preferred_conversation_tone: "adaptive",
+      formality_level: "balanced",
+      response_length_preference: "balanced",
+      technical_explanation_depth: "adaptive",
+      humor_professional_balance: "balanced",
+    }, cfg);
+  }
+
+  function updateVisPersonalizationFromHistory() {
+    const recent = getRecentHistory(40);
+    const userMsgs = recent.filter(function (m) { return m.role === "user"; }).map(function (m) { return String(m.content || ""); });
+    const style = userMsgs.length && userMsgs.some(function (t) { return t.length > 220; }) ? "detailed" : "concise";
+    const low = userMsgs.join(" ").toLowerCase();
+    const patterns = [];
+    if (/\bplease\b/.test(low)) patterns.push("polite_requests");
+    if (/\bexplain\b|\bwhy\b|\bhow\b/.test(low)) patterns.push("curious_questioning");
+    if (/\bquick\b|\bshort\b/.test(low)) patterns.push("short_answers_preference");
+    const uniquePatterns = Array.from(new Set(patterns)).slice(0, 12);
+    visPersonalizationProfile = Object.assign({}, visPersonalizationProfile || {}, {
+      preferred_interaction_style: style,
+      behavior_patterns: uniquePatterns.length ? uniquePatterns : (visPersonalizationProfile.behavior_patterns || []),
+      conversation_habits: uniquePatterns.length ? uniquePatterns : (visPersonalizationProfile.conversation_habits || []),
+    });
+    visBehaviorConfig = Object.assign({}, visBehaviorConfig || {}, {
+      response_length_preference: style === "detailed" ? "long" : "concise",
+    });
   }
 
   function getRecentHistory(limit) {
@@ -859,8 +914,10 @@
       addLog("assistant", "Tutor: " + String(pending.answer || ""));
       pushHistory("assistant", String(pending.answer || ""));
       await playTutorTTS(String(pending.speakText || pending.answer || ""));
+      if (pendingPiMessages.length) flushPiBatch("resume_pending_user_messages");
     } else {
       setAssistantState("listening", "Listening");
+      if (pendingPiMessages.length) flushPiBatch("resume_pending_user_messages");
     }
   }
 
@@ -2801,6 +2858,12 @@
           setAssistantState("thinking", "Thinking");
           const text = await transcribeAudioBlob(blob);
           if (text) {
+            if (!visCanOperateAI()) {
+              pendingPiMessages.push({ text: String(text), at: Date.now(), source: "stt_paused_resume" });
+              scheduleVisProfileSave();
+              setAssistantStateForVisOffline("Offline - no face");
+              return;
+            }
             await askTutorText(text);
           } else {
             setAssistantState("idle", "Idle");
@@ -3015,6 +3078,41 @@
     setModel: function (model) { return setPIModel(model); },
     getVoiceId: function () { return getSelectedVoiceId(); },
     setVoiceId: function (voiceId) { return setSelectedVoiceId(voiceId); },
+  };
+  window.VisualIntelligenceDiagnostics = {
+    getStatus: function () {
+      return {
+        enabled: !!enabled,
+        vis_runtime_loaded: !!(window.PI_VIS_RUNTIME && typeof window.PI_VIS_RUNTIME.createRuntime === "function"),
+        vis_runtime_active: !!visRuntime,
+        vis_can_operate_ai: !!visCanOperateAI(),
+        vis_offline: !!visOffline,
+        vis_last_offline_reason: String(visLastOfflineReason || ""),
+        vis_active_profile_file: visActiveProfile && visActiveProfile.file_name ? String(visActiveProfile.file_name) : "",
+        vis_active_username: String(visLastKnownUserLabel || ""),
+        vis_recognition_index_size: Array.isArray(visRecognitionIndex) ? visRecognitionIndex.length : 0,
+        vis_pending_response: !!visPendingResponse,
+        vis_pending_user_messages: Array.isArray(pendingPiMessages) ? pendingPiMessages.length : 0,
+        vis_behavior_configuration: Object.assign({}, visBehaviorConfig || {}),
+        vis_personalization_profile: Object.assign({}, visPersonalizationProfile || {}),
+        vis_speech_state: Object.assign({}, visSpeechState || {}),
+      };
+    },
+    forceOpenSetup: function () {
+      if (visRuntime && visRuntime.openSetup) {
+        visRuntime.openSetup();
+        return true;
+      }
+      openVisSetup();
+      return true;
+    },
+    forceRefreshIndex: async function () {
+      const rows = await loadVisProfilesFromCloud();
+      if (visRuntime && visRuntime.refreshIndex) {
+        try { await visRuntime.refreshIndex(); } catch (e) {}
+      }
+      return Array.isArray(rows) ? rows.length : 0;
+    },
   };
 
   loadMemory();

@@ -23,7 +23,11 @@
         busy: false,
       });
       backdropEl.hidden = false;
-      render();
+      try {
+        render();
+      } catch (e) {
+        renderFallback("Failed to render setup step. Please retry.");
+      }
     }
 
     function close() {
@@ -63,6 +67,21 @@
           '<div class="pi-vis-note">Keep your face centered and rotate slightly for multi-angle capture.</div>' +
           '<div class="pi-vis-note">The system is generating your biometric identity signature now.</div>';
       }
+      bindEvents();
+      // Fail-safe: if any external style/script empties the body, repopulate.
+      if (!String(body.innerHTML || "").trim()) {
+        renderFallback("Setup content reloaded.");
+      }
+    }
+
+    function renderFallback(note) {
+      const body = backdropEl.querySelector(".pi-vis-setup-body");
+      if (!body) return;
+      body.innerHTML =
+        '<p><strong>Step 1 of 4: Visual Intelligence Introduction</strong></p>' +
+        '<p>Visual Intelligence Setup is ready.</p>' +
+        '<p>' + String(note || "") + '</p>' +
+        '<div class="pi-vis-actions"><button type="button" class="pi-vis-btn" data-vis-action="continue">Continue</button></div>';
       bindEvents();
     }
 

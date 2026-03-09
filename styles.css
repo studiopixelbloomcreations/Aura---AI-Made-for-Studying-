@@ -4581,7 +4581,9 @@ body {
   display: grid;
 }
 
-.pi-panel.pi-vis-offline {
+.pi-panel.pi-vis-offline .pi-header,
+.pi-panel.pi-vis-offline .pi-main,
+.pi-panel.pi-vis-offline .pi-aurora {
   filter: grayscale(1) saturate(0.25) brightness(0.7);
 }
 
@@ -4626,11 +4628,18 @@ body {
 
 .pi-vis-setup {
   width: min(620px, 92vw);
+  min-height: 220px;
   border-radius: 16px;
   border: 1px solid rgba(164, 226, 255, 0.3);
   background: linear-gradient(180deg, rgba(16, 28, 52, 0.96), rgba(7, 15, 30, 0.96));
   box-shadow: 0 24px 90px rgba(0, 0, 0, 0.48);
   padding: 18px;
+}
+
+.pi-vis-setup-body {
+  display: block !important;
+  min-height: 150px;
+  color: #e8f5ff;
 }
 
 .pi-vis-setup-title {
