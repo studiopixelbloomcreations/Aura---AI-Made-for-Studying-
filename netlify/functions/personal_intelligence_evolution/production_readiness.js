@@ -15,6 +15,7 @@ function computeReadiness() {
     { key: "PI_SWARM_BACKOFF_BASE_MS", ok: isSet(process.env.PI_SWARM_BACKOFF_BASE_MS), required: false },
     { key: "PI_CLOUD_AUTO_EVOLVE", ok: isSet(process.env.PI_CLOUD_AUTO_EVOLVE), required: false },
     { key: "PI_ADMIN_TOKEN", ok: isSet(process.env.PI_ADMIN_TOKEN), required: true },
+    { key: "PI_STRICT_PUTER_ONLY", ok: String(process.env.PI_STRICT_PUTER_ONLY || "true").trim().toLowerCase() === "true", required: true },
     { key: "PI_SWARM_FANOUT_URL", ok: isSet(process.env.PI_SWARM_FANOUT_URL), required: false },
     { key: "PI_RESEARCH_SOURCE_FEEDS", ok: isSet(process.env.PI_RESEARCH_SOURCE_FEEDS), required: false },
   ];

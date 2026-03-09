@@ -7,6 +7,7 @@ const { SandboxRunner } = require("./sandbox_runner");
 const { EvolutionEngine } = require("./evolution_engine");
 const { CloudStateStore } = require("./cloud_state_store");
 const { SwarmTaskQueue } = require("./swarm_task_queue");
+const { routeRequest } = require("./hybrid_router");
 
 async function testMemoryFacade() {
   const snapshot = buildMemorySnapshot(
@@ -91,6 +92,9 @@ async function testEndToEndEvolutionCycle() {
     assert(out.evolution_status);
     assert(out.active_module_versions);
     assert(out.phases_3_to_9_status);
+    assert(out.pcos_status);
+    assert(out.cognitive_trace_id);
+    assert(typeof out.twin_state_version === "number");
     if (out.proposal_trace_id) observedTrace = out.proposal_trace_id;
   }
 
@@ -123,12 +127,28 @@ async function testQueueDeadLetterBehavior() {
   assert.strictEqual(processed.dead_lettered_count >= 1, true);
 }
 
+async function testCloudOnlyPolicy() {
+  const route = routeRequest({ message: "quick hi" });
+  assert.strictEqual(route.target, "cloud");
+  assert.strictEqual(route.local_runtime_allowed, false);
+}
+
+async function testPcosPersistence() {
+  const store = new CloudStateStore();
+  const twin = await store.readDoc("digital_twin_state", {});
+  assert.strictEqual(twin.ok, true);
+  const traces = await store.readDoc("cognitive_traces", { traces: [] });
+  assert.strictEqual(traces.ok, true);
+}
+
 async function run() {
   await testMemoryFacade();
   await testSafetyRestrictions();
   await testSandboxRejectInvalidPatch();
   await testEndToEndEvolutionCycle();
   await testQueueDeadLetterBehavior();
+  await testCloudOnlyPolicy();
+  await testPcosPersistence();
   console.log("evolution tests: ok");
 }
 

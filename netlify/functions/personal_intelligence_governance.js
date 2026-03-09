@@ -23,7 +23,24 @@ exports.handler = async function handler(event) {
   if (!auth.ok) return json(401, { error: auth.reason });
 
   const store = new CloudStateStore();
-  const docs = ["swarm_task_queue", "distributed_swarm_state", "deep_research_reports", "multilayer_graph", "strategic_memory", "agent_civilization_async", "sri_lanka_layer", "governed_rollout"];
+  const docs = [
+    "swarm_task_queue",
+    "distributed_swarm_state",
+    "deep_research_reports",
+    "research_index",
+    "citation_traces",
+    "digital_twin_state",
+    "life_timeline",
+    "cognitive_traces",
+    "knowledge_universe",
+    "multilayer_graph",
+    "strategic_memory",
+    "agent_civilization_async",
+    "sri_lanka_layer",
+    "governed_rollout",
+    "governance_decisions",
+    "architecture_rfc",
+  ];
   const out = {};
 
   for (const key of docs) {

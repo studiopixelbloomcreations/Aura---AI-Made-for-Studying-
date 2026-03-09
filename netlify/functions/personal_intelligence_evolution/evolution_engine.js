@@ -17,6 +17,7 @@ const { getModelConfig } = require("./model_router");
 const { runPIOsCycle } = require("./pi_os_controller");
 const { runPhase2Cycle } = require("./phase2_orchestrator");
 const { runPhases3To9 } = require("./phases_3_to_9_orchestrator");
+const { runPCOSCycle } = require("./pcos_controller");
 
 const runtimeState = {
   boot_at: nowIso(),
@@ -161,6 +162,11 @@ const EvolutionEngine = {
     const piOs = runPIOsCycle(runtimeState, envelope, memorySnapshot, evolution.weaknesses || []);
     const phase2 = await runPhase2Cycle(envelope);
     const phases3to9 = await runPhases3To9(envelope, memorySnapshot, phase2);
+    const pcos = await runPCOSCycle(envelope, {
+      memorySnapshot,
+      phase2Status: phase2,
+      rollout_mode: phases3to9 && phases3to9.phase9_governed_rollout ? phases3to9.phase9_governed_rollout.rollout_mode : "",
+    });
 
     return {
       evolution_status: {
@@ -187,6 +193,11 @@ const EvolutionEngine = {
       pi_os_status: piOs,
       phase2_status: phase2,
       phases_3_to_9_status: phases3to9,
+      pcos_status: pcos && pcos.pcos_status ? pcos.pcos_status : undefined,
+      cognitive_trace_id: pcos && pcos.cognitive_trace_id ? pcos.cognitive_trace_id : "",
+      twin_state_version: pcos && pcos.twin_state_version ? pcos.twin_state_version : 0,
+      research_report_id: pcos && pcos.research_report_id ? pcos.research_report_id : "",
+      governance_decision_id: pcos && pcos.governance_decision_id ? pcos.governance_decision_id : "",
     };
   },
 };

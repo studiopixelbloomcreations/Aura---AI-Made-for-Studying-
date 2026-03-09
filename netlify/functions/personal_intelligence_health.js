@@ -25,6 +25,9 @@ exports.handler = async function handler(event) {
   const store = new CloudStateStore();
   const queue = await store.readDoc("swarm_task_queue", { tasks: [], dead_letter: [], metrics: {} });
   const rollout = await store.readDoc("governed_rollout", { events: [] });
+  const twin = await store.readDoc("digital_twin_state", { version: 0 });
+  const traces = await store.readDoc("cognitive_traces", { traces: [] });
+  const gov = await store.readDoc("governance_decisions", { decisions: [] });
 
   return json(200, {
     ok: true,
@@ -40,6 +43,11 @@ exports.handler = async function handler(event) {
       latest: rollout && rollout.ok && rollout.doc && Array.isArray(rollout.doc.events) && rollout.doc.events.length
         ? rollout.doc.events[rollout.doc.events.length - 1]
         : null,
+    },
+    pcos_summary: {
+      twin_state_version: twin && twin.ok && twin.doc ? Number(twin.doc.version || 0) : 0,
+      cognitive_trace_count: traces && traces.ok && traces.doc && Array.isArray(traces.doc.traces) ? traces.doc.traces.length : 0,
+      governance_decision_count: gov && gov.ok && gov.doc && Array.isArray(gov.doc.decisions) ? gov.doc.decisions.length : 0,
     },
   });
 };

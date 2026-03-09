@@ -8,7 +8,10 @@ function sanitizeModelId(v) {
 }
 
 function getModelConfig() {
+  const strict = String(process.env.PI_STRICT_PUTER_ONLY || "true").trim().toLowerCase() === "true";
   return {
+    provider: "puter",
+    strict_puter_only: strict,
     main: sanitizeModelId(process.env.PI_MAIN_BRAIN_MODEL || "gemini-3-pro-preview") || "gemini-3-pro-preview",
     main_fallback: sanitizeModelId(process.env.PI_MAIN_BRAIN_FALLBACK_MODEL || "gemini-3-pro-preview") || "gemini-3-pro-preview",
     analysis: sanitizeModelId(process.env.PI_ANALYSIS_BRAIN_MODEL || "gemini-3-pro-preview") || "gemini-3-pro-preview",
@@ -23,6 +26,15 @@ async function generateStageText(stage, prompt, options) {
   const stageKey = String(stage || "proposal").trim().toLowerCase();
   const model = cfg[stageKey] || cfg.proposal;
   const injected = String(opts.puter_text || "").trim();
+  const injectedProvider = String(opts.provider || "puter").trim().toLowerCase();
+  if (cfg.strict_puter_only && injectedProvider !== "puter") {
+    return {
+      ok: false,
+      text: "",
+      model_used: model,
+      error: "PUTER_ONLY_POLICY: non-puter provider blocked",
+    };
+  }
   if (!injected) {
     return {
       ok: false,

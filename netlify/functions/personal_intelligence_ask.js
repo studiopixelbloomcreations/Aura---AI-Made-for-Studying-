@@ -336,7 +336,7 @@ exports.handler = async function handler(event) {
   const aiOk = cloudEvolveOnly ? true : (action ? true : !!llm.ok);
   const aiError = cloudEvolveOnly ? "" : (action ? "" : String(llm.error || ""));
   const latencyMs = Math.max(0, Date.now() - startedAt);
-  const runtimeMode = String(process.env.PI_RUNTIME_MODE || "cloud_only").trim().toLowerCase();
+  const runtimeMode = "cloud_only";
 
   let evolutionMeta = null;
   try {
@@ -422,6 +422,11 @@ exports.handler = async function handler(event) {
     pi_os_status: evolutionMeta && evolutionMeta.pi_os_status ? evolutionMeta.pi_os_status : undefined,
     phase2_status: evolutionMeta && evolutionMeta.phase2_status ? evolutionMeta.phase2_status : undefined,
     phases_3_to_9_status: evolutionMeta && evolutionMeta.phases_3_to_9_status ? evolutionMeta.phases_3_to_9_status : undefined,
+    pcos_status: evolutionMeta && evolutionMeta.pcos_status ? evolutionMeta.pcos_status : undefined,
+    cognitive_trace_id: evolutionMeta && evolutionMeta.cognitive_trace_id ? evolutionMeta.cognitive_trace_id : undefined,
+    twin_state_version: evolutionMeta && evolutionMeta.twin_state_version ? evolutionMeta.twin_state_version : undefined,
+    research_report_id: evolutionMeta && evolutionMeta.research_report_id ? evolutionMeta.research_report_id : undefined,
+    governance_decision_id: evolutionMeta && evolutionMeta.governance_decision_id ? evolutionMeta.governance_decision_id : undefined,
     runtime_mode: runtimeMode,
     cloud_evolution: cloudEvolution || undefined,
   });

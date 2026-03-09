@@ -9,6 +9,7 @@
   const STT_RECORD_MS = 8000;
   const PI_BATCH_WAIT_MS = 10000;
   const PI_BATCH_MAX_MESSAGES = 10;
+  const WAKE_WORD_RE = /\b(hey\s+tutor|tutor)\b/i;
   const PI_MODEL_KEY = "pi_model";
   const PI_MODEL_DEFAULT = "gemini-3-pro-preview";
   const PI_TTS_VOICE_KEY = (window.PuterVoiceCatalog && window.PuterVoiceCatalog.storageKey) ? String(window.PuterVoiceCatalog.storageKey) : "g9_tts_voice";
@@ -26,6 +27,9 @@
   const HISTORY_BACKEND_WINDOW = 120;
   let enabled = false;
   let recognition = null;
+  let wakeRecognition = null;
+  let wakeWordArmed = false;
+  let wakeWordRestartTimer = null;
   let idleTimer = null;
   let tutorAudio = null;
   let assistantState = "idle";
@@ -60,6 +64,8 @@
   let pendingPiTimer = null;
   let pendingPiFlushBusy = false;
   let pendingPiFlushAgain = false;
+  let uiMode = "text";
+  let typingRowEl = null;
   const SILENT_WAV_DATA_URI = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=";
 
   const panel = document.createElement("div");
@@ -73,38 +79,70 @@
         <div class="pi-section">Personal Intelligence</div>
         <div class="pi-name">Tutor</div>
       </div>
+      <div class="pi-top-status">
+        <span class="pi-top-dot"></span>
+        <span class="pi-top-label">Online</span>
+      </div>
+      <button class="pi-mode-toggle" type="button" aria-label="Switch mode">
+        <span class="pi-mode-pill active" data-mode="text">Text</span>
+        <span class="pi-mode-pill" data-mode="voice">Voice</span>
+      </button>
       <button class="pi-close" type="button" aria-label="Close assistant">x</button>
     </div>
-    <div class="pi-orb-wrap">
-      <button class="pi-orb idle" type="button" aria-label="Activate Tutor">
-        <span class="pi-orb-shell"></span>
-        <span class="pi-orb-core"></span>
-        <span class="pi-orb-glint"></span>
-      </button>
-      <div class="pi-state">Idle</div>
-      <div class="pi-evolution-board" aria-live="polite">
-        <div class="pi-evolution-title">Cloud Evolution</div>
-        <div class="pi-evolution-grid">
-          <div class="pi-evolution-item"><span>Runtime</span><strong data-pi-field="runtime">-</strong></div>
-          <div class="pi-evolution-item"><span>Graph</span><strong data-pi-field="graph">-</strong></div>
-          <div class="pi-evolution-item"><span>Queue</span><strong data-pi-field="queue">-</strong></div>
-          <div class="pi-evolution-item"><span>Research</span><strong data-pi-field="research">-</strong></div>
-          <div class="pi-evolution-item"><span>Retries</span><strong data-pi-field="retries">0</strong></div>
-          <div class="pi-evolution-item"><span>Dead-Letter</span><strong data-pi-field="dead">0</strong></div>
+    <div class="pi-main">
+      <section class="pi-text-mode active" data-pi-mode="text">
+        <div class="pi-log" aria-live="polite"></div>
+        <div class="pi-evolution-board" aria-live="polite">
+          <div class="pi-evolution-title">Cloud Evolution</div>
+          <div class="pi-evolution-grid">
+            <div class="pi-evolution-item"><span>Runtime</span><strong data-pi-field="runtime">-</strong></div>
+            <div class="pi-evolution-item"><span>Graph</span><strong data-pi-field="graph">-</strong></div>
+            <div class="pi-evolution-item"><span>Queue</span><strong data-pi-field="queue">-</strong></div>
+            <div class="pi-evolution-item"><span>Research</span><strong data-pi-field="research">-</strong></div>
+            <div class="pi-evolution-item"><span>Retries</span><strong data-pi-field="retries">0</strong></div>
+            <div class="pi-evolution-item"><span>Dead-Letter</span><strong data-pi-field="dead">0</strong></div>
+          </div>
         </div>
-      </div>
+        <div class="pi-input-bar">
+          <button class="pi-input-mic" type="button" aria-label="Voice input">Mic</button>
+          <input class="pi-text-input" type="text" placeholder="Ask Personal Intelligence..." />
+          <button class="pi-input-send" type="button" aria-label="Send text">Send</button>
+        </div>
+      </section>
+      <section class="pi-voice-mode" data-pi-mode="voice">
+        <div class="pi-orb-wrap">
+          <button class="pi-orb idle" type="button" aria-label="Activate Tutor">
+            <span class="pi-orb-shell"></span>
+            <span class="pi-orb-core"></span>
+            <span class="pi-orb-glint"></span>
+          </button>
+          <div class="pi-state">Idle</div>
+        </div>
+        <div class="pi-voice-controls">
+          <button class="pi-voice-btn" data-vc="mute" type="button">Mute</button>
+          <button class="pi-voice-btn" data-vc="end" type="button">End</button>
+          <button class="pi-voice-btn" data-vc="text" type="button">Text Mode</button>
+        </div>
+      </section>
     </div>
-    <div class="pi-log" aria-live="polite"></div>
     <input class="pi-hidden-file-input" type="file" multiple style="display:none" />
   `;
   document.body.appendChild(panel);
 
   const closeBtn = panel.querySelector(".pi-close");
+  const modeToggleBtn = panel.querySelector(".pi-mode-toggle");
+  const modePills = panel.querySelectorAll(".pi-mode-pill");
+  const modeSections = panel.querySelectorAll("[data-pi-mode]");
   const orbBtn = panel.querySelector(".pi-orb");
   const auraCanvas = panel.querySelector(".pi-aurora-canvas");
   const stateEl = panel.querySelector(".pi-state");
+  const topStatusLabelEl = panel.querySelector(".pi-top-label");
   const logEl = panel.querySelector(".pi-log");
   const hiddenFileInput = panel.querySelector(".pi-hidden-file-input");
+  const textInputEl = panel.querySelector(".pi-text-input");
+  const textSendBtn = panel.querySelector(".pi-input-send");
+  const textMicBtn = panel.querySelector(".pi-input-mic");
+  const voiceControlBtns = panel.querySelectorAll(".pi-voice-btn");
   const evoFields = {
     runtime: panel.querySelector('[data-pi-field="runtime"]'),
     graph: panel.querySelector('[data-pi-field="graph"]'),
@@ -125,9 +163,123 @@
   function addLog(role, text) {
     const row = document.createElement("div");
     row.className = "pi-log-row " + (role === "user" ? "user" : "assistant");
-    row.textContent = text;
+    const content = String(text || "")
+      .replace(/^You:\s*/i, "")
+      .replace(/^Tutor:\s*/i, "");
+    row.textContent = content;
     logEl.appendChild(row);
     logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function setUIMode(mode) {
+    const next = mode === "voice" ? "voice" : "text";
+    uiMode = next;
+    modeSections.forEach(function (sec) {
+      const isActive = String(sec.getAttribute("data-pi-mode") || "") === next;
+      sec.classList.toggle("active", isActive);
+    });
+    modePills.forEach(function (pill) {
+      const isActive = String(pill.getAttribute("data-mode") || "") === next;
+      pill.classList.toggle("active", isActive);
+    });
+  }
+
+  function showTypingIndicator() {
+    if (!logEl || typingRowEl) return;
+    const row = document.createElement("div");
+    row.className = "pi-log-row assistant pi-typing";
+    row.innerHTML = '<span class="pi-dot"></span><span class="pi-dot"></span><span class="pi-dot"></span>';
+    logEl.appendChild(row);
+    logEl.scrollTop = logEl.scrollHeight;
+    typingRowEl = row;
+  }
+
+  function hideTypingIndicator() {
+    try {
+      if (typingRowEl && typingRowEl.parentNode) typingRowEl.parentNode.removeChild(typingRowEl);
+    } catch (e) {}
+    typingRowEl = null;
+  }
+
+  function hasWakeWord(text) {
+    return WAKE_WORD_RE.test(String(text || ""));
+  }
+
+  function clearWakeWordRestartTimer() {
+    try {
+      if (wakeWordRestartTimer) clearTimeout(wakeWordRestartTimer);
+    } catch (e) {}
+    wakeWordRestartTimer = null;
+  }
+
+  function stopWakeWordListener() {
+    wakeWordArmed = false;
+    clearWakeWordRestartTimer();
+    try {
+      if (wakeRecognition) wakeRecognition.onend = null;
+      if (wakeRecognition) wakeRecognition.stop();
+    } catch (e) {}
+    wakeRecognition = null;
+  }
+
+  async function triggerFromWakeWord(transcript) {
+    const heard = String(transcript || "").trim();
+    if (heard) {
+      addLog("assistant", "Tutor: Wake word detected (" + heard + ").");
+    } else {
+      addLog("assistant", "Tutor: Wake word detected.");
+    }
+    await primeAudioPlayback();
+    if (!enabled) setEnabled(true);
+    startListening();
+  }
+
+  function startWakeWordListener() {
+    if (wakeWordArmed) return;
+    const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Rec) {
+      dbg("wake word listener unavailable: speech recognition not supported");
+      return;
+    }
+    wakeWordArmed = true;
+    if (!wakeRecognition) {
+      wakeRecognition = new Rec();
+      wakeRecognition.lang = "en-US";
+      wakeRecognition.continuous = true;
+      wakeRecognition.interimResults = true;
+      wakeRecognition.onresult = function (ev) {
+        let transcript = "";
+        try {
+          const idx = ev && typeof ev.resultIndex === "number" ? ev.resultIndex : 0;
+          transcript = ev && ev.results && ev.results[idx] && ev.results[idx][0]
+            ? String(ev.results[idx][0].transcript || "")
+            : "";
+        } catch (e) {
+          transcript = "";
+        }
+        if (!hasWakeWord(transcript)) return;
+        stopWakeWordListener();
+        triggerFromWakeWord(transcript).catch(function () {});
+      };
+      wakeRecognition.onerror = function (ev) {
+        dbg("wake word error", ev && ev.error);
+      };
+      wakeRecognition.onend = function () {
+        if (!wakeWordArmed || enabled) return;
+        clearWakeWordRestartTimer();
+        wakeWordRestartTimer = setTimeout(function () {
+          try {
+            if (wakeRecognition && wakeWordArmed && !enabled) wakeRecognition.start();
+          } catch (e) {}
+        }, 700);
+      };
+    }
+    try {
+      wakeRecognition.start();
+      addLog("assistant", "Tutor: Wake mode active. Say 'Hey Tutor' or 'Tutor'.");
+    } catch (e) {
+      dbg("wake word start failed", e && e.message);
+    }
   }
 
   renderEvolutionStatus({});
@@ -435,6 +587,7 @@
     panel.classList.add("state-" + kind);
     assistantState = kind;
     stateEl.textContent = label;
+    if (topStatusLabelEl) topStatusLabelEl.textContent = label || "Online";
   }
 
   function clearIdleTimer() {
@@ -1093,7 +1246,9 @@
         if (recognition) recognition.abort();
       } catch (e) {}
       setAssistantState("idle", "Idle");
+      startWakeWordListener();
     } else {
+      stopWakeWordListener();
       startOrbVisualization();
       ensureMicAnalyser();
     }
@@ -1474,6 +1629,7 @@
     const t = String(text || "").trim();
     if (!t || !enabled) return;
     setAssistantState("thinking", "Thinking");
+    showTypingIndicator();
     armIdleTimer();
     try {
       const language = localStorage.getItem("g9_language") || "English";
@@ -1498,6 +1654,7 @@
         });
         const actionAnswer = actionData && actionData.answer ? String(actionData.answer) : "I did not get that. Please try again.";
         const actionSpeakText = buildSpeakText(actionAnswer);
+        hideTypingIndicator();
         addLog("assistant", "Tutor: " + actionAnswer);
         pushHistory("assistant", actionAnswer);
         if (actionData && actionData.learned_facts) mergeKnownFacts(actionData.learned_facts);
@@ -1520,6 +1677,7 @@
       const puterResp = await window.puter.ai.chat(chatMessages, { model: model });
       const answer = extractPuterText(puterResp) || "I did not get that. Please try again.";
       const speakText = buildSpeakText(answer);
+      hideTypingIndicator();
       addLog("assistant", "Tutor: " + answer);
       pushHistory("assistant", answer);
       dbg("AI provider:", "puter", "ok:", true, "model:", model);
@@ -1546,6 +1704,7 @@
         });
         const answer = data && data.answer ? String(data.answer) : "I did not get that. Please try again.";
         const speakText = buildSpeakText(answer);
+        hideTypingIndicator();
         addLog("assistant", "Tutor: " + answer);
         pushHistory("assistant", answer);
         if (data && data.learned_facts) mergeKnownFacts(data.learned_facts);
@@ -1554,9 +1713,12 @@
         renderEvolutionStatus(data);
         await playTutorTTS(speakText);
       } catch (e2) {
+        hideTypingIndicator();
         addLog("assistant", "Tutor: Request failed. Please try again.");
         setAssistantState("idle", "Idle");
       }
+    } finally {
+      hideTypingIndicator();
     }
   }
 
@@ -1790,7 +1952,7 @@
     await primeAudioPlayback();
     setEnabled(!enabled);
     if (enabled) {
-      startListening();
+      if (uiMode === "voice") startListening();
     }
   });
 
@@ -1798,10 +1960,71 @@
     setEnabled(false);
   });
 
-  orbBtn.addEventListener("click", async function () {
-    await primeAudioPlayback();
-    startListening();
-  });
+  if (orbBtn) {
+    orbBtn.addEventListener("click", async function () {
+      await primeAudioPlayback();
+      setUIMode("voice");
+      startListening();
+    });
+  }
+
+  if (modeToggleBtn) {
+    modeToggleBtn.addEventListener("click", function () {
+      const next = uiMode === "voice" ? "text" : "voice";
+      setUIMode(next);
+      if (next === "voice" && enabled) {
+        startListening();
+      }
+    });
+  }
+
+  if (textSendBtn && textInputEl) {
+    textSendBtn.addEventListener("click", function () {
+      const v = String(textInputEl.value || "").trim();
+      if (!v) return;
+      textInputEl.value = "";
+      setUIMode("text");
+      askTutorText(v);
+    });
+    textInputEl.addEventListener("keydown", function (ev) {
+      if (!ev || ev.key !== "Enter") return;
+      ev.preventDefault();
+      const v = String(textInputEl.value || "").trim();
+      if (!v) return;
+      textInputEl.value = "";
+      askTutorText(v);
+    });
+  }
+
+  if (textMicBtn) {
+    textMicBtn.addEventListener("click", async function () {
+      await primeAudioPlayback();
+      setUIMode("voice");
+      if (!enabled) setEnabled(true);
+      startListening();
+    });
+  }
+
+  if (voiceControlBtns && voiceControlBtns.length) {
+    voiceControlBtns.forEach(function (btn) {
+      btn.addEventListener("click", async function () {
+        const action = String(btn.getAttribute("data-vc") || "");
+        if (action === "text") {
+          setUIMode("text");
+          return;
+        }
+        if (action === "end") {
+          setEnabled(false);
+          return;
+        }
+        if (action === "mute") {
+          stopTutorAudio();
+          addLog("assistant", "Tutor: Voice output muted.");
+          return;
+        }
+      });
+    });
+  }
 
   // Runtime controls so model/tts can be changed later without code edits.
   window.PersonalIntelligenceConfig = {
@@ -1814,6 +2037,7 @@
   loadMemory();
   initCloudMemorySync();
   initPISettingsSelectors().catch(function (e) { dbg("init PI settings selectors failed", e && e.message); });
+  setUIMode("text");
   setEnabled(false);
   try {
     if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
