@@ -2686,6 +2686,21 @@ body {
   position: relative;
 }
 
+.pi-brain-toggle {
+  min-width: 42px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  border: 1px solid rgba(118, 203, 255, 0.28);
+  background: rgba(13, 24, 45, 0.55);
+  color: #d6f2ff;
+}
+
+.pi-brain-toggle.active {
+  border-color: rgba(99, 235, 255, 0.62);
+  background: linear-gradient(145deg, rgba(22, 157, 255, 0.52), rgba(122, 88, 255, 0.52));
+  box-shadow: 0 0 16px rgba(85, 190, 255, 0.5);
+}
+
 .composer::before {
   content: '';
   position: absolute;

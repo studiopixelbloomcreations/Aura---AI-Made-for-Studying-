@@ -9,6 +9,7 @@
   const messagesEl=document.getElementById('messages');
   const inputBox=document.getElementById('inputBox');
   const sendBtn=document.getElementById('sendBtn');
+  const piBrainToggle=document.getElementById('piBrainToggle');
   const micBtn=document.getElementById('micBtn');
   const currentSubject=document.getElementById('currentSubject');
   const chatTitle=document.getElementById('chatTitle');
@@ -44,8 +45,10 @@
   let examModePapersLoaded = false;
   let examModePdfLinks = [];
   const MAIN_MODEL_KEY = 'main_model';
+  const PI_CHAT_TOGGLE_KEY = 'g9_pi_chat_mode';
   const ADMIN_UNLOCK_MS = 15000;
   const MAIN_MODEL_DEFAULT = 'gemini-3-pro-preview';
+  const PI_MODEL_DEFAULT = 'gemini-3-pro-preview';
   const MAIN_MODEL_OPTIONS_FALLBACK = [
     { id: 'google/gemini-2.5-flash', label: 'google/gemini-2.5-flash' },
     { id: 'openai/gpt-5.2-chat', label: 'openai/gpt-5.2-chat' },
@@ -60,7 +63,8 @@
     language: localStorage.getItem('g9_language') || 'English',
     studyGoal: localStorage.getItem('g9_study_goal') || '60',
     chats: JSON.parse(localStorage.getItem('g9_chats') || '[]'),
-    active: localStorage.getItem('g9_active') || null
+    active: localStorage.getItem('g9_active') || null,
+    piChatMode: localStorage.getItem(PI_CHAT_TOGGLE_KEY) === 'true'
   };
 
   // Remote chat sync (Firestore via GoogleSync)
@@ -567,6 +571,41 @@
     return '';
   }
 
+  function getPiModel(){
+    try {
+      return String(localStorage.getItem('pi_model') || PI_MODEL_DEFAULT).trim() || PI_MODEL_DEFAULT;
+    } catch (e) {
+      return PI_MODEL_DEFAULT;
+    }
+  }
+
+  function getPiKnownFacts(){
+    try {
+      const a = JSON.parse(localStorage.getItem('personal_intelligence_memory_v1') || '{}');
+      if(a && typeof a === 'object' && !Array.isArray(a)) return a;
+    } catch (e) {}
+    try {
+      const b = JSON.parse(localStorage.getItem('pcos_pi_facts_v2') || '{}');
+      if(b && typeof b === 'object' && !Array.isArray(b)) return b;
+    } catch (e) {}
+    return {};
+  }
+
+  function setPiChatMode(enabled){
+    state.piChatMode = !!enabled;
+    try { localStorage.setItem(PI_CHAT_TOGGLE_KEY, state.piChatMode ? 'true' : 'false'); } catch (e) {}
+    if(piBrainToggle){
+      piBrainToggle.classList.toggle('active', state.piChatMode);
+      piBrainToggle.setAttribute('aria-pressed', state.piChatMode ? 'true' : 'false');
+      piBrainToggle.title = state.piChatMode ? 'Personal Intelligence brain active' : 'Main Tutor brain active';
+    }
+    if(inputBox){
+      inputBox.placeholder = state.piChatMode
+        ? 'Personal Intelligence mode: ask anything...'
+        : 'Ask me anything...';
+    }
+  }
+
   function fallbackMainModels(){
     return MAIN_MODEL_OPTIONS_FALLBACK.slice();
   }
@@ -953,6 +992,63 @@
       } catch (e3) {}
     }
 
+    if(state.piChatMode){
+      let chat=state.chats.find(c=>c.id===state.active); if(!chat){ createChat('New Chat'); chat=state.chats[0]; }
+      if(chat.messages.length===0){ const t=await generateTitle(text); chat.title=t; saveChats(); renderChats(); renderActiveChat(); }
+      const langTag = state.language==='Sinhala' ? '[à·ƒà·’à¶‚à·„à¶½]' : '[English]'; chat.messages.push({role:'user',content:langTag+' '+text}); appendMessage('user',langTag+' '+text); saveChats(); inputBox.value=''; if(micBtn) micBtn.classList.remove('hidden'); if(sendBtn) sendBtn.classList.remove('show'); chat.messages.push({role:'ai',content:'Thinkingâ€¦'}); appendMessage('ai','Thinkingâ€¦'); saveChats(); renderChats(); emitProgressEvent('g9:chat_context', { chatId: state.active, subject: state.subject });
+      emitProgressEvent('g9:user_message', { chatId: state.active, subject: state.subject, text });
+
+      const history = (chat && Array.isArray(chat.messages))
+        ? chat.messages
+            .filter(m => m && (m.role === 'user' || m.role === 'ai') && m.content && m.content !== 'Thinkingâ€¦')
+            .slice(-20)
+            .map(m => ({ role: m.role === 'ai' ? 'assistant' : 'user', content: String(m.content).slice(0, 1200) }))
+        : [];
+
+      try{
+        await ensurePuterReady(true);
+        const piModel = getPiModel();
+        const piPrompt =
+          'You are Personal Intelligence, an advanced reasoning assistant. ' +
+          'Be precise, adaptive, and context-aware. Current subject: ' + state.subject + '. ' +
+          'Respond in ' + state.language + '.';
+        const puterResp = await window.puter.ai.chat([{ role: 'system', content: piPrompt }].concat(history), { model: piModel });
+        const puterAnswer = extractPuterText(puterResp);
+        if(!puterAnswer){
+          throw new Error('Personal Intelligence model returned an empty response.');
+        }
+        const reqBody = {
+          message: text,
+          email: 'guest@student.com',
+          language: state.language,
+          subject: state.subject,
+          title: 'Personal Intelligence',
+          history: history,
+          known_facts: getPiKnownFacts(),
+          puter_reply: {
+            answer: puterAnswer,
+            model: piModel
+          },
+          puter_model: piModel,
+          runtime_mode: 'cloud_only'
+        };
+        const res = await (window.Api && window.Api.apiFetch
+          ? window.Api.apiFetch('/personal-intelligence/ask', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(reqBody) })
+          : fetch('/personal-intelligence/ask', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(reqBody) }));
+        const data = await safeReadJson(res);
+        if(!res.ok){
+          throw new Error('Personal Intelligence request failed (HTTP ' + res.status + '): ' + getBackendErrorMessage(data));
+        }
+        const answerRaw = data && data.answer ? String(data.answer) : puterAnswer;
+        const answer = answerRaw ? stripAwardPointsLine(answerRaw) : 'Personal Intelligence returned an empty response.';
+        const lastAi=[...chat.messages].reverse().find(m=>m.role==='ai');
+        if(lastAi) lastAi.content=answer; emitProgressEvent('g9:ai_response', { chatId: state.active, subject: state.subject, text: answer });
+        renderActiveChat(); saveChats();
+      }
+      catch(e){ const msg=(e && e.message) ? ('âš ï¸ ' + String(e.message)) : 'âš ï¸ Personal Intelligence failed to respond.'; const lastAi=[...chat.messages].reverse().find(m=>m.role==='ai'); if(lastAi) lastAi.content=msg; renderActiveChat(); saveChats(); toast(msg,{duration:5000}); }
+      return;
+    }
+
     let chat=state.chats.find(c=>c.id===state.active); if(!chat){ createChat('New Chat'); chat=state.chats[0]; }
     if(chat.messages.length===0){ const t=await generateTitle(text); chat.title=t; saveChats(); renderChats(); renderActiveChat(); }
     const langTag = state.language==='Sinhala' ? '[සිංහල]' : '[English]'; chat.messages.push({role:'user',content:langTag+' '+text}); appendMessage('user',langTag+' '+text); saveChats(); inputBox.value=''; if(micBtn) micBtn.classList.remove('hidden'); if(sendBtn) sendBtn.classList.remove('show'); chat.messages.push({role:'ai',content:'Thinking…'}); appendMessage('ai','Thinking…'); saveChats(); renderChats(); emitProgressEvent('g9:chat_context', { chatId: state.active, subject: state.subject });
@@ -1066,6 +1162,13 @@
     });
   }
 
+  if (piBrainToggle) {
+    piBrainToggle.addEventListener('click', () => {
+      setPiChatMode(!state.piChatMode);
+      toast(state.piChatMode ? 'Personal Intelligence text mode enabled' : 'Main Tutor mode enabled');
+    });
+  }
+
   // Action buttons
   const actionButtons = document.querySelectorAll('.action-button');
   actionButtons.forEach(btn => {
@@ -1169,6 +1272,7 @@
   };
 
   // init
+  setPiChatMode(state.piChatMode);
   renderChats(); renderActiveChat(); if(!state.active && state.chats.length===0) createChat('New Chat');
   
   // Initial welcome panel check

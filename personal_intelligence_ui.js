@@ -172,7 +172,7 @@
   }
 
   function setUIMode(mode) {
-    const next = mode === "voice" ? "voice" : "text";
+    const next = "voice";
     uiMode = next;
     modeSections.forEach(function (sec) {
       const isActive = String(sec.getAttribute("data-pi-mode") || "") === next;
@@ -1969,13 +1969,7 @@
   }
 
   if (modeToggleBtn) {
-    modeToggleBtn.addEventListener("click", function () {
-      const next = uiMode === "voice" ? "text" : "voice";
-      setUIMode(next);
-      if (next === "voice" && enabled) {
-        startListening();
-      }
-    });
+    modeToggleBtn.style.display = "none";
   }
 
   if (textSendBtn && textInputEl) {
@@ -2010,7 +2004,7 @@
       btn.addEventListener("click", async function () {
         const action = String(btn.getAttribute("data-vc") || "");
         if (action === "text") {
-          setUIMode("text");
+          setUIMode("voice");
           return;
         }
         if (action === "end") {
@@ -2037,7 +2031,17 @@
   loadMemory();
   initCloudMemorySync();
   initPISettingsSelectors().catch(function (e) { dbg("init PI settings selectors failed", e && e.message); });
-  setUIMode("text");
+  if (textSendBtn) textSendBtn.style.display = "none";
+  if (textInputEl) textInputEl.style.display = "none";
+  if (textMicBtn) textMicBtn.style.display = "none";
+  if (voiceControlBtns && voiceControlBtns.length) {
+    voiceControlBtns.forEach(function (btn) {
+      if (String(btn.getAttribute("data-vc") || "") === "text") {
+        btn.style.display = "none";
+      }
+    });
+  }
+  setUIMode("voice");
   setEnabled(false);
   try {
     if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
