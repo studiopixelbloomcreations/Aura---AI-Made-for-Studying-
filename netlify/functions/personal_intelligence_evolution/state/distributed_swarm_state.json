@@ -1,25 +1,25 @@
 {
   "schema_version": 1,
   "file_kind": "PI Distributed Swarm State",
-  "updated_at": "2026-03-09T06:52:29.331Z",
+  "updated_at": "2026-03-09T06:55:58.190Z",
   "workers": {
     "w_1": {
       "id": "w_1_o2jdbl",
       "created_at": "2026-03-08T18:12:29.825Z",
-      "runs": 14,
-      "last_seen_at": "2026-03-09T06:52:28.002Z"
+      "runs": 15,
+      "last_seen_at": "2026-03-09T06:55:57.146Z"
     },
     "w_2": {
       "id": "w_2_af82qp",
       "created_at": "2026-03-08T18:12:29.825Z",
-      "runs": 14,
-      "last_seen_at": "2026-03-09T06:52:28.002Z"
+      "runs": 15,
+      "last_seen_at": "2026-03-09T06:55:57.146Z"
     },
     "w_3": {
       "id": "w_3_nyml6o",
       "created_at": "2026-03-08T18:12:29.825Z",
-      "runs": 14,
-      "last_seen_at": "2026-03-09T06:52:28.002Z"
+      "runs": 15,
+      "last_seen_at": "2026-03-09T06:55:57.146Z"
     }
   },
   "leases": {},
@@ -238,6 +238,21 @@
     },
     {
       "at": "2026-03-09T06:52:29.331Z",
+      "worker_id": "w_3_nyml6o",
+      "processed": []
+    },
+    {
+      "at": "2026-03-09T06:55:57.554Z",
+      "worker_id": "w_1_o2jdbl",
+      "processed": []
+    },
+    {
+      "at": "2026-03-09T06:55:57.956Z",
+      "worker_id": "w_2_af82qp",
+      "processed": []
+    },
+    {
+      "at": "2026-03-09T06:55:58.190Z",
       "worker_id": "w_3_nyml6o",
       "processed": []
     }
