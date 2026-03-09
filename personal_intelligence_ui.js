@@ -1275,13 +1275,28 @@
     return best;
   }
 
+  function renderVisSetupEmergencyFallback() {
+    if (!visSetupEl) return;
+    const body = visSetupEl.querySelector(".pi-vis-setup-body");
+    if (!body) return;
+    body.innerHTML =
+      '<p><strong>Step 1 of 4: Visual Intelligence Introduction</strong></p>' +
+      '<p>Visual Intelligence setup recovered from a rendering issue.</p>' +
+      '<div class="pi-vis-actions"><button type="button" class="pi-vis-btn" data-vis-action="continue">Continue</button></div>';
+  }
+
   function openVisSetup() {
     visUseLegacySetupFallback = true;
+    if (visSetupOpen) return;
     visSetupOpen = true;
     visSetupState = Object.assign({}, visSetupState, { step: 1, agreed: false });
     panel.classList.add("pi-vis-setup-open");
     if (visSetupEl) visSetupEl.hidden = false;
-    renderVisSetup();
+    try {
+      renderVisSetup();
+    } catch (e) {
+      renderVisSetupEmergencyFallback();
+    }
   }
 
   function closeVisSetup() {
@@ -1579,7 +1594,7 @@
           addLog("assistant", "Tutor: Setup scan failed. Keep face in frame and retry.");
         },
         onRequireSetupFallback: function () {
-          openVisSetup();
+          if (!visSetupOpen) openVisSetup();
         },
       });
       if (visRuntime && visRuntime.start) {
