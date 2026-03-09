@@ -41,6 +41,13 @@
       "risk_score": 0,
       "mode": "auto_promote",
       "reason": "low_risk"
+    },
+    {
+      "id": "gov_mmit31dx",
+      "at": "2026-03-09T06:34:23.301Z",
+      "risk_score": 0,
+      "mode": "auto_promote",
+      "reason": "low_risk"
     }
   ]
 }
