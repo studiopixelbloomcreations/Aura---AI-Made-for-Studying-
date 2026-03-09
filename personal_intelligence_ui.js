@@ -418,30 +418,50 @@
 
   async function createVisProfileArtifactInRepo(profile) {
     if (!profile || !profile.file_name) return { ok: false, skipped: true, reason: "missing_profile" };
-    if (!window.DesktopAssistant || !window.DesktopAssistant.startEvolution) {
-      return { ok: false, skipped: true, reason: "desktop_bridge_unavailable" };
-    }
-    const repoPath = "vis_identity_profiles/" + String(profile.file_name || "");
+    const fileName = String(profile.file_name || "").trim();
     const json = JSON.stringify(profile, null, 2) + "\n";
+    // Web-first path: commit to GitHub via Netlify function.
     try {
-      const out = await window.DesktopAssistant.startEvolution({
-        file_path: repoPath,
-        instruction: "Write VIS identity profile JSON artifact for enrolled user.",
-        puter_generated_code: json,
-        puter_model: "local_json_writer",
-        deploy_local: true,
-        deploy_cloud: true,
+      const cloudOut = await fetchJson("/vis/identity-profile-commit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          file_name: fileName,
+          profile: profile,
+          commit_message: "vis: save " + fileName,
+        }),
       });
-      if (!out || !out.ok) {
-        pushVisDebug("Repo artifact write failed: " + String((out && (out.error || out.stage)) || "unknown"));
-      } else {
-        pushVisDebug("Repo artifact written: " + repoPath);
+      if (cloudOut && cloudOut.ok) {
+        pushVisDebug("Repo artifact committed (web): " + String(cloudOut.file_path || fileName));
+        return cloudOut;
       }
-      return out || { ok: false };
-    } catch (e) {
-      pushVisDebug("Repo artifact exception: " + String((e && e.message) || e));
-      return { ok: false, error: String((e && e.message) || e) };
+    } catch (webErr) {
+      pushVisDebug("Web repo commit failed: " + String((webErr && webErr.message) || webErr));
     }
+
+    // Desktop fallback path if available.
+    if (window.DesktopAssistant && window.DesktopAssistant.startEvolution) {
+      const repoPath = "vis_identity_profiles/" + fileName;
+      try {
+        const out = await window.DesktopAssistant.startEvolution({
+          file_path: repoPath,
+          instruction: "Write VIS identity profile JSON artifact for enrolled user.",
+          puter_generated_code: json,
+          puter_model: "local_json_writer",
+          deploy_local: true,
+          deploy_cloud: true,
+        });
+        if (!out || !out.ok) {
+          pushVisDebug("Desktop repo artifact write failed: " + String((out && (out.error || out.stage)) || "unknown"));
+        } else {
+          pushVisDebug("Desktop repo artifact written: " + repoPath);
+        }
+        return out || { ok: false };
+      } catch (e) {
+        pushVisDebug("Desktop repo artifact exception: " + String((e && e.message) || e));
+      }
+    }
+    return { ok: false, skipped: true, reason: "no_web_or_desktop_commit_path" };
   }
 
   function visCanOperateAI() {

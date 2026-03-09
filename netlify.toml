@@ -92,6 +92,11 @@
   status = 200
 
 [[redirects]]
+  from = "/vis/identity-profile-commit"
+  to = "/.netlify/functions/vis_identity_profile_commit"
+  status = 200
+
+[[redirects]]
   from = "/personal-intelligence/set-home"
   to = "/.netlify/functions/personal_intelligence_set_home"
   status = 200
