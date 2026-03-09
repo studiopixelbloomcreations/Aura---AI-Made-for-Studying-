@@ -49,6 +49,16 @@
       "tags": [
         "general"
       ]
+    },
+    {
+      "id": "life_evt_mmito2mc_552e0",
+      "at": "2026-03-09T06:50:44.676Z",
+      "message": "hello",
+      "success": true,
+      "latency_ms": 3,
+      "tags": [
+        "general"
+      ]
     }
   ]
 }
