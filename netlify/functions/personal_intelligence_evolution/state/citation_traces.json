@@ -254,6 +254,21 @@
       },
       "citation_count": 0,
       "at": "2026-03-09T06:52:30.252Z"
+    },
+    {
+      "id": "trace_mmitqgbo",
+      "report_id": "",
+      "query": "teach me how to do a kick flip",
+      "policy": {
+        "timeout_ms": 6000,
+        "max_depth": 2,
+        "budget": 6,
+        "allowlist": [],
+        "denylist": [],
+        "trust_threshold": 0.25
+      },
+      "citation_count": 0,
+      "at": "2026-03-09T06:52:35.748Z"
     }
   ]
 }
