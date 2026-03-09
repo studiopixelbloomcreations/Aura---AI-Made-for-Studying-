@@ -151,6 +151,20 @@
         "research_report_id": "",
         "governance_decision_id": "gov_mmismra2"
       }
+    },
+    {
+      "id": "obs_mmismsig_czeld",
+      "at": "2026-03-09T06:21:45.304Z",
+      "type": "ask_response",
+      "payload": {
+        "ai_provider": "puter_client",
+        "ai_ok": true,
+        "latency_ms": 3,
+        "action_type": "",
+        "evolution": true,
+        "phase2": true,
+        "phase3to9": true
+      }
     }
   ]
 }
