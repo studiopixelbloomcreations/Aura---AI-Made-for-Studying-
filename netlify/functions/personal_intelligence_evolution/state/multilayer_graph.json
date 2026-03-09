@@ -6,11 +6,11 @@
         "self": {
           "id": "self",
           "payload": {
-            "name": "",
-            "school": "",
+            "name": "T H E N U J A.",
+            "school": "Saint Anne's College. Got that",
             "city": ""
           },
-          "updated_at": "2026-03-09T06:34:21.272Z"
+          "updated_at": "2026-03-09T06:39:12.486Z"
         }
       },
       "edges": []
@@ -24,9 +24,9 @@
         "active_context": {
           "id": "active_context",
           "payload": {
-            "size": 3
+            "size": 20
           },
-          "updated_at": "2026-03-09T06:34:21.272Z"
+          "updated_at": "2026-03-09T06:39:12.486Z"
         }
       },
       "edges": []
@@ -40,5 +40,5 @@
       "edges": []
     }
   },
-  "updated_at": "2026-03-09T06:34:21.272Z"
+  "updated_at": "2026-03-09T06:39:12.486Z"
 }
