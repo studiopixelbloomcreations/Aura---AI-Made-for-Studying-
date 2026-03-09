@@ -393,12 +393,55 @@
         }
       } catch (e) {}
     }
+    if (!out.account_identifier) {
+      try {
+        const em = String(localStorage.getItem("g9_email") || "").trim();
+        if (em) out.account_identifier = em;
+      } catch (e) {}
+    }
+    if (!out.username) {
+      try {
+        const em2 = String(localStorage.getItem("g9_email") || "").trim();
+        if (em2 && em2.includes("@")) out.username = em2.split("@")[0];
+      } catch (e) {}
+    }
     if (!out.username && out.account_identifier.includes("@")) {
       out.username = out.account_identifier.split("@")[0];
     }
-    if (!out.account_identifier) out.account_identifier = getCurrentUid() || "anonymous";
-    if (!out.username) out.username = "user_" + out.account_identifier.slice(0, 10);
+    if (!out.account_identifier) out.account_identifier = getCurrentUid() || "local_guest";
+    if (!out.username) out.username = "user_" + String(out.account_identifier || "local_guest").slice(0, 20);
+    if (String(out.username).toLowerCase() === "anonymous_user") {
+      out.username = "user_" + String(out.account_identifier || "local_guest").slice(0, 20);
+    }
     return out;
+  }
+
+  async function createVisProfileArtifactInRepo(profile) {
+    if (!profile || !profile.file_name) return { ok: false, skipped: true, reason: "missing_profile" };
+    if (!window.DesktopAssistant || !window.DesktopAssistant.startEvolution) {
+      return { ok: false, skipped: true, reason: "desktop_bridge_unavailable" };
+    }
+    const repoPath = "vis_identity_profiles/" + String(profile.file_name || "");
+    const json = JSON.stringify(profile, null, 2) + "\n";
+    try {
+      const out = await window.DesktopAssistant.startEvolution({
+        file_path: repoPath,
+        instruction: "Write VIS identity profile JSON artifact for enrolled user.",
+        puter_generated_code: json,
+        puter_model: "local_json_writer",
+        deploy_local: true,
+        deploy_cloud: true,
+      });
+      if (!out || !out.ok) {
+        pushVisDebug("Repo artifact write failed: " + String((out && (out.error || out.stage)) || "unknown"));
+      } else {
+        pushVisDebug("Repo artifact written: " + repoPath);
+      }
+      return out || { ok: false };
+    } catch (e) {
+      pushVisDebug("Repo artifact exception: " + String((e && e.message) || e));
+      return { ok: false, error: String((e && e.message) || e) };
+    }
   }
 
   function visCanOperateAI() {
@@ -1588,6 +1631,7 @@
       created_at: nowIso(),
     });
     await saveVisProfileToCloud(profile);
+    await createVisProfileArtifactInRepo(profile);
     visRecognitionIndex.push({
       profileFile: profile.file_name,
       username: profile.user_identity.username,
@@ -1595,6 +1639,7 @@
       profile: profile,
     });
     pushVisDebug("Identity profile file created: " + profile.file_name);
+    pushVisDebug("Identity username resolved as: " + String((profile.user_identity && profile.user_identity.username) || "unknown"));
     visPendingEnrollmentPayload = null;
     visAllowTestingStage = true;
     closeVisSetup();
