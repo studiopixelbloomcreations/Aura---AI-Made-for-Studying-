@@ -188,7 +188,13 @@
     <div class="pi-vis-setup-backdrop" hidden>
       <div class="pi-vis-setup" role="dialog" aria-modal="true" aria-labelledby="piVisSetupTitle">
         <div class="pi-vis-setup-title" id="piVisSetupTitle">Visual Intelligence Setup</div>
-        <div class="pi-vis-setup-body"></div>
+        <div class="pi-vis-setup-body">
+          <p><strong>Step 1 of 4: Visual Intelligence Introduction</strong></p>
+          <p>Visual Intelligence Setup is preparing your enrollment flow...</p>
+          <div class="pi-vis-actions">
+            <button type="button" class="pi-vis-btn" data-vis-action="continue">Continue</button>
+          </div>
+        </div>
       </div>
     </div>
   `;
@@ -1532,6 +1538,9 @@
         },
         onScanFailed: function () {
           addLog("assistant", "Tutor: Setup scan failed. Keep face in frame and retry.");
+        },
+        onRequireSetupFallback: function () {
+          openVisSetup();
         },
       });
       if (visRuntime && visRuntime.start) {

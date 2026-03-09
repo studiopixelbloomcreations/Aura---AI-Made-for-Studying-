@@ -194,7 +194,13 @@
             if (typeof opts.onOffline === "function") opts.onOffline("Offline - unrecognized face");
             if (setup && !setup.isOpen()) {
               const hints = typeof opts.getIdentityHints === "function" ? opts.getIdentityHints() : { username: "user" };
-              setup.open(hints.username);
+              try {
+                setup.open(hints.username);
+              } catch (e) {
+                if (typeof opts.onRequireSetupFallback === "function") opts.onRequireSetupFallback();
+              }
+            } else if (!setup && typeof opts.onRequireSetupFallback === "function") {
+              opts.onRequireSetupFallback();
             }
           }
           return;
