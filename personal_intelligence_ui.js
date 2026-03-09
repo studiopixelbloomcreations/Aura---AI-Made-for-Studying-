@@ -115,6 +115,7 @@
   };
   let visUserInstance = null;
   let visCloudLoadInFlight = false;
+  let visUseLegacySetupFallback = false;
   let visProfileSaveTimer = null;
   let visSetupState = {
     step: 1,
@@ -239,9 +240,10 @@
     if (checkedRadio) visSetupState.infrared = String(checkedRadio.value || "") === "yes";
   }
 
-  // Fail-safe delegated setup controls: keeps setup flow clickable even if per-step listeners fail.
+  // Fail-safe delegated setup controls for legacy fallback flow only.
   if (visSetupEl) {
     visSetupEl.addEventListener("click", function (ev) {
+      if (!visUseLegacySetupFallback) return;
       const btn = ev && ev.target && ev.target.closest ? ev.target.closest("[data-vis-action]") : null;
       if (!btn) return;
       const action = String(btn.getAttribute("data-vis-action") || "").trim().toLowerCase();
@@ -1274,6 +1276,7 @@
   }
 
   function openVisSetup() {
+    visUseLegacySetupFallback = true;
     visSetupOpen = true;
     visSetupState = Object.assign({}, visSetupState, { step: 1, agreed: false });
     panel.classList.add("pi-vis-setup-open");
@@ -1282,6 +1285,7 @@
   }
 
   function closeVisSetup() {
+    visUseLegacySetupFallback = false;
     visSetupOpen = false;
     panel.classList.remove("pi-vis-setup-open");
     if (visSetupEl) visSetupEl.hidden = true;
