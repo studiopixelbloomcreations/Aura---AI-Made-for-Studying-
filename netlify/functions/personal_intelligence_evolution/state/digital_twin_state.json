@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-03-09T06:21:40.716Z",
+  "profile": {
+    "learning_style": "mixed",
+    "productivity_pattern": "unknown",
+    "pace": "medium"
+  },
+  "current_goal": "",
+  "metrics": {
+    "interactions": 1,
+    "success_rate": 100,
+    "avg_latency_ms": 3
+  },
+  "version": 2
+}
