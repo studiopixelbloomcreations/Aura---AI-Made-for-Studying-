@@ -407,6 +407,17 @@
     return !!(enabled && !visOffline && visActiveProfile && !visSetupOpen && !runtimeSetupOpen && !visScanning && !visVerificationBusy && !testOpen);
   }
 
+  function maybeOpenVisSetupForFirstRun(reason) {
+    const hasProfiles = Array.isArray(visRecognitionIndex) && visRecognitionIndex.length > 0;
+    if (hasProfiles) return false;
+    if (visSetupOpen) return false;
+    if (visVerificationBusy) return false;
+    if (visTestEl && !visTestEl.hidden) return false;
+    pushVisDebug("Opening first-run setup (" + String(reason || "bootstrap") + ").");
+    openVisSetup();
+    return true;
+  }
+
   function openVisTestStage(profile) {
     if (!visAllowTestingStage) return;
     if (!visTestEl) return;
@@ -866,6 +877,7 @@
           }
           if (!memoryCloudLoaded) await loadCloudMemoryForUid(memoryUid);
           await loadVisProfilesFromCloud();
+          maybeOpenVisSetupForFirstRun("auth_state");
           if (visRuntime && visRuntime.refreshIndex) {
             try { await visRuntime.refreshIndex(); } catch (e) {}
           }
@@ -1658,6 +1670,7 @@
     visDetectBusy = true;
     try {
       if (!visIndexLoaded) await loadVisProfilesFromCloud();
+      maybeOpenVisSetupForFirstRun("frame_loop");
       const faces = await detectFacesFromVideo();
       if (!faces.length) {
         const hadFace = visFacePresent;
@@ -1750,6 +1763,9 @@
   }
 
   async function initVisualIntelligenceSystem() {
+    closeVisTestStage();
+    visAllowTestingStage = false;
+    visPendingEnrollmentPayload = null;
     if (window.PI_VIS_RUNTIME && typeof window.PI_VIS_RUNTIME.createRuntime === "function") {
       visRuntime = window.PI_VIS_RUNTIME.createRuntime({
         panelEl: panel,
@@ -1813,12 +1829,16 @@
       });
       if (visRuntime && visRuntime.start) {
         const okExternal = await visRuntime.start();
-        if (okExternal) return;
+        if (okExternal) {
+          maybeOpenVisSetupForFirstRun("runtime_start");
+          return;
+        }
       }
     }
 
     initVisDetector();
     await loadVisProfilesFromCloud();
+    maybeOpenVisSetupForFirstRun("legacy_init");
     const ok = await ensureVisCameraReady();
     if (!ok) return;
     setVisOfflineState(true, "Scanning for face...");
