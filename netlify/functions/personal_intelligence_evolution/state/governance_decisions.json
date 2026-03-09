@@ -27,6 +27,13 @@
       "risk_score": 0,
       "mode": "auto_promote",
       "reason": "low_risk"
+    },
+    {
+      "id": "gov_mmit2bov",
+      "at": "2026-03-09T06:33:49.999Z",
+      "risk_score": 0,
+      "mode": "auto_promote",
+      "reason": "low_risk"
     }
   ]
 }
