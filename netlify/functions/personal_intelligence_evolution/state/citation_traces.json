@@ -164,6 +164,21 @@
       },
       "citation_count": 0,
       "at": "2026-03-09T06:50:40.245Z"
+    },
+    {
+      "id": "trace_mmito3sy",
+      "report_id": "",
+      "query": "hello",
+      "policy": {
+        "timeout_ms": 6000,
+        "max_depth": 2,
+        "budget": 6,
+        "allowlist": [],
+        "denylist": [],
+        "trust_threshold": 0.25
+      },
+      "citation_count": 0,
+      "at": "2026-03-09T06:50:46.210Z"
     }
   ]
 }
