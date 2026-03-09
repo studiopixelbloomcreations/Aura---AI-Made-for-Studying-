@@ -229,6 +229,41 @@
     dead: panel.querySelector('[data-pi-field="dead"]'),
   };
 
+  function syncVisSetupStateFromDom() {
+    if (!visSetupEl) return;
+    const usernameInput = visSetupEl.querySelector('[data-vis="username"]');
+    if (usernameInput) visSetupState.username = sanitizeVisUsername(usernameInput.value || visSetupState.username);
+    const agreeInput = visSetupEl.querySelector('[data-vis="agree"]');
+    if (agreeInput) visSetupState.agreed = !!agreeInput.checked;
+    const checkedRadio = visSetupEl.querySelector('input[name="pi-vis-ir"]:checked');
+    if (checkedRadio) visSetupState.infrared = String(checkedRadio.value || "") === "yes";
+  }
+
+  // Fail-safe delegated setup controls: keeps setup flow clickable even if per-step listeners fail.
+  if (visSetupEl) {
+    visSetupEl.addEventListener("click", function (ev) {
+      const btn = ev && ev.target && ev.target.closest ? ev.target.closest("[data-vis-action]") : null;
+      if (!btn) return;
+      const action = String(btn.getAttribute("data-vis-action") || "").trim().toLowerCase();
+      if (!action) return;
+      syncVisSetupStateFromDom();
+      if (action === "continue") {
+        if (visSetupState.step === 2 && !visSetupState.agreed) return;
+        visSetupState.step = Math.min(3, Number(visSetupState.step || 1) + 1);
+        renderVisSetup();
+        return;
+      }
+      if (action === "back") {
+        visSetupState.step = Math.max(1, Number(visSetupState.step || 1) - 1);
+        renderVisSetup();
+        return;
+      }
+      if (action === "start" || action === "start-scan") {
+        startVisEnrollment();
+      }
+    });
+  }
+
   function dbg() {
     try {
       const args = Array.prototype.slice.call(arguments);
