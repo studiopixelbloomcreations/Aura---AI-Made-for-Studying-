@@ -29,6 +29,16 @@
       "tags": [
         "general"
       ]
+    },
+    {
+      "id": "life_evt_mmit32uc_zfyvc",
+      "at": "2026-03-09T06:34:25.188Z",
+      "message": "hello",
+      "success": true,
+      "latency_ms": 1,
+      "tags": [
+        "general"
+      ]
     }
   ]
 }
