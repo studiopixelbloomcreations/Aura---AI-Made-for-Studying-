@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-03-09T06:22:07.876Z",
+  "updated_at": "2026-03-09T06:33:52.369Z",
   "layers": {
     "user": {
       "self": {
-        "name": "T H E N U J A.",
-        "school": "Saint Anne's College. Got that",
+        "name": "",
+        "school": "",
         "city": ""
       }
     },
