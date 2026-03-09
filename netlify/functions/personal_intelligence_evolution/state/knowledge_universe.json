@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-03-09T06:21:42.371Z",
+  "layers": {
+    "user": {
+      "self": {
+        "name": "T H E N U J A.",
+        "school": "Saint Anne's College. Got that",
+        "city": ""
+      }
+    },
+    "skills": {},
+    "tasks": {},
+    "interests": {},
+    "emotion": {}
+  },
+  "hints": [
+    "Maintain balanced tutoring strategy."
+  ]
+}
