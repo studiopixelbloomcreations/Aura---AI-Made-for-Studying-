@@ -224,6 +224,21 @@
       },
       "citation_count": 0,
       "at": "2026-03-09T06:52:18.200Z"
+    },
+    {
+      "id": "trace_mmitq7if",
+      "report_id": "",
+      "query": "alight tell me what is an ai",
+      "policy": {
+        "timeout_ms": 6000,
+        "max_depth": 2,
+        "budget": 6,
+        "allowlist": [],
+        "denylist": [],
+        "trust_threshold": 0.25
+      },
+      "citation_count": 0,
+      "at": "2026-03-09T06:52:24.327Z"
     }
   ]
 }
