@@ -179,6 +179,18 @@
         "rollout_mode": "auto_promote",
         "rollout_risk": 0
       }
+    },
+    {
+      "id": "obs_mmisnbzq_r5mci",
+      "at": "2026-03-09T06:22:10.550Z",
+      "type": "pcos_cycle",
+      "payload": {
+        "cloud_only": true,
+        "cognitive_trace_id": "cog_mmisn93l_wl8aye",
+        "twin_state_version": 3,
+        "research_report_id": "",
+        "governance_decision_id": "gov_mmisnb5g"
+      }
     }
   ]
 }
