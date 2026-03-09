@@ -311,6 +311,20 @@
         "research_report_id": "",
         "governance_decision_id": "gov_mmit9czq"
       }
+    },
+    {
+      "id": "obs_mmit9e7u_bewqr",
+      "at": "2026-03-09T06:39:19.866Z",
+      "type": "ask_response",
+      "payload": {
+        "ai_provider": "puter_client",
+        "ai_ok": true,
+        "latency_ms": 2,
+        "action_type": "",
+        "evolution": true,
+        "phase2": true,
+        "phase3to9": true
+      }
     }
   ]
 }
