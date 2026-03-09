@@ -121,6 +121,7 @@
   let visTestEl = null;
   let visVerificationBusy = false;
   let visVerificationProfile = null;
+  let visAllowTestingStage = false;
   let visProfileSaveTimer = null;
   let visSetupState = {
     step: 1,
@@ -234,6 +235,7 @@
   visCanvasEl = panel.querySelector(".pi-vis-canvas");
   visSetupEl = panel.querySelector(".pi-vis-setup-backdrop");
   visTestEl = panel.querySelector(".pi-vis-test-backdrop");
+  if (visTestEl) visTestEl.hidden = true;
   const textInputEl = panel.querySelector(".pi-text-input");
   const textSendBtn = panel.querySelector(".pi-input-send");
   const textMicBtn = panel.querySelector(".pi-input-mic");
@@ -336,6 +338,7 @@
       }
       if (action === "activate") {
         if (visVerificationProfile) {
+          visAllowTestingStage = false;
           closeVisTestStage();
           switchToVisProfile(visVerificationProfile);
         }
@@ -405,6 +408,7 @@
   }
 
   function openVisTestStage(profile) {
+    if (!visAllowTestingStage) return;
     if (!visTestEl) return;
     visVerificationProfile = profile || null;
     visVerificationBusy = true;
@@ -417,10 +421,12 @@
 
   function closeVisTestStage() {
     visVerificationBusy = false;
+    visVerificationProfile = null;
     if (visTestEl) visTestEl.hidden = true;
   }
 
   async function startVisVerificationStage(profile) {
+    if (!visAllowTestingStage) return;
     if (!profile) return;
     openVisTestStage(profile);
     const statusEl = visTestEl ? visTestEl.querySelector(".pi-vis-test-status") : null;
@@ -455,6 +461,7 @@
         if (statusEl) statusEl.textContent = "Verification complete. Recognized user: " + uname;
         if (activateBtn) activateBtn.hidden = false;
         visVerificationBusy = false;
+        visAllowTestingStage = false;
         return;
       }
     }
@@ -1441,6 +1448,8 @@
   }
 
   function openVisSetup() {
+    visAllowTestingStage = false;
+    closeVisTestStage();
     visUseLegacySetupFallback = true;
     if (visSetupOpen) return;
     visSetupOpen = true;
@@ -1575,6 +1584,7 @@
     });
     pushVisDebug("Identity profile file created: " + profile.file_name);
     visPendingEnrollmentPayload = null;
+    visAllowTestingStage = true;
     closeVisSetup();
     await startVisVerificationStage(profile);
   }
