@@ -20,6 +20,13 @@
       "risk_score": 0,
       "mode": "auto_promote",
       "reason": "low_risk"
+    },
+    {
+      "id": "gov_mmisnb5g",
+      "at": "2026-03-09T06:22:09.460Z",
+      "risk_score": 0,
+      "mode": "auto_promote",
+      "reason": "low_risk"
     }
   ]
 }
