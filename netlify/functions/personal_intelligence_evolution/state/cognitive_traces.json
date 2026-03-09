@@ -1,0 +1,38 @@
+{
+  "traces": [
+    {
+      "id": "cog_mmismpat_nwmvu1",
+      "at": "2026-03-09T06:21:41.194Z",
+      "stages": [
+        {
+          "name": "perception",
+          "ok": true,
+          "at": "2026-03-09T06:21:41.141Z"
+        },
+        {
+          "name": "working_memory",
+          "ok": true,
+          "at": "2026-03-09T06:21:41.141Z"
+        },
+        {
+          "name": "executive_control",
+          "ok": true,
+          "at": "2026-03-09T06:21:41.141Z"
+        },
+        {
+          "name": "imagination",
+          "ok": true,
+          "at": "2026-03-09T06:21:41.141Z"
+        },
+        {
+          "name": "reflection",
+          "ok": true,
+          "at": "2026-03-09T06:21:41.141Z"
+        }
+      ],
+      "intents": [
+        "general"
+      ]
+    }
+  ]
+}
