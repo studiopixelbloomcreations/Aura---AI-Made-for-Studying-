@@ -76,6 +76,13 @@
       "risk_score": 0,
       "mode": "auto_promote",
       "reason": "low_risk"
+    },
+    {
+      "id": "gov_mmito47m",
+      "at": "2026-03-09T06:50:46.738Z",
+      "risk_score": 0,
+      "mode": "auto_promote",
+      "reason": "low_risk"
     }
   ]
 }
