@@ -89,6 +89,16 @@
       "tags": [
         "general"
       ]
+    },
+    {
+      "id": "life_evt_mmituwjs_v2vtm",
+      "at": "2026-03-09T06:56:03.400Z",
+      "message": "who are you",
+      "success": true,
+      "latency_ms": 0,
+      "tags": [
+        "general"
+      ]
     }
   ]
 }
