@@ -119,16 +119,36 @@
   let visDebugLogs = [];
   let visPendingEnrollmentPayload = null;
   let visTestEl = null;
+  let visPersonalizeEl = null;
   let visVerificationBusy = false;
   let visVerificationProfile = null;
   let visAllowTestingStage = false;
   let visProfileSaveTimer = null;
+  const VIS_DISABLE_EXTERNAL_RUNTIME = true;
   let visSetupState = {
     step: 1,
     agreed: false,
     infrared: false,
     username: "",
   };
+  let visPersonalizeOpen = false;
+  let visPersonalizeState = {
+    loading: false,
+    profile: null,
+    answers: {},
+  };
+  const VIS_PERSONALIZE_QUESTIONS = [
+    { id: "preferred_name", label: "What should I call you?", placeholder: "Your preferred name", type: "text" },
+    { id: "full_name", label: "Full name (for formal moments)", placeholder: "Full name", type: "text" },
+    { id: "interests", label: "Top 3 interests", placeholder: "e.g., robotics, music, football", type: "text" },
+    { id: "favorite_subjects", label: "Favorite subjects", placeholder: "e.g., ICT, Math, Biology", type: "text" },
+    { id: "goals", label: "Goals for the next 3 months", placeholder: "e.g., improve grades, learn coding", type: "text" },
+    { id: "learning_style", label: "How do you learn best?", placeholder: "e.g., visuals, step-by-step, examples", type: "text" },
+    { id: "preferred_tone", label: "Preferred tone", placeholder: "e.g., calm, energetic, direct", type: "text" },
+    { id: "hobbies", label: "Hobbies / after-school activities", placeholder: "e.g., gaming, cricket, art", type: "text" },
+    { id: "timezone_or_city", label: "City or time zone", placeholder: "e.g., Colombo, UTC+05:30", type: "text" },
+    { id: "preferred_language", label: "Preferred language", placeholder: "e.g., English, Sinhala, Tamil", type: "text" },
+  ];
   const SILENT_WAV_DATA_URI = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=";
 
   const panel = document.createElement("div");
@@ -215,6 +235,15 @@
         </div>
       </div>
     </div>
+    <div class="pi-vis-personalize-backdrop" hidden>
+      <div class="pi-vis-personalize" role="dialog" aria-modal="true" aria-labelledby="piVisPersonalizeTitle">
+        <div class="pi-vis-personalize-head">
+          <div class="pi-vis-personalize-title" id="piVisPersonalizeTitle">Personalize Your Own Agent</div>
+          <div class="pi-vis-personalize-subtitle">Answer 10 quick questions to build your unique Personal Intelligence.</div>
+        </div>
+        <div class="pi-vis-personalize-body"></div>
+      </div>
+    </div>
   `;
   document.body.appendChild(panel);
 
@@ -235,6 +264,7 @@
   visCanvasEl = panel.querySelector(".pi-vis-canvas");
   visSetupEl = panel.querySelector(".pi-vis-setup-backdrop");
   visTestEl = panel.querySelector(".pi-vis-test-backdrop");
+  visPersonalizeEl = panel.querySelector(".pi-vis-personalize-backdrop");
   if (visTestEl) visTestEl.hidden = true;
   const textInputEl = panel.querySelector(".pi-text-input");
   const textSendBtn = panel.querySelector(".pi-input-send");
@@ -340,8 +370,20 @@
         if (visVerificationProfile) {
           visAllowTestingStage = false;
           closeVisTestStage();
-          switchToVisProfile(visVerificationProfile);
+          switchToVisProfile(visVerificationProfile).then(function () {
+            ensureVisPersonalAgent(visVerificationProfile, "post_test");
+          });
         }
+      }
+    });
+  }
+  if (visPersonalizeEl) {
+    visPersonalizeEl.addEventListener("click", function (ev) {
+      const btn = ev && ev.target && ev.target.closest ? ev.target.closest("[data-vis-personalize]") : null;
+      if (!btn) return;
+      const action = String(btn.getAttribute("data-vis-personalize") || "").trim().toLowerCase();
+      if (action === "submit") {
+        submitVisPersonalize();
       }
     });
   }
@@ -467,15 +509,18 @@
   function visCanOperateAI() {
     const runtimeSetupOpen = !!(visRuntime && visRuntime.isSetupOpen && visRuntime.isSetupOpen());
     const testOpen = !!(visTestEl && !visTestEl.hidden);
-    return !!(enabled && !visOffline && visActiveProfile && !visSetupOpen && !runtimeSetupOpen && !visScanning && !visVerificationBusy && !testOpen);
+    return !!(enabled && !visOffline && visActiveProfile && hasVisPersonalAgent(visActiveProfile) && !visSetupOpen && !runtimeSetupOpen && !visScanning && !visVerificationBusy && !testOpen && !visPersonalizeOpen);
   }
 
   function maybeOpenVisSetupForFirstRun(reason) {
+    if (!visIndexLoaded) return false;
     const hasProfiles = Array.isArray(visRecognitionIndex) && visRecognitionIndex.length > 0;
     if (hasProfiles) return false;
+    if (!visFacePresent) return false;
     if (visSetupOpen) return false;
     if (visVerificationBusy) return false;
     if (visTestEl && !visTestEl.hidden) return false;
+    if (visPersonalizeOpen) return false;
     pushVisDebug("Opening first-run setup (" + String(reason || "bootstrap") + ").");
     openVisSetup();
     return true;
@@ -497,6 +542,216 @@
     visVerificationBusy = false;
     visVerificationProfile = null;
     if (visTestEl) visTestEl.hidden = true;
+  }
+
+  function hasVisPersonalAgent(profile) {
+    const agent = profile && profile.personal_intelligence_agent ? profile.personal_intelligence_agent : null;
+    if (!agent || typeof agent !== "object") return false;
+    if (String(agent.status || "").toLowerCase() !== "ready") return false;
+    const answers = agent.personalization_answers && typeof agent.personalization_answers === "object"
+      ? agent.personalization_answers
+      : {};
+    return Object.keys(answers || {}).length >= VIS_PERSONALIZE_QUESTIONS.length;
+  }
+
+  function openVisPersonalize(profile) {
+    if (!visPersonalizeEl) return;
+    if (visPersonalizeOpen) return;
+    visPersonalizeOpen = true;
+    visPersonalizeState = {
+      loading: false,
+      profile: profile || null,
+      answers: {},
+    };
+    panel.classList.add("pi-vis-personalize-open");
+    visPersonalizeEl.hidden = false;
+    renderVisPersonalize();
+  }
+
+  function closeVisPersonalize() {
+    visPersonalizeOpen = false;
+    visPersonalizeState.loading = false;
+    panel.classList.remove("pi-vis-personalize-open");
+    if (visPersonalizeEl) visPersonalizeEl.hidden = true;
+  }
+
+  function renderVisPersonalize() {
+    if (!visPersonalizeEl) return;
+    const body = visPersonalizeEl.querySelector(".pi-vis-personalize-body");
+    if (!body) return;
+    if (visPersonalizeState.loading) {
+      body.innerHTML =
+        '<div class="pi-vis-personalize-loading">' +
+        '<div class="pi-vis-personalize-spinner"></div>' +
+        '<div class="pi-vis-personalize-loading-title">Creating your Personal Intelligence...</div>' +
+        '<div class="pi-vis-personalize-loading-note">Calibrating preferences, memory, and tone profile.</div>' +
+        "</div>";
+      return;
+    }
+    const answers = visPersonalizeState.answers || {};
+    const rows = VIS_PERSONALIZE_QUESTIONS.map(function (q, idx) {
+      const val = answers[q.id] ? String(answers[q.id]) : "";
+      return (
+        '<label class="pi-vis-personalize-field" data-q="' + q.id + '">' +
+          '<span class="pi-vis-personalize-label">' + String(idx + 1) + '. ' + q.label + "</span>" +
+          '<input class="pi-vis-personalize-input" type="' + q.type + '" data-vis-answer="' + q.id + '" ' +
+            'placeholder="' + String(q.placeholder || "") + '" value="' + val + '" required />' +
+        "</label>"
+      );
+    }).join("");
+    body.innerHTML =
+      '<div class="pi-vis-personalize-progress">' +
+        '<div class="pi-vis-personalize-progress-bar"><span></span></div>' +
+        '<div class="pi-vis-personalize-progress-text">Complete all 10 to activate your agent.</div>' +
+      "</div>" +
+      '<form class="pi-vis-personalize-form" autocomplete="off">' +
+        rows +
+        '<div class="pi-vis-personalize-actions">' +
+          '<button type="button" class="pi-vis-btn" data-vis-personalize="submit">Create Agent</button>' +
+        "</div>" +
+      "</form>";
+
+    const inputs = body.querySelectorAll("[data-vis-answer]");
+    if (inputs && inputs.length) {
+      inputs.forEach(function (input) {
+        input.addEventListener("input", function () {
+          const key = String(input.getAttribute("data-vis-answer") || "");
+          visPersonalizeState.answers[key] = String(input.value || "");
+          updatePersonalizeProgress();
+          const field = input.closest ? input.closest(".pi-vis-personalize-field") : null;
+          if (field) field.classList.toggle("is-missing", !String(input.value || "").trim());
+        });
+      });
+    }
+    updatePersonalizeProgress();
+  }
+
+  function updatePersonalizeProgress() {
+    if (!visPersonalizeEl) return;
+    const body = visPersonalizeEl.querySelector(".pi-vis-personalize-body");
+    if (!body) return;
+    const inputs = body.querySelectorAll("[data-vis-answer]");
+    if (!inputs || !inputs.length) return;
+    let filled = 0;
+    inputs.forEach(function (input) {
+      if (String(input.value || "").trim()) filled += 1;
+    });
+    const pct = Math.max(0, Math.min(100, Math.round((filled / VIS_PERSONALIZE_QUESTIONS.length) * 100)));
+    const bar = body.querySelector(".pi-vis-personalize-progress-bar span");
+    if (bar) bar.style.width = pct + "%";
+  }
+
+  function collectPersonalizeAnswers() {
+    if (!visPersonalizeEl) return {};
+    const body = visPersonalizeEl.querySelector(".pi-vis-personalize-body");
+    if (!body) return {};
+    const inputs = body.querySelectorAll("[data-vis-answer]");
+    const out = {};
+    if (inputs && inputs.length) {
+      inputs.forEach(function (input) {
+        const key = String(input.getAttribute("data-vis-answer") || "");
+        out[key] = String(input.value || "").trim();
+      });
+    }
+    return out;
+  }
+
+  function validatePersonalizeAnswers(answers) {
+    if (!visPersonalizeEl) return false;
+    const body = visPersonalizeEl.querySelector(".pi-vis-personalize-body");
+    if (!body) return false;
+    let ok = true;
+    VIS_PERSONALIZE_QUESTIONS.forEach(function (q) {
+      const val = answers[q.id];
+      const field = body.querySelector('[data-q="' + q.id + '"]');
+      const missing = !String(val || "").trim();
+      if (field) field.classList.toggle("is-missing", missing);
+      if (missing) ok = false;
+    });
+    return ok;
+  }
+
+  function parseCsvList(value) {
+    return String(value || "")
+      .split(",")
+      .map(function (s) { return s.trim(); })
+      .filter(Boolean)
+      .slice(0, 10);
+  }
+
+  async function createVisPersonalAgent(profile, answers) {
+    if (!profile) return false;
+    const safeAnswers = answers && typeof answers === "object" ? answers : {};
+    profile.personal_intelligence_agent = {
+      status: "ready",
+      created_at: nowIso(),
+      personalization_answers: Object.assign({}, safeAnswers),
+      personalization_questions: VIS_PERSONALIZE_QUESTIONS.map(function (q) { return q.id; }),
+    };
+    const facts = {
+      preferred_name: safeAnswers.preferred_name || "",
+      full_name: safeAnswers.full_name || "",
+      interests: safeAnswers.interests || "",
+      favorite_subjects: safeAnswers.favorite_subjects || "",
+      goals: safeAnswers.goals || "",
+      learning_style: safeAnswers.learning_style || "",
+      preferred_tone: safeAnswers.preferred_tone || "",
+      hobbies: safeAnswers.hobbies || "",
+      timezone_or_city: safeAnswers.timezone_or_city || "",
+      preferred_language: safeAnswers.preferred_language || "",
+    };
+    mergeKnownFacts(facts);
+    visPersonalizationProfile = Object.assign({}, visPersonalizationProfile || {}, {
+      interests: parseCsvList(safeAnswers.interests),
+      frequently_discussed_topics: parseCsvList(safeAnswers.favorite_subjects),
+      behavior_patterns: parseCsvList(safeAnswers.goals),
+      conversation_habits: parseCsvList(safeAnswers.learning_style),
+      preferred_interaction_style: safeAnswers.preferred_tone || visPersonalizationProfile.preferred_interaction_style,
+      tone_preferences: safeAnswers.preferred_tone || visPersonalizationProfile.tone_preferences,
+    });
+    visBehaviorConfig = Object.assign({}, visBehaviorConfig || {}, {
+      preferred_conversation_tone: safeAnswers.preferred_tone || visBehaviorConfig.preferred_conversation_tone,
+    });
+    profile.personalization_profile = Object.assign({}, profile.personalization_profile || {}, visPersonalizationProfile || {});
+    profile.ai_behavior_configuration = Object.assign({}, profile.ai_behavior_configuration || {}, visBehaviorConfig || {});
+    profile.learned_preferences = Object.assign({}, profile.learned_preferences || {}, knownFacts || {});
+    if (visActiveProfile && visActiveProfile.file_name === profile.file_name) {
+      scheduleVisProfileSave();
+    } else {
+      await saveVisProfileToCloud(profile);
+    }
+    await createVisProfileArtifactInRepo(profile);
+    return true;
+  }
+
+  function ensureVisPersonalAgent(profile, reason) {
+    if (!profile) return;
+    if (hasVisPersonalAgent(profile)) return;
+    if (visPersonalizeOpen) return;
+    if (visSetupOpen || visVerificationBusy || visScanning) return;
+    if (!visFacePresent) return;
+    pushVisDebug("Opening personalization flow (" + String(reason || "missing_agent") + ").");
+    setAssistantStateForVisOffline("Personalization required");
+    openVisPersonalize(profile);
+  }
+
+  function submitVisPersonalize() {
+    if (visPersonalizeState.loading) return;
+    const answers = collectPersonalizeAnswers();
+    const ok = validatePersonalizeAnswers(answers);
+    if (!ok) return;
+    visPersonalizeState.loading = true;
+    renderVisPersonalize();
+    const profile = visPersonalizeState.profile || visActiveProfile;
+    setTimeout(function () {
+      createVisPersonalAgent(profile, answers).then(function () {
+        visPersonalizeState.loading = false;
+        closeVisPersonalize();
+        if (profile) {
+          switchToVisProfile(profile);
+        }
+      });
+    }, 1200);
   }
 
   async function startVisVerificationStage(profile) {
@@ -1361,6 +1616,7 @@
       last_active_timestamp: nowIso(),
     });
     await saveVisProfileToCloud(visActiveProfile);
+    await createVisProfileArtifactInRepo(visActiveProfile);
   }
 
   function applyVisProfileToRuntime(profile) {
@@ -1416,6 +1672,7 @@
       scheduleVisProfileSave();
     }
     await resumeFromVisOnline();
+    ensureVisPersonalAgent(visActiveProfile, "profile_switch");
   }
 
   async function detectFacesFromVideo() {
@@ -1735,7 +1992,6 @@
     visDetectBusy = true;
     try {
       if (!visIndexLoaded) await loadVisProfilesFromCloud();
-      maybeOpenVisSetupForFirstRun("frame_loop");
       const faces = await detectFacesFromVideo();
       if (!faces.length) {
         const hadFace = visFacePresent;
@@ -1746,6 +2002,11 @@
         return;
       }
       visFacePresent = true;
+      if (Array.isArray(visRecognitionIndex) && visRecognitionIndex.length === 0) {
+        maybeOpenVisSetupForFirstRun("no_index");
+        setAssistantStateForVisOffline("Offline - no visual identity on record");
+        return;
+      }
       const vector = extractVisFaceVector(faces[0]);
       if (!vector.length) {
         if (!visOffline) pauseForVisOffline("Offline - no face");
@@ -1756,7 +2017,7 @@
         visNoMatchCount += 1;
         if (visNoMatchCount >= VIS_MATCH_STABLE_COUNT) {
           setAssistantStateForVisOffline("Offline - unrecognized face");
-          if (!visSetupOpen) openVisSetup();
+          if (!visSetupOpen && !visPersonalizeOpen) openVisSetup();
         }
         return;
       }
@@ -1780,8 +2041,9 @@
           const hit = visRecognitionIndex.find(function (r) { return r.profileFile === match.profileFile; });
           if (hit && hit.profile) await switchToVisProfile(hit.profile);
         }
-      } else if (visOffline) {
-        await resumeFromVisOnline();
+      } else {
+        if (visOffline) await resumeFromVisOnline();
+        if (visActiveProfile) ensureVisPersonalAgent(visActiveProfile, "recognition");
       }
     } catch (e) {
       dbg("VIS frame processing failed", e && e.message);
@@ -1831,7 +2093,7 @@
     closeVisTestStage();
     visAllowTestingStage = false;
     visPendingEnrollmentPayload = null;
-    if (window.PI_VIS_RUNTIME && typeof window.PI_VIS_RUNTIME.createRuntime === "function") {
+    if (!VIS_DISABLE_EXTERNAL_RUNTIME && window.PI_VIS_RUNTIME && typeof window.PI_VIS_RUNTIME.createRuntime === "function") {
       visRuntime = window.PI_VIS_RUNTIME.createRuntime({
         panelEl: panel,
         videoEl: visVideoEl,
@@ -1894,16 +2156,12 @@
       });
       if (visRuntime && visRuntime.start) {
         const okExternal = await visRuntime.start();
-        if (okExternal) {
-          maybeOpenVisSetupForFirstRun("runtime_start");
-          return;
-        }
+        if (okExternal) return;
       }
     }
 
     initVisDetector();
     await loadVisProfilesFromCloud();
-    maybeOpenVisSetupForFirstRun("legacy_init");
     const ok = await ensureVisCameraReady();
     if (!ok) return;
     setVisOfflineState(true, "Scanning for face...");
@@ -2840,6 +3098,8 @@
 
   async function sendLocalEvolutionFromPuter(userText, generatedCode, updates) {
     try {
+      // Fact files are retired; facts live inside VIS identity profiles now.
+      return;
       const localEvolutionEnabled = String(localStorage.getItem("pi_local_evolution_enabled") || "false").trim().toLowerCase() === "true";
       if (!localEvolutionEnabled) return;
       if (!window.DesktopAssistant || !window.DesktopAssistant.startEvolution) return;

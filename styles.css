@@ -4784,6 +4784,150 @@ body {
   gap: 8px;
 }
 
+.pi-vis-personalize-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 20% 20%, rgba(64, 196, 255, 0.18), rgba(4, 8, 16, 0.78));
+  backdrop-filter: blur(8px);
+}
+
+.pi-vis-personalize-backdrop[hidden] {
+  display: none !important;
+}
+
+.pi-vis-personalize {
+  width: min(760px, 94vw);
+  border-radius: 18px;
+  border: 1px solid rgba(144, 226, 255, 0.45);
+  background: linear-gradient(180deg, rgba(11, 26, 48, 0.98), rgba(6, 14, 30, 0.98));
+  box-shadow: 0 28px 110px rgba(0, 0, 0, 0.55);
+  padding: 18px 18px 16px;
+}
+
+.pi-vis-personalize-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.pi-vis-personalize-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #e9f7ff;
+}
+
+.pi-vis-personalize-subtitle {
+  font-size: 12px;
+  color: rgba(214, 234, 255, 0.86);
+}
+
+.pi-vis-personalize-body {
+  color: #e8f5ff;
+}
+
+.pi-vis-personalize-progress {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.pi-vis-personalize-progress-bar {
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 215, 255, 0.4);
+  background: rgba(8, 16, 30, 0.85);
+}
+
+.pi-vis-personalize-progress-bar span {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #4de1ff, #8cffc1, #ffd36d);
+  transition: width 160ms ease;
+}
+
+.pi-vis-personalize-progress-text {
+  font-size: 11px;
+  color: rgba(190, 220, 248, 0.9);
+}
+
+.pi-vis-personalize-form {
+  display: grid;
+  gap: 10px;
+  max-height: min(420px, 60vh);
+  overflow: auto;
+  padding-right: 6px;
+}
+
+.pi-vis-personalize-field {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(120, 210, 255, 0.2);
+  background: rgba(12, 24, 40, 0.7);
+}
+
+.pi-vis-personalize-field.is-missing {
+  border-color: rgba(255, 120, 120, 0.55);
+  box-shadow: 0 0 18px rgba(255, 120, 120, 0.15);
+}
+
+.pi-vis-personalize-label {
+  font-size: 12px;
+  color: rgba(222, 240, 255, 0.92);
+}
+
+.pi-vis-personalize-input {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(111, 197, 255, 0.4);
+  background: rgba(7, 14, 28, 0.9);
+  color: #eef8ff;
+  padding: 8px 10px;
+}
+
+.pi-vis-personalize-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+  padding-bottom: 6px;
+}
+
+.pi-vis-personalize-loading {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 30px 18px;
+  gap: 10px;
+}
+
+.pi-vis-personalize-spinner {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 3px solid rgba(134, 220, 255, 0.35);
+  border-top-color: #8cffc1;
+  animation: pi-spin 1.1s linear infinite;
+}
+
+.pi-vis-personalize-loading-title {
+  font-size: 14px;
+  color: #f2fbff;
+  font-weight: 600;
+}
+
+.pi-vis-personalize-loading-note {
+  font-size: 11px;
+  color: rgba(188, 218, 246, 0.9);
+}
+
 .pi-aurora {
   position: absolute;
   inset: 0;
@@ -5027,6 +5171,11 @@ body {
 @keyframes pi-ring-spin {
   from { transform: translate(-50%, -50%) rotate(0deg) scale(calc(0.88 + var(--pi-energy))); }
   to { transform: translate(-50%, -50%) rotate(360deg) scale(calc(0.88 + var(--pi-energy))); }
+}
+
+@keyframes pi-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 @keyframes pi-breathe {
