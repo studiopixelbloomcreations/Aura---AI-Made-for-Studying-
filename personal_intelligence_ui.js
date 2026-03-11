@@ -76,6 +76,7 @@
   let visCanvasEl = null;
   let visSetupEl = null;
   let visDetector = null;
+  let visDetectorUnsupported = false;
   let visRuntime = null;
   let visMonitorTimer = null;
   let visDetectBusy = false;
@@ -1988,18 +1989,35 @@
 
   async function processVisFrame() {
     if (visDetectBusy || !visVideoEl || visSetupOpen || visScanning || visVerificationBusy) return;
-    if (!visDetector) return;
     visDetectBusy = true;
     try {
       if (!visIndexLoaded) await loadVisProfilesFromCloud();
-      const faces = await detectFacesFromVideo();
+      let faces = [];
+      if (visDetector) {
+        faces = await detectFacesFromVideo();
+      }
       if (!faces.length) {
-        const hadFace = visFacePresent;
-        visFacePresent = false;
-        visRecognitionCandidate = { profileFile: "", count: 0 };
-        visNoMatchCount = 0;
-        if (hadFace || !visOffline) pauseForVisOffline("Offline - no face");
-        return;
+        if (visDetectorUnsupported) {
+          const pseudo = buildPseudoCenterFace();
+          if (pseudo) {
+            faces = [pseudo];
+            if (visOffline) setAssistantStateForVisOffline("Camera active - fallback scan");
+          } else {
+            const hadFace = visFacePresent;
+            visFacePresent = false;
+            visRecognitionCandidate = { profileFile: "", count: 0 };
+            visNoMatchCount = 0;
+            if (hadFace || !visOffline) pauseForVisOffline("Offline - no face");
+            return;
+          }
+        } else {
+          const hadFace = visFacePresent;
+          visFacePresent = false;
+          visRecognitionCandidate = { profileFile: "", count: 0 };
+          visNoMatchCount = 0;
+          if (hadFace || !visOffline) pauseForVisOffline("Offline - no face");
+          return;
+        }
       }
       visFacePresent = true;
       if (Array.isArray(visRecognitionIndex) && visRecognitionIndex.length === 0) {
@@ -2079,12 +2097,15 @@
     try {
       if ("FaceDetector" in window) {
         visDetector = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+        visDetectorUnsupported = false;
       } else {
         visDetector = null;
+        visDetectorUnsupported = true;
         setAssistantStateForVisOffline("Offline - face API unsupported");
       }
     } catch (e) {
       visDetector = null;
+      visDetectorUnsupported = true;
       setAssistantStateForVisOffline("Offline - face API unsupported");
     }
   }
