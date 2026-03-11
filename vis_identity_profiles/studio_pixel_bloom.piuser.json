@@ -146,11 +146,11 @@
     "humor_professional_balance": "balanced"
   },
   "session_state": {
-    "paused": false,
-    "assistant_state": "listening",
+    "paused": true,
+    "assistant_state": "idle",
     "pending_messages": [],
     "pending_response": null,
-    "last_active_timestamp": "2026-03-11T12:22:06.397Z",
+    "last_active_timestamp": "2026-03-11T12:22:24.706Z",
     "speech_state": {
       "active": false,
       "text": "",
@@ -159,8 +159,8 @@
     },
     "user_instance": {
       "profile_file": "studio_pixel_bloom.piuser.json",
-      "runtime_key": "vis_instance_studio_pixel_bloom.piuser.json_mmm0dwba",
-      "loaded_at": "2026-03-11T12:22:05.782Z"
+      "runtime_key": "vis_instance_studio_pixel_bloom.piuser.json_mmm0eag7",
+      "loaded_at": "2026-03-11T12:22:24.103Z"
     }
   },
   "personal_intelligence_agent": {
