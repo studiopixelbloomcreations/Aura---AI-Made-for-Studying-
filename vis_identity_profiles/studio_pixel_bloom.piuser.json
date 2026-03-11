@@ -95,20 +95,41 @@
     "created_at": "2026-03-11T11:55:19.967Z"
   },
   "personalization_profile": {
-    "interests": [],
-    "behavior_patterns": [],
-    "conversation_habits": [],
-    "preferred_interaction_style": "balanced",
-    "frequently_discussed_topics": [],
-    "tone_preferences": "adaptive"
+    "interests": [
+      "Robotics",
+      "software devaloping. Engineering"
+    ],
+    "behavior_patterns": [
+      "Improve my grades",
+      "learn some coding"
+    ],
+    "conversation_habits": [
+      "step by step and examples"
+    ],
+    "preferred_interaction_style": "energetic",
+    "frequently_discussed_topics": [
+      "ICT"
+    ],
+    "tone_preferences": "energetic"
   },
   "conversation_memory": {
     "history": [],
     "important_facts": {}
   },
-  "learned_preferences": {},
+  "learned_preferences": {
+    "preferred_name": "Thenuja",
+    "full_name": "Thenuja Manumitha Premasiri",
+    "interests": "Robotics, software devaloping. Engineering",
+    "favorite_subjects": "ICT",
+    "goals": "Improve my grades, learn some coding",
+    "learning_style": "step by step and examples",
+    "preferred_tone": "energetic",
+    "hobbies": "gaming",
+    "timezone_or_city": "Kurunegala",
+    "preferred_language": "English"
+  },
   "ai_behavior_configuration": {
-    "preferred_conversation_tone": "adaptive",
+    "preferred_conversation_tone": "energetic",
     "formality_level": "balanced",
     "response_length_preference": "balanced",
     "technical_explanation_depth": "adaptive",
@@ -131,5 +152,33 @@
       "runtime_key": "vis_instance_studio_pixel_bloom.piuser.json_mmlzfk4g",
       "loaded_at": "2026-03-11T11:55:23.680Z"
     }
+  },
+  "personal_intelligence_agent": {
+    "status": "ready",
+    "created_at": "2026-03-11T11:57:19.253Z",
+    "personalization_answers": {
+      "preferred_name": "Thenuja",
+      "full_name": "Thenuja Manumitha Premasiri",
+      "interests": "Robotics, software devaloping. Engineering",
+      "favorite_subjects": "ICT",
+      "goals": "Improve my grades, learn some coding",
+      "learning_style": "step by step and examples",
+      "preferred_tone": "energetic",
+      "hobbies": "gaming",
+      "timezone_or_city": "Kurunegala",
+      "preferred_language": "English"
+    },
+    "personalization_questions": [
+      "preferred_name",
+      "full_name",
+      "interests",
+      "favorite_subjects",
+      "goals",
+      "learning_style",
+      "preferred_tone",
+      "hobbies",
+      "timezone_or_city",
+      "preferred_language"
+    ]
   }
 }
