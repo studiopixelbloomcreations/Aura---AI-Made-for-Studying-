@@ -129,7 +129,7 @@
     X-Content-Type-Options = "nosniff"
     Cross-Origin-Opener-Policy = "same-origin-allow-popups"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Content-Security-Policy = "default-src 'self' https://www.gstatic.com https://accounts.google.com https://*.google.com https://*.googleapis.com https://*.firebaseapp.com; script-src 'self' https://www.gstatic.com https://apis.google.com https://accounts.google.com https://unpkg.com https://js.puter.com https://*.puter.com https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' blob: data: https:; connect-src 'self' https://* wss://* data: blob:; frame-src 'self' https://accounts.google.com https://*.google.com https://*.firebaseapp.com https://*.puter.com; frame-ancestors 'self';"
+    Content-Security-Policy = "default-src 'self' https://www.gstatic.com https://accounts.google.com https://*.google.com https://*.googleapis.com https://*.firebaseapp.com; script-src 'self' https://www.gstatic.com https://apis.google.com https://accounts.google.com https://unpkg.com https://js.puter.com https://*.puter.com https://cdn.jsdelivr.net 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' blob: data: https:; connect-src 'self' https://* wss://* data: blob:; frame-src 'self' https://accounts.google.com https://*.google.com https://*.firebaseapp.com https://*.puter.com; frame-ancestors 'self';"
 
 # Cache static assets
 [[headers]]
