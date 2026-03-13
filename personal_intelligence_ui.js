@@ -33,6 +33,8 @@
   const VIS_SCAN_INTERVAL_MS = 120;
   const VIS_SCAN_FRAME_COUNT = 18;
   const VIS_PROFILE_DOC_LIMIT = 100;
+  const VIS_HUMAN_SCRIPT_LOCAL = "vis_human/human.js";
+  const VIS_HUMAN_SCRIPT_FALLBACK = "https://unpkg.com/@vladmandic/human/dist/human.js";
   let enabled = false;
   let recognition = null;
   let wakeRecognition = null;
@@ -836,6 +838,17 @@
     visVerificationBusy = false;
   }
 
+  function updateTopStatusLabel(reason) {
+    if (!topStatusLabelEl) return;
+    if (visOffline) {
+      topStatusLabelEl.textContent = reason || "Offline";
+      return;
+    }
+    const userLabel = String(visLastKnownUserLabel || "Unknown");
+    const emotionLabel = String(visLastEmotion || "neutral").toLowerCase();
+    topStatusLabelEl.textContent = "Online - " + userLabel + " · " + emotionLabel;
+  }
+
   function setVisOfflineState(nextOffline, reason) {
     visOffline = !!nextOffline;
     panel.classList.toggle("pi-vis-offline", visOffline);
@@ -843,11 +856,7 @@
       topStatusDotEl.classList.toggle("is-offline", visOffline);
       topStatusDotEl.classList.toggle("is-online", !visOffline);
     }
-    if (visOffline) {
-      if (topStatusLabelEl) topStatusLabelEl.textContent = reason || "Offline";
-    } else if (topStatusLabelEl) {
-      topStatusLabelEl.textContent = "Online - " + String(visLastKnownUserLabel || "Unknown");
-    }
+    updateTopStatusLabel(reason);
   }
 
   function cosineSimilarity(a, b) {
@@ -869,10 +878,48 @@
     return dot / (Math.sqrt(ax) * Math.sqrt(by));
   }
 
+  function loadHumanScript(src) {
+    return new Promise(function (resolve, reject) {
+      try {
+        const existing = document.querySelector('script[data-vis-human="true"][src="' + src + '"]');
+        if (existing) {
+          if (window.Human && window.Human.Human) resolve(true);
+          else existing.addEventListener("load", function () { resolve(true); }, { once: true });
+          return;
+        }
+        const tag = document.createElement("script");
+        tag.src = src;
+        tag.async = true;
+        tag.defer = true;
+        tag.setAttribute("data-vis-human", "true");
+        tag.onload = function () { resolve(true); };
+        tag.onerror = function () { reject(new Error("HUMAN_SCRIPT_LOAD_FAILED")); };
+        document.head.appendChild(tag);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
+  async function ensureHumanScriptLoaded() {
+    if (window.Human && window.Human.Human) return true;
+    try {
+      await loadHumanScript(VIS_HUMAN_SCRIPT_LOCAL);
+      if (window.Human && window.Human.Human) return true;
+    } catch (e) {}
+    try {
+      await loadHumanScript(VIS_HUMAN_SCRIPT_FALLBACK);
+      return !!(window.Human && window.Human.Human);
+    } catch (e2) {
+      return false;
+    }
+  }
+
   async function ensureHumanReady() {
     if (visHumanReady) return true;
     if (visHumanLoading) return false;
-    if (!window.Human || !window.Human.Human) return false;
+    const scriptOk = await ensureHumanScriptLoaded();
+    if (!scriptOk || !window.Human || !window.Human.Human) return false;
     visHumanLoading = true;
     try {
       const config = {
@@ -1011,7 +1058,7 @@
   function estimateFrameLuma() {
     if (!visVideoEl) return 1;
     const canvas = visCanvasEl || document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return 1;
     const w = 32;
     const h = 24;
@@ -1607,7 +1654,10 @@
     panel.classList.add("state-" + kind);
     assistantState = kind;
     stateEl.textContent = label;
-    if (topStatusLabelEl) topStatusLabelEl.textContent = label || "Online";
+    if (topStatusLabelEl) {
+      visLastKnownUserLabel = label || visLastKnownUserLabel || "Unknown";
+      updateTopStatusLabel();
+    }
   }
 
   function getVisProfileStorePath(uid, fileName) {
@@ -1962,7 +2012,7 @@
       visSpeechState = Object.assign({}, visSpeechState || {}, session.speech_state);
     }
     saveMemory();
-    if (topStatusLabelEl) topStatusLabelEl.textContent = "Online - " + visLastKnownUserLabel;
+    if (topStatusLabelEl) updateTopStatusLabel();
   }
 
   async function switchToVisProfile(profile) {
@@ -2420,6 +2470,7 @@
         if (visActiveProfile && visActiveProfile.session_state) {
           visActiveProfile.session_state.last_emotion = emotion;
         }
+        updateTopStatusLabel();
       }
       if (Array.isArray(visRecognitionIndex) && visRecognitionIndex.length === 0) {
         if (!visSetupOpen) openVisSetup();
