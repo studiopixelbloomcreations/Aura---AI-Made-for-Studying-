@@ -1,4 +1,6 @@
 ﻿(function () {
+  let scanTimer = null;
+
   function isVisible(el) {
     const rect = el.getBoundingClientRect();
     if (!rect || rect.width < 24 || rect.height < 24) return false;
@@ -90,10 +92,23 @@
     });
   }
 
+  function scheduleScan() {
+    if (scanTimer) return;
+    scanTimer = setTimeout(function () {
+      scanTimer = null;
+      scanAndWrap();
+    }, 200);
+  }
+
   function initLiquidGlass() {
     scanAndWrap();
     setTimeout(scanAndWrap, 600);
     setInterval(scanAndWrap, 4000);
+
+    const observer = new MutationObserver(function () {
+      scheduleScan();
+    });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
   }
 
   window.addEventListener('load', function () {

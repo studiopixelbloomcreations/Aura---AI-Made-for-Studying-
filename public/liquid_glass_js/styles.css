@@ -1,10 +1,13 @@
-/* Base Styles - General layout and typography */
+﻿/* Base Styles - General layout and typography */
 html,
 body {
   margin: 0;
   padding: 0;
-  font-family: sans-serif;
-  background: white;
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  background: radial-gradient(circle at 20% 20%, rgba(86, 170, 255, 0.35), rgba(20, 28, 48, 0.92) 55%),
+    radial-gradient(circle at 80% 10%, rgba(170, 255, 214, 0.25), rgba(10, 14, 26, 0.95) 60%),
+    #0a0f1f;
+  color: #e8f0ff;
 }
 
 .content {
