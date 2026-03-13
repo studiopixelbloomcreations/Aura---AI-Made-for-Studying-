@@ -131,6 +131,7 @@
   let visProfileSaveTimer = null;
   const VIS_DISABLE_EXTERNAL_RUNTIME = true;
   const VIS_HUMAN_MODEL_BASE = "vis_human/models";
+  const VIS_HUMAN_MODEL_FALLBACK = "https://unpkg.com/@vladmandic/human/models";
   let visHuman = null;
   let visHumanReady = false;
   let visHumanLoading = false;
@@ -904,8 +905,11 @@
   async function ensureHumanScriptLoaded() {
     if (window.Human && window.Human.Human) return true;
     try {
-      await loadHumanScript(VIS_HUMAN_SCRIPT_LOCAL);
-      if (window.Human && window.Human.Human) return true;
+      const localRes = await fetch(VIS_HUMAN_SCRIPT_LOCAL, { method: "HEAD", cache: "no-store" });
+      if (localRes && localRes.ok) {
+        await loadHumanScript(VIS_HUMAN_SCRIPT_LOCAL);
+        if (window.Human && window.Human.Human) return true;
+      }
     } catch (e) {}
     try {
       await loadHumanScript(VIS_HUMAN_SCRIPT_FALLBACK);
@@ -915,6 +919,15 @@
     }
   }
 
+  async function resolveHumanModelBase() {
+    const base = String(window.HUMAN_MODEL_BASE || VIS_HUMAN_MODEL_BASE);
+    try {
+      const res = await fetch(base.replace(/\/$/, "") + "/models.json", { method: "HEAD", cache: "no-store" });
+      if (res && res.ok) return base;
+    } catch (e) {}
+    return VIS_HUMAN_MODEL_FALLBACK;
+  }
+
   async function ensureHumanReady() {
     if (visHumanReady) return true;
     if (visHumanLoading) return false;
@@ -922,10 +935,10 @@
     if (!scriptOk || !window.Human || !window.Human.Human) return false;
     visHumanLoading = true;
     try {
-      const config = {
-        backend: "webgl",
+      const modelBasePath = await resolveHumanModelBase();
+      const baseConfig = {
         cacheSensitivity: 0,
-        modelBasePath: String(window.HUMAN_MODEL_BASE || VIS_HUMAN_MODEL_BASE),
+        modelBasePath: modelBasePath,
         face: {
           enabled: true,
           detector: { enabled: true },
@@ -940,12 +953,24 @@
         object: { enabled: false },
         segmentation: { enabled: false },
       };
-      visHuman = new window.Human.Human(config);
-      if (visHuman.load) await visHuman.load();
-      if (visHuman.warmup) await visHuman.warmup();
-      visHumanReady = true;
-      pushVisDebug("Human.js loaded for face recognition.");
-      return true;
+      const backends = ["webgl", "webgpu", "wasm", "cpu"];
+      let lastErr = null;
+      for (let i = 0; i < backends.length; i += 1) {
+        try {
+          const cfg = Object.assign({}, baseConfig, { backend: backends[i] });
+          const human = new window.Human.Human(cfg);
+          if (human.load) await human.load();
+          if (human.warmup) await human.warmup();
+          visHuman = human;
+          visHumanReady = true;
+          pushVisDebug("Human.js loaded for face recognition (backend=" + backends[i] + ").");
+          return true;
+        } catch (err) {
+          lastErr = err;
+        }
+      }
+      if (lastErr) throw lastErr;
+      return false;
     } catch (e) {
       pushVisDebug("Human.js init failed: " + String((e && e.message) || e));
       visHumanReady = false;
