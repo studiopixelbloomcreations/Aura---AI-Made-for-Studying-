@@ -130,6 +130,7 @@
   let visAllowTestingStage = false;
   let visProfileSaveTimer = null;
   let visExpectedProfileFile = "";
+  let visUnknownFaceSince = 0;
   const VIS_DISABLE_EXTERNAL_RUNTIME = true;
   const VIS_HUMAN_MODEL_BASE = "https://cdn.jsdelivr.net/npm/@vladmandic/human/models/";
   let visHuman = null;
@@ -2467,18 +2468,22 @@
       return;
     }
     const match = findVisMatch(vector, "human-js");
-      if (!match || match.score < VIS_RECOGNITION_THRESHOLD) {
-        visNoMatchCount += 1;
-        if (visNoMatchCount >= VIS_MATCH_STABLE_COUNT) {
-          if (visExpectedProfileFile) {
-            setAssistantStateForVisOffline("Recognizing user...");
-          } else {
+    if (!match || match.score < VIS_RECOGNITION_THRESHOLD) {
+      visNoMatchCount += 1;
+      if (visNoMatchCount >= VIS_MATCH_STABLE_COUNT) {
+        if (visExpectedProfileFile) {
+          setAssistantStateForVisOffline("Recognizing user...");
+        } else {
+          if (!visUnknownFaceSince) visUnknownFaceSince = Date.now();
+          if (Date.now() - visUnknownFaceSince > 2500) {
             setAssistantStateForVisOffline("Offline - unrecognized face");
             if (!visSetupOpen && !visPersonalizeOpen) openVisSetup();
           }
         }
-        return;
       }
+      return;
+    }
+    visUnknownFaceSince = 0;
     visNoMatchCount = 0;
     if (visRecognitionCandidate.profileFile === match.profileFile) {
       visRecognitionCandidate.count += 1;
@@ -2489,6 +2494,8 @@
       setAssistantStateForVisOffline("Recognizing user...");
       return;
     }
+    dbg("recognized user = true");
+    dbg("recognized users username = " + String(match.username || match.profileFile || "unknown"));
     const activeFile = visActiveProfile && visActiveProfile.file_name ? String(visActiveProfile.file_name) : "";
     if (activeFile !== match.profileFile) {
       let profile = match.profile || null;
