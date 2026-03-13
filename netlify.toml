@@ -10,6 +10,11 @@
   to = "/landing.html"
   status = 302
 
+[[redirects]]
+  from = "/vis_human/*"
+  to = "/public/vis_human/:splat"
+  status = 200
+
 # API redirect to Netlify Functions
 [[redirects]]
   from = "/health"
