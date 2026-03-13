@@ -4928,52 +4928,6 @@ body {
   color: rgba(188, 218, 246, 0.9);
 }
 
-/* Liquid Glass JS overrides to avoid double glass effects */
-.liquid-glass-js .pi-panel,
-.liquid-glass-js .pi-sidebar,
-.liquid-glass-js .pi-header,
-.liquid-glass-js .pi-main,
-.liquid-glass-js .pi-composer,
-.liquid-glass-js .pi-top-status,
-.liquid-glass-js .pi-mode-toggle,
-.liquid-glass-js .pi-quick-actions,
-.liquid-glass-js .pi-vis-setup,
-.liquid-glass-js .pi-vis-test,
-.liquid-glass-js .pi-vis-personalize,
-.liquid-glass-js .sidebar,
-.liquid-glass-js .app-header,
-.liquid-glass-js .chat,
-.liquid-glass-js .welcome-panel,
-.liquid-glass-js .summary-card,
-.liquid-glass-js .action-button,
-.liquid-glass-js .composer,
-.liquid-glass-js .profile-card,
-.liquid-glass-js .gamification-card,
-.liquid-glass-js .settings-section,
-.liquid-glass-js .admin-settings-card,
-.liquid-glass-js .badges-content,
-.liquid-glass-js .modal-panel {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-  filter: none !important;
-}
-
-.liquid-glass-js .liquidGlass-effect,
-.liquid-glass-js .liquidGlass-tint,
-.liquid-glass-js .liquidGlass-shine {
-  display: none !important;
-}
-
-.liquid-glass-js .lg-wrap {
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
-}
-
-.liquid-glass-js .lg-glass-content {
-  background: transparent !important;
-}
-
 .pi-aurora {
   position: absolute;
   inset: 0;

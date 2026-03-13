@@ -126,10 +126,6 @@
   let visAllowTestingStage = false;
   let visProfileSaveTimer = null;
   const VIS_DISABLE_EXTERNAL_RUNTIME = true;
-  const VIS_HUMAN_MODEL_BASE = "vis_human/models";
-  let visHuman = null;
-  let visHumanReady = false;
-  let visHumanLoading = false;
   let visSetupState = {
     step: 1,
     agreed: false,
@@ -774,19 +770,15 @@
       visVerificationBusy = false;
       return;
     }
-    if (targetModel !== "human-js") {
-      if (statusEl) statusEl.textContent = "Verification failed: profile not enrolled with Human.js.";
-      visVerificationBusy = false;
-      return;
-    }
-    await ensureHumanReady();
     let stable = 0;
     let tries = 0;
     while (tries < 45) {
       tries += 1;
       await new Promise(function (resolve) { setTimeout(resolve, 140); });
-      const human = await getHumanEmbedding();
-      const probe = human && human.embedding ? human.embedding : [];
+      const faces = await detectFacesFromVideo();
+      const face = faces && faces.length ? faces[0] : null;
+      if (!face) continue;
+      const probe = extractVisFaceVector(face);
       if (!probe.length) continue;
       const score = cosineSimilarity(probe, targetVector);
       if (statusEl) statusEl.textContent = "Testing recognition... score " + score.toFixed(3);
@@ -841,62 +833,7 @@
     return dot / (Math.sqrt(ax) * Math.sqrt(by));
   }
 
-  async function ensureHumanReady() {
-    if (visHumanReady) return true;
-    if (visHumanLoading) return false;
-    if (!window.Human || !window.Human.Human) return false;
-    visHumanLoading = true;
-    try {
-      const config = {
-        backend: "webgl",
-        cacheSensitivity: 0,
-        modelBasePath: String(window.HUMAN_MODEL_BASE || VIS_HUMAN_MODEL_BASE),
-        face: {
-          enabled: true,
-          detector: { enabled: true },
-          mesh: { enabled: false },
-          description: { enabled: true },
-          iris: { enabled: false },
-          emotion: { enabled: false },
-        },
-        body: { enabled: false },
-        hand: { enabled: false },
-        gesture: { enabled: false },
-        object: { enabled: false },
-        segmentation: { enabled: false },
-      };
-      visHuman = new window.Human.Human(config);
-      if (visHuman.load) await visHuman.load();
-      if (visHuman.warmup) await visHuman.warmup();
-      visHumanReady = true;
-      pushVisDebug("Human.js loaded for face recognition.");
-      return true;
-    } catch (e) {
-      pushVisDebug("Human.js init failed: " + String((e && e.message) || e));
-      visHumanReady = false;
-      return false;
-    } finally {
-      visHumanLoading = false;
-    }
-  }
-
-  async function getHumanEmbedding() {
-    if (!visVideoEl) return null;
-    const ok = await ensureHumanReady();
-    if (!ok || !visHuman) return null;
-    try {
-      const result = await visHuman.detect(visVideoEl);
-      const face = result && Array.isArray(result.face) && result.face.length ? result.face[0] : null;
-      const embedding = face && Array.isArray(face.embedding) ? face.embedding : [];
-      if (!embedding.length) return null;
-      return {
-        embedding: embedding.slice(0),
-        face: face,
-      };
-    } catch (e) {
-      return null;
-    }
-  }
+  // Human.js integration removed; use legacy face vector pipeline.
 
   function averageVectors(vectors) {
     const src = Array.isArray(vectors) ? vectors.filter(Array.isArray) : [];
@@ -1616,7 +1553,7 @@
           if (!data || !data.profile_file) return;
           const fileName = String(data.profile_file || "");
           const profile = profileMap[fileName] || null;
-          const signatureModel = String((data.vector_model) || (profile && profile.facial_signature && profile.facial_signature.signature_model) || "legacy");
+          const signatureModel = "legacy";
           const vector = Array.isArray(data.feature_vector)
             ? data.feature_vector
             : (profile && profile.facial_signature && Array.isArray(profile.facial_signature.feature_vector)
@@ -1626,7 +1563,7 @@
           if (!vector.length && !profile) return;
           nextIndex.push({
             profileFile: fileName,
-            vector: signatureModel === "human-js" ? vector.slice(0) : vector.slice(0, 256),
+            vector: vector.slice(0, 256),
             username: String(data.username || (profile && profile.user_identity && profile.user_identity.username) || fileName),
             profile: profile,
             vector_model: signatureModel,
@@ -1635,14 +1572,14 @@
       } else {
         Object.keys(profileMap).forEach(function (fileName) {
           const profile = profileMap[fileName];
-          const signatureModel = String((profile.facial_signature && profile.facial_signature.signature_model) || "legacy");
+          const signatureModel = "legacy";
           const vector = profile && profile.facial_signature && Array.isArray(profile.facial_signature.feature_vector)
             ? profile.facial_signature.feature_vector
             : [];
           if (!vector.length) return;
           nextIndex.push({
             profileFile: fileName,
-            vector: signatureModel === "human-js" ? vector.slice(0) : vector.slice(0, 256),
+            vector: vector.slice(0, 256),
             username: String((profile.user_identity && profile.user_identity.username) || fileName),
             profile: profile,
             vector_model: signatureModel,
@@ -1670,10 +1607,10 @@
       visRecognitionIndex = data.map(function (row) {
         return {
           profileFile: String(row.profileFile || row.file_name || ""),
-          vector: Array.isArray(row.vector) ? row.vector.slice(0) : [],
+          vector: Array.isArray(row.vector) ? row.vector.slice(0, 256) : [],
           username: String(row.username || row.profileFile || "user"),
           profile: null,
-          vector_model: String(row.vector_model || row.signature_model || "legacy"),
+          vector_model: "legacy",
         };
       }).filter(function (row) { return row.profileFile && row.vector.length; });
       visIndexLoaded = true;
@@ -2002,7 +1939,7 @@
     }
     const identityHints = getSignedInIdentityHints();
     const requested = sanitizeVisUsername(visSetupState.username) || sanitizeVisUsername(identityHints.username) || "user";
-    const signatureModel = String(payload.signatureModel || "legacy");
+    const signatureModel = "legacy";
     const profile = getDefaultVisProfile(requested, identityHints.account_identifier, {
       scan_mode: visSetupState.infrared ? "infrared_assisted" : "high_precision_rgb",
       frame_count: payload.frameCount || payload.vectorsLength || 0,
@@ -2020,7 +1957,7 @@
     visRecognitionIndex.push({
       profileFile: profile.file_name,
       username: profile.user_identity.username,
-      vector: signatureModel === "human-js" ? payload.avgVector.slice(0) : payload.avgVector.slice(0, 256),
+      vector: payload.avgVector.slice(0, 256),
       profile: profile,
       vector_model: signatureModel,
     });
@@ -2037,16 +1974,8 @@
     visScanning = true;
     visSetupState.step = 4;
     try { renderVisSetup(); } catch (e) { pushVisDebug("scan step render failed: " + String((e && e.message) || e)); }
-    const humanReady = await ensureHumanReady();
-    const signatureModel = "human-js";
-    if (!humanReady) {
-      visScanning = false;
-      visSetupState.step = 3;
-      try { renderVisSetup(); } catch (e) {}
-      pushVisDebug("Human.js models not ready. Check network/CSP and retry.");
-      return;
-    }
-    pushVisDebug("Face scan started (human-js).");
+    const signatureModel = "legacy";
+    pushVisDebug("Face scan started (legacy).");
     if (!visVideoEl || !visVideoEl.srcObject || !visVideoEl.videoWidth || !visVideoEl.videoHeight) {
       const cameraReady = await ensureVisCameraReady();
       if (!cameraReady) {
@@ -2061,10 +1990,11 @@
     const landmarks = [];
     for (let i = 0; i < VIS_SCAN_FRAME_COUNT; i += 1) {
       await new Promise(function (resolve) { setTimeout(resolve, 120); });
-      const human = await getHumanEmbedding();
-      if (human && human.embedding && human.embedding.length) {
-        vectors.push(human.embedding);
-      }
+      const faces = await detectFacesFromVideo();
+      const face = faces && faces.length ? faces[0] : null;
+      if (!face) continue;
+      const vector = extractVisFaceVector(face);
+      if (vector.length) vectors.push(vector);
       const bar = visSetupEl ? visSetupEl.querySelector(".pi-vis-progress-bar") : null;
       if (bar) bar.style.width = Math.min(100, Math.round(((i + 1) / VIS_SCAN_FRAME_COUNT) * 100)) + "%";
     }
@@ -2076,7 +2006,7 @@
       addLog("assistant", "Tutor: Setup scan failed. Keep face in frame and retry.");
       return;
     }
-    pushVisDebug("Scan completed with Human.js frames: " + String(vectors.length));
+    pushVisDebug("Scan completed with detected face frames: " + String(vectors.length));
     const avgVector = averageVectors(vectors);
     visPendingEnrollmentPayload = {
       avgVector: avgVector,
@@ -2095,18 +2025,22 @@
     visDetectBusy = true;
     try {
       if (!visIndexLoaded) await loadVisProfilesFromCloud();
-      const humanReady = await ensureHumanReady();
-      if (!humanReady) {
-        setAssistantStateForVisOffline("Loading Human.js models...");
-        return;
-      }
       if (Array.isArray(visRecognitionIndex) && visRecognitionIndex.length === 0) {
         maybeOpenVisSetupForFirstRun("no_index");
         setAssistantStateForVisOffline("Offline - no visual identity on record");
         return;
       }
-      const human = await getHumanEmbedding();
-      const vector = human && human.embedding ? human.embedding : [];
+      const faces = await detectFacesFromVideo();
+      const face = faces && faces.length ? faces[0] : null;
+      if (!face) {
+        const hadFace = visFacePresent;
+        visFacePresent = false;
+        visRecognitionCandidate = { profileFile: "", count: 0 };
+        visNoMatchCount = 0;
+        if (hadFace || !visOffline) pauseForVisOffline("Offline - no face");
+        return;
+      }
+      const vector = extractVisFaceVector(face);
       if (!vector.length) {
         const hadFace = visFacePresent;
         visFacePresent = false;
@@ -2116,7 +2050,7 @@
         return;
       }
       visFacePresent = true;
-      const match = findVisMatch(vector, "human-js");
+      const match = findVisMatch(vector, "legacy");
       if (!match || match.score < VIS_RECOGNITION_THRESHOLD) {
         visNoMatchCount += 1;
         if (visNoMatchCount >= VIS_MATCH_STABLE_COUNT) {
