@@ -34,7 +34,7 @@
   const VIS_SCAN_INTERVAL_MS = 80;
   const VIS_SCAN_FRAME_COUNT = 8;
   const VIS_PROFILE_DOC_LIMIT = 100;
-  const VIS_HUMAN_SCRIPT_LOCAL = "vis_human/human.js";
+  const VIS_HUMAN_SCRIPT_CDN = "https://cdn.jsdelivr.net/npm/@vladmandic/human/dist/human.js";
   let enabled = false;
   let recognition = null;
   let wakeRecognition = null;
@@ -130,7 +130,7 @@
   let visAllowTestingStage = false;
   let visProfileSaveTimer = null;
   const VIS_DISABLE_EXTERNAL_RUNTIME = true;
-  const VIS_HUMAN_MODEL_BASE = "vis_human/models";
+  const VIS_HUMAN_MODEL_BASE = "https://cdn.jsdelivr.net/npm/@vladmandic/human/models/";
   let visHuman = null;
   let visHumanReady = false;
   let visHumanLoading = false;
@@ -904,26 +904,26 @@
   async function ensureHumanScriptLoaded() {
     if (window.Human && window.Human.Human) return true;
     try {
-      const localRes = await fetch(VIS_HUMAN_SCRIPT_LOCAL, { method: "HEAD", cache: "no-store" });
-      if (localRes && localRes.ok) {
-        await loadHumanScript(VIS_HUMAN_SCRIPT_LOCAL);
-        if (window.Human && window.Human.Human) return true;
+      await loadHumanScript(VIS_HUMAN_SCRIPT_CDN);
+    } catch (e) {
+      pushVisDebug("Human.js CDN load failed: " + String((e && e.message) || e));
+      setAssistantStateForVisOffline("Offline - Human.js failed to load");
+      return false;
+    }
+    const startedAt = Date.now();
+    while (!(window.Human && window.Human.Human)) {
+      if (Date.now() - startedAt > 5000) {
+        pushVisDebug("Human.js load timeout.");
+        setAssistantStateForVisOffline("Offline - Human.js failed to load");
+        return false;
       }
-    } catch (e) {}
-    pushVisDebug("Human.js local script missing at " + VIS_HUMAN_SCRIPT_LOCAL);
-    setAssistantStateForVisOffline("Offline - Human.js assets missing");
-    return false;
+      await new Promise(function (r) { setTimeout(r, 100); });
+    }
+    return true;
   }
 
   async function resolveHumanModelBase() {
-    const base = String(window.HUMAN_MODEL_BASE || VIS_HUMAN_MODEL_BASE);
-    try {
-      const res = await fetch(base.replace(/\/$/, "") + "/models.json", { method: "HEAD", cache: "no-store" });
-      if (res && res.ok) return base;
-    } catch (e) {}
-    pushVisDebug("Human.js local models missing at " + base);
-    setAssistantStateForVisOffline("Offline - Human.js models missing");
-    return "";
+    return String(window.HUMAN_MODEL_BASE || VIS_HUMAN_MODEL_BASE);
   }
 
   async function ensureHumanReady() {
@@ -934,10 +934,6 @@
     visHumanLoading = true;
     try {
       const modelBasePath = await resolveHumanModelBase();
-      if (!modelBasePath) {
-        visHumanReady = false;
-        return false;
-      }
       const baseConfig = {
         cacheSensitivity: 0,
         modelBasePath: modelBasePath,
