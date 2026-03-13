@@ -23,11 +23,13 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@callstack/liquid-glass": "^0.7.0",
     "@vitejs/plugin-react": "^5.1.2",
     "@vladmandic/human": "^3.3.6",
     "axios": "^1.6.0",
     "canvas-confetti": "^1.9.4",
     "electron-updater": "^6.3.9",
+    "html2canvas": "^1.4.1",
     "liquid-glass-react": "^1.1.1",
     "pdf-parse": "^1.1.1",
     "react": "^19.2.3",
