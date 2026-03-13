@@ -1,8 +1,19 @@
 ﻿(function () {
+  function isVisible(el) {
+    const rect = el.getBoundingClientRect();
+    if (!rect || rect.width < 24 || rect.height < 24) return false;
+    const style = window.getComputedStyle(el);
+    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+    return true;
+  }
+
   function wrapElement(el, options) {
     if (!el || el.dataset.lgWrapped === 'true') return null;
+    if (!isVisible(el)) return null;
     const opts = options || {};
     const rect = el.getBoundingClientRect();
+    if (!rect || rect.width < 24 || rect.height < 24) return null;
+
     const container = new Container({
       borderRadius: Number(opts.borderRadius || 24),
       type: opts.type || 'rounded',
@@ -40,22 +51,31 @@
     return container;
   }
 
-  function initLiquidGlass() {
+  function hideLegacyGlassLayers() {
+    document.querySelectorAll('.liquidGlass-effect, .liquidGlass-tint, .liquidGlass-shine').forEach(function (el) {
+      el.style.display = 'none';
+    });
+  }
+
+  function scanAndWrap() {
     if (!window.html2canvas || !window.Container) return;
     document.body.classList.add('liquid-glass-js');
+    hideLegacyGlassLayers();
 
     const targets = [
-      { sel: '.pi-panel', radius: 28, tint: 0.24 },
-      { sel: '.pi-sidebar', radius: 22, tint: 0.18 },
-      { sel: '.pi-header', radius: 20, tint: 0.2 },
-      { sel: '.pi-main', radius: 24, tint: 0.18 },
-      { sel: '.pi-composer', radius: 18, tint: 0.2 },
-      { sel: '.pi-top-status', radius: 14, tint: 0.16, type: 'pill' },
-      { sel: '.pi-mode-toggle', radius: 16, tint: 0.18, type: 'pill' },
-      { sel: '.pi-quick-actions', radius: 18, tint: 0.2 },
-      { sel: '.pi-vis-setup', radius: 18, tint: 0.22 },
-      { sel: '.pi-vis-test', radius: 18, tint: 0.22 },
-      { sel: '.pi-vis-personalize', radius: 18, tint: 0.22 },
+      { sel: '.sidebar', radius: 22, tint: 0.18 },
+      { sel: '.app-header', radius: 18, tint: 0.2 },
+      { sel: '.chat', radius: 26, tint: 0.2 },
+      { sel: '.welcome-panel', radius: 22, tint: 0.2 },
+      { sel: '.summary-card', radius: 16, tint: 0.18 },
+      { sel: '.action-button', radius: 14, tint: 0.18, type: 'pill' },
+      { sel: '.composer', radius: 16, tint: 0.2 },
+      { sel: '.profile-card', radius: 18, tint: 0.2 },
+      { sel: '.gamification-card', radius: 18, tint: 0.2 },
+      { sel: '.settings-section', radius: 18, tint: 0.2 },
+      { sel: '.admin-settings-card', radius: 18, tint: 0.2 },
+      { sel: '.badges-content', radius: 18, tint: 0.2 },
+      { sel: '.modal-panel', radius: 16, tint: 0.25 },
     ];
 
     targets.forEach(function (cfg) {
@@ -70,7 +90,13 @@
     });
   }
 
+  function initLiquidGlass() {
+    scanAndWrap();
+    setTimeout(scanAndWrap, 600);
+    setInterval(scanAndWrap, 4000);
+  }
+
   window.addEventListener('load', function () {
-    setTimeout(initLiquidGlass, 240);
+    setTimeout(initLiquidGlass, 260);
   });
 })();
