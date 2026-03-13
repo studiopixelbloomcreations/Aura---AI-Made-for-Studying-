@@ -4,8 +4,8 @@
   "user_identity": {
     "username": "studio_pixel_bloom",
     "account_identifier": "studiopixelbloomcreations@gmail.com",
-    "system_user_id": "vis_mmotvab0_7ytgive9",
-    "creation_timestamp": "2026-03-13T11:42:58.284Z"
+    "system_user_id": "vis_mmotvaau_759s4tdz",
+    "creation_timestamp": "2026-03-13T11:42:58.278Z"
   },
   "facial_signature": {
     "scan_mode": "high_precision_rgb",
@@ -2320,7 +2320,7 @@
       ],
       "extraction": "human-js face mesh + bounding geometry"
     },
-    "created_at": "2026-03-13T11:42:58.284Z"
+    "created_at": "2026-03-13T11:42:58.278Z"
   },
   "personalization_profile": {
     "interests": [],
@@ -2343,11 +2343,11 @@
     "humor_professional_balance": "balanced"
   },
   "session_state": {
-    "paused": true,
-    "assistant_state": "idle",
+    "paused": false,
+    "assistant_state": "listening",
     "pending_messages": [],
     "pending_response": null,
-    "last_active_timestamp": "2026-03-13T11:43:16.446Z",
+    "last_active_timestamp": "2026-03-13T11:43:19.077Z",
     "speech_state": {
       "active": false,
       "text": "",
@@ -2356,8 +2356,8 @@
     },
     "user_instance": {
       "profile_file": "studio_pixel_bloom.piuser.json",
-      "runtime_key": "vis_instance_studio_pixel_bloom.piuser.json_mmotvnut",
-      "loaded_at": "2026-03-13T11:43:15.845Z"
+      "runtime_key": "vis_instance_studio_pixel_bloom.piuser.json_mmotvpvu",
+      "loaded_at": "2026-03-13T11:43:18.474Z"
     }
   }
 }
