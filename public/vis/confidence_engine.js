@@ -1,14 +1,12 @@
-// VIS Confidence Engine
-(function () {
-  const VIS = (window.VIS = window.VIS || {});
-  VIS.confidenceEngine = {
-    current: null,
-    count: 0,
+export function createConfidenceEngine() {
+  let current = null;
+  let count = 0;
+  return {
     update(userId) {
-      if (!userId) { this.current = null; this.count = 0; return false; }
-      if (this.current === userId) this.count += 1; else { this.current = userId; this.count = 1; }
-      return this.count >= 3;
+      if (!userId) { current = null; count = 0; return false; }
+      if (current === userId) count += 1; else { current = userId; count = 1; }
+      return count >= 3;
     },
-    reset() { this.current = null; this.count = 0; }
+    reset() { current = null; count = 0; }
   };
-})();
+}

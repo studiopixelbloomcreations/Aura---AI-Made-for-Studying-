@@ -22,7 +22,6 @@
   <link rel="stylesheet" href="styles.css?v=20260313orig2">
   <script src="loginRedirect.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@vladmandic/human/dist/human.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection"></script>
 </head>
 
 <body>
@@ -589,24 +588,8 @@
   <script src="vis/vis_recognition.js?v=20260309vis2"></script>
   <script src="vis/vis_setup_modal.js?v=20260309vis2"></script>
   <script src="vis/vis_runtime.js?v=20260309vis2"></script>
-  <script src="/vis/camera_engine.js"></script>
-  <script src="/vis/detector_engine.js"></script>
-  <script src="/vis/tracker_engine.js"></script>
-  <script src="/vis/embedding_engine.js"></script>
-  <script src="/vis/vector_engine.js"></script>
-  <script src="/vis/presence_engine.js"></script>
-  <script src="/vis/identity_engine.js"></script>
-  <script src="/vis/confidence_engine.js"></script>
-  <script src="/vis/emotion_engine.js"></script>
-  <script src="/vis/session_manager.js"></script>
-  <script src="/vis/ai_router.js"></script>
-  <script src="/vis/vis_controller.js"></script>
-  <script src="personal_intelligence_ui.js?v=20260313human19"></script>
-  <script>
-    window.addEventListener('load', function () {
-      if (window.VIS && VIS.visController && VIS.visController.start) VIS.visController.start();
-    });
-  </script>
+  <script type="module" src="/vis/vis_controller.js"></script>
+  <script src="personal_intelligence_ui.js?v=20260313human20"></script>
   <svg style="display:none">
     <defs>
       <filter id="glass-distortion">

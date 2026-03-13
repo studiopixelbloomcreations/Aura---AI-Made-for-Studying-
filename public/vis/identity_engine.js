@@ -1,45 +1,24 @@
-// VIS Identity Engine
-(function () {
-  const VIS = (window.VIS = window.VIS || {});
-  const LOCAL_KEY = 'vis_local_profiles';
-
-  function loadLocal() {
-    try { return JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]'); } catch { return []; }
-  }
-  function saveLocal(list) {
-    try { localStorage.setItem(LOCAL_KEY, JSON.stringify(list || [])); } catch {}
-  }
-
-  function normalizeIndex(raw) {
-    if (!raw) return [];
-    if (Array.isArray(raw)) return raw;
-    if (raw.profiles && Array.isArray(raw.profiles)) return raw.profiles;
-    return [];
-  }
-
-  VIS.identityEngine = {
-    async loadProfiles() {
-      let index = [];
-      try {
-        const res = await fetch('/vis_profiles/index.json', { cache: 'no-store' });
-        if (res.ok) index = normalizeIndex(await res.json());
-      } catch {}
-      const local = loadLocal();
-      const merged = [...index, ...local];
-      return merged.map((p) => ({
-        user_id: p.user_id || p.username || p.profile_file || p.file_name,
-        vector: p.vector || (p.facial_signature && p.facial_signature.feature_vector) || [],
-        profile: p.profile || p
-      }));
-    },
-    saveProfile(profile, vector) {
-      const local = loadLocal();
-      local.push({
-        user_id: profile.user_identity && profile.user_identity.username,
-        vector,
-        profile
-      });
-      saveLocal(local);
+export async function loadProfiles() {
+  const profiles = [];
+  try {
+    const res = await fetch('/vis_profiles/index.json', { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) profiles.push(...data);
+      if (data && Array.isArray(data.profiles)) profiles.push(...data.profiles);
     }
-  };
-})();
+  } catch {}
+  const local = JSON.parse(localStorage.getItem('vis_profiles_local') || '[]');
+  profiles.push(...local);
+  return profiles.map((p) => ({
+    user_id: p.user_identity?.username || p.username || p.user_id,
+    embedding: p.facial_signature?.feature_vector || p.embedding || [],
+    profile: p
+  }));
+}
+
+export function saveProfile(profile) {
+  const local = JSON.parse(localStorage.getItem('vis_profiles_local') || '[]');
+  local.push(profile);
+  localStorage.setItem('vis_profiles_local', JSON.stringify(local));
+}

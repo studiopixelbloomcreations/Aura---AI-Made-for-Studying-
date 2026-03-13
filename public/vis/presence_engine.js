@@ -1,14 +1,12 @@
-// VIS Presence Engine
-(function () {
-  const VIS = (window.VIS = window.VIS || {});
-  VIS.presenceEngine = {
-    lastSeenAt: 0,
+export function createPresenceEngine() {
+  let lastSeen = 0;
+  return {
     update(hasFace) {
-      if (hasFace) this.lastSeenAt = Date.now();
+      if (hasFace) lastSeen = Date.now();
       return this.isPresent();
     },
     isPresent() {
-      return (Date.now() - this.lastSeenAt) < 700;
+      return Date.now() - lastSeen < 700;
     }
   };
-})();
+}
