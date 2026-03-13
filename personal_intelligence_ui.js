@@ -26,15 +26,15 @@
   const HISTORY_MODEL_WINDOW = 120;
   const HISTORY_BACKEND_WINDOW = 120;
   const VIS_PROFILE_EXTENSION = ".piuser.json";
-  const VIS_RECOGNITION_THRESHOLD = 0.93;
-  const VIS_MATCH_STABLE_COUNT = 4;
+  const VIS_RECOGNITION_THRESHOLD = 0.9;
+  const VIS_MATCH_STABLE_COUNT = 3;
   const VIS_FACE_LOST_MS = 700;
+  const VIS_ENROLL_FRAME_DELAY_MS = 80;
   const VIS_LIGHTING_MIN_LUMA = 0.22;
-  const VIS_SCAN_INTERVAL_MS = 120;
-  const VIS_SCAN_FRAME_COUNT = 18;
+  const VIS_SCAN_INTERVAL_MS = 80;
+  const VIS_SCAN_FRAME_COUNT = 8;
   const VIS_PROFILE_DOC_LIMIT = 100;
   const VIS_HUMAN_SCRIPT_LOCAL = "vis_human/human.js";
-  const VIS_HUMAN_SCRIPT_FALLBACK = "https://unpkg.com/@vladmandic/human/dist/human.js";
   let enabled = false;
   let recognition = null;
   let wakeRecognition = null;
@@ -131,7 +131,6 @@
   let visProfileSaveTimer = null;
   const VIS_DISABLE_EXTERNAL_RUNTIME = true;
   const VIS_HUMAN_MODEL_BASE = "vis_human/models";
-  const VIS_HUMAN_MODEL_FALLBACK = "https://unpkg.com/@vladmandic/human/models";
   let visHuman = null;
   let visHumanReady = false;
   let visHumanLoading = false;
@@ -805,20 +804,20 @@
     await ensureHumanReady();
     let stable = 0;
     let tries = 0;
-    while (tries < 45) {
+    while (tries < 25) {
       tries += 1;
-      await new Promise(function (resolve) { setTimeout(resolve, 140); });
+      await new Promise(function (resolve) { setTimeout(resolve, 90); });
       const human = await getHumanEmbedding();
       const probe = human && human.embedding ? human.embedding : [];
       if (!probe.length) continue;
       const score = cosineSimilarity(probe, targetVector);
       if (statusEl) statusEl.textContent = "Testing recognition... score " + score.toFixed(3);
-      if (score >= Math.max(0.9, VIS_RECOGNITION_THRESHOLD - 0.02)) {
+      if (score >= Math.max(0.88, VIS_RECOGNITION_THRESHOLD - 0.03)) {
         stable += 1;
       } else {
         stable = 0;
       }
-      if (stable >= 3) {
+      if (stable >= 2) {
         const uname = String((profile.user_identity && profile.user_identity.username) || "user");
         if (statusEl) statusEl.textContent = "Verification complete. Recognized user: " + uname;
         if (activateBtn) activateBtn.hidden = false;
@@ -911,12 +910,9 @@
         if (window.Human && window.Human.Human) return true;
       }
     } catch (e) {}
-    try {
-      await loadHumanScript(VIS_HUMAN_SCRIPT_FALLBACK);
-      return !!(window.Human && window.Human.Human);
-    } catch (e2) {
-      return false;
-    }
+    pushVisDebug("Human.js local script missing at " + VIS_HUMAN_SCRIPT_LOCAL);
+    setAssistantStateForVisOffline("Offline - Human.js assets missing");
+    return false;
   }
 
   async function resolveHumanModelBase() {
@@ -925,7 +921,9 @@
       const res = await fetch(base.replace(/\/$/, "") + "/models.json", { method: "HEAD", cache: "no-store" });
       if (res && res.ok) return base;
     } catch (e) {}
-    return VIS_HUMAN_MODEL_FALLBACK;
+    pushVisDebug("Human.js local models missing at " + base);
+    setAssistantStateForVisOffline("Offline - Human.js models missing");
+    return "";
   }
 
   async function ensureHumanReady() {
@@ -936,13 +934,17 @@
     visHumanLoading = true;
     try {
       const modelBasePath = await resolveHumanModelBase();
+      if (!modelBasePath) {
+        visHumanReady = false;
+        return false;
+      }
       const baseConfig = {
         cacheSensitivity: 0,
         modelBasePath: modelBasePath,
         face: {
           enabled: true,
-          detector: { enabled: true },
-          mesh: { enabled: true },
+          detector: { enabled: true, maxDetected: 1 },
+          mesh: { enabled: false },
           description: { enabled: true },
           iris: { enabled: false },
           emotion: { enabled: true },
@@ -2344,7 +2346,7 @@
     const landmarks = [];
     const geometrySnapshots = [];
     for (let i = 0; i < VIS_SCAN_FRAME_COUNT; i += 1) {
-      await new Promise(function (resolve) { setTimeout(resolve, 120); });
+      await new Promise(function (resolve) { setTimeout(resolve, VIS_ENROLL_FRAME_DELAY_MS); });
       const detection = await getHumanDetections();
       const face = detection && detection.faces ? selectPrimaryFace(detection.faces) : null;
       if (face && Array.isArray(face.embedding) && face.embedding.length) {
@@ -4225,3 +4227,4 @@
     if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
   } catch (e) {}
 })();
+

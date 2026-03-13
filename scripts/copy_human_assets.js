@@ -29,6 +29,7 @@ function main() {
   const outDirs = [
     path.join(root, 'vis_human'),
     path.join(root, 'public', 'vis_human'),
+    path.join(root, 'dist', 'vis_human'),
   ];
 
   if (!fs.existsSync(pkgDir)) {
