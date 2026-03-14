@@ -556,19 +556,28 @@
   </div>
 
   <script>
-    // Suppress Human.js internal errors that escape try/catch
+    // NUCLEAR: Block WebGL context creation so TensorFlow.js can only use WASM.
+    // Human.js v3.3.6 registers WebGL kernels during init regardless of config.
+    // By making getContext('webgl') return null, TF.js is forced to use wasm.
+    (function() {
+      var origGetContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function(type) {
+        if (type === 'webgl' || type === 'webgl2' || type === 'experimental-webgl') {
+          return null;
+        }
+        return origGetContext.apply(this, arguments);
+      };
+    })();
+    // Safety net: suppress any remaining Human.js/TF errors
     window.addEventListener('unhandledrejection', function(event) {
       var reason = event && event.reason;
       if (!reason) return;
       var msg = reason.message || String(reason);
       var stack = reason.stack || '';
-      // Catch any Human.js / TensorFlow internal errors
-      if (msg.indexOf("reading 'backend'") !== -1 ||
-          msg.indexOf('Tensor is disposed') !== -1 ||
-          msg.indexOf('is disposed') !== -1 ||
-          msg.indexOf('moveData') !== -1 ||
-          stack.indexOf('human.js') !== -1 ||
-          stack.indexOf('human_engine.js') !== -1) {
+      if (msg.indexOf("'backend'") !== -1 ||
+          msg.indexOf('disposed') !== -1 ||
+          msg.indexOf('WebGL') !== -1 ||
+          stack.indexOf('human.js') !== -1) {
         event.preventDefault();
       }
     });
