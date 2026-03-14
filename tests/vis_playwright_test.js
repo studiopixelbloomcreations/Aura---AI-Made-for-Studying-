@@ -53,6 +53,10 @@ function startStaticServer(rootDir, port) {
         res.setHeader('Content-Type', 'application/json');
         return res.end(JSON.stringify({ points: 0, badges: [] }));
       }
+      if (urlPath === '/vis_identity_profiles/index.json') {
+        res.setHeader('Content-Type', 'application/json');
+        return res.end(JSON.stringify([]));
+      }
       if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
         filePath = path.join(filePath, 'index.html');
       }

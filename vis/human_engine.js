@@ -82,10 +82,10 @@ export async function detectFace(video) {
     const face = buildTestFace();
     return { result: { face: [face] }, face };
   }
-  // Skip if another detect is already in progress (concurrency guard)
-  if (window.__visDetectBusy) return { result: null, face: null };
   const human = await initHuman();
   if (!human) return { result: null, face: null };
+  // Check AND acquire lock synchronously to avoid async race condition
+  if (window.__visDetectBusy) return { result: null, face: null };
   window.__visDetectBusy = true;
   try {
     if (human.tf && human.tf.engine && human.tf.engine().startScope) human.tf.engine().startScope();

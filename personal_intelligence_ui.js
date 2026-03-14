@@ -1058,17 +1058,21 @@
 
   async function getHumanDetections() {
     if (!visVideoEl) return { faces: [], result: null };
-    // Skip if another detect call is in progress (vis_controller or us)
-    if (window.__visDetectBusy) return { faces: [], result: null };
     const ok = await ensureHumanReady();
     if (!ok || !visHuman) return { faces: [], result: null };
+    // Skip if another detect call is in progress (vis_controller or us)
+    if (window.__visDetectBusy) return { faces: [], result: null };
     window.__visDetectBusy = true;
     try {
       const source = getHumanDetectionSource();
+      if (visHuman.tf && visHuman.tf.engine && visHuman.tf.engine().startScope) visHuman.tf.engine().startScope();
       const result = await visHuman.detect(source);
+      if (visHuman.tf && visHuman.tf.engine && visHuman.tf.engine().endScope) visHuman.tf.engine().endScope();
+      if (visHuman.tf && visHuman.tf.nextFrame) await visHuman.tf.nextFrame();
       const faces = result && Array.isArray(result.face) ? result.face.slice(0) : [];
       return { faces: faces, result: result || null };
     } catch (e) {
+      if (visHuman.tf && visHuman.tf.engine && visHuman.tf.engine().endScope) { try { visHuman.tf.engine().endScope(); } catch(_){} }
       return { faces: [], result: null };
     } finally {
       window.__visDetectBusy = false;
