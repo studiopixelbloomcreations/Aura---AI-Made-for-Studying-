@@ -51,6 +51,13 @@ export async function initHuman() {
   if (window.__visHuman) return window.__visHuman;
   if (window.__visHumanInitFailed) return null;
   if (!window.Human || !window.Human.Human) throw new Error('Human.js not loaded');
+  
+  // Set global env wasmPath before creating the instance 
+  // because the constructor-level config gets ignored during early init
+  if (window.Human.env) {
+    window.Human.env.wasmPath = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/';
+  }
+
   const humanConfig = {
     backend: 'wasm', // Force wasm to avoid WebGL context crashes
     wasmPath: 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/',

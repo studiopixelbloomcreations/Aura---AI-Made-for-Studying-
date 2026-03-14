@@ -1008,6 +1008,10 @@
     visHumanLoading = true;
     try {
       const modelBasePath = await resolveHumanModelBase();
+      if (window.Human.env) {
+        window.Human.env.wasmPath = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/';
+      }
+      
       const cfg = {
         backend: "wasm",
         wasmPath: "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/",
