@@ -84,10 +84,16 @@ export async function detectFace(video) {
   }
   const human = await initHuman();
   if (!human) return { result: null, face: null };
-  if (human.tf && human.tf.engine && human.tf.engine().startScope) human.tf.engine().startScope();
-  const result = await human.detect(video);
-  if (human.tf && human.tf.engine && human.tf.engine().endScope) human.tf.engine().endScope();
-  if (human.tf && human.tf.nextFrame) await human.tf.nextFrame();
-  const face = result && result.face && result.face[0] ? result.face[0] : null;
-  return { result, face };
+  try {
+    if (human.tf && human.tf.engine && human.tf.engine().startScope) human.tf.engine().startScope();
+    const result = await human.detect(video);
+    if (human.tf && human.tf.engine && human.tf.engine().endScope) human.tf.engine().endScope();
+    if (human.tf && human.tf.nextFrame) await human.tf.nextFrame();
+    const face = result && result.face && result.face[0] ? result.face[0] : null;
+    return { result, face };
+  } catch (detectErr) {
+    console.warn('[VIS] human.detect error (WebGL context may be lost):', detectErr && detectErr.message);
+    try { if (human.tf && human.tf.engine && human.tf.engine().endScope) human.tf.engine().endScope(); } catch (_) {}
+    return { result: null, face: null };
+  }
 }

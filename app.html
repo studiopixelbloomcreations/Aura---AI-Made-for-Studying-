@@ -561,11 +561,17 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
   <script src="firebase_runtime_config.js"></script>
   <script>
-    if (navigator.onLine && !window.__VIS_TEST_USE_MOCK) {
-      document.write('<script src="https://js.puter.com/v2/"><\/script>');
-    } else {
-      console.log('Puter.js suppressed (offline or test)');
-    }
+    (function() {
+      if (!navigator.onLine || window.__VIS_TEST_USE_MOCK) {
+        console.log('Puter.js suppressed (offline or test)');
+        return;
+      }
+      var s = document.createElement('script');
+      s.src = 'https://js.puter.com/v2/';
+      s.async = false;
+      s.defer = false;
+      document.head.appendChild(s);
+    })();
   </script>
   <script src="puter_voice_catalog.js?v=20260303voice1"></script>
   <script src="auth.js"></script>
