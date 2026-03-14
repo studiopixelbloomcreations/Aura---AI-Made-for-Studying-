@@ -556,29 +556,35 @@
   </div>
 
   <script>
-    // NUCLEAR: Block WebGL context creation so TensorFlow.js can only use WASM.
-    // Human.js v3.3.6 registers WebGL kernels during init regardless of config.
-    // By making getContext('webgl') return null, TF.js is forced to use wasm.
+    // Block ALL WebGL context creation (HTMLCanvasElement + OffscreenCanvas)
     (function() {
       var origGetContext = HTMLCanvasElement.prototype.getContext;
       HTMLCanvasElement.prototype.getContext = function(type) {
-        if (type === 'webgl' || type === 'webgl2' || type === 'experimental-webgl') {
-          return null;
-        }
+        if (type === 'webgl' || type === 'webgl2' || type === 'experimental-webgl') return null;
         return origGetContext.apply(this, arguments);
       };
+      if (typeof OffscreenCanvas !== 'undefined') {
+        var origOSGetContext = OffscreenCanvas.prototype.getContext;
+        OffscreenCanvas.prototype.getContext = function(type) {
+          if (type === 'webgl' || type === 'webgl2' || type === 'experimental-webgl') return null;
+          return origOSGetContext.apply(this, arguments);
+        };
+      }
+      // Also block WebGL2RenderingContext availability check
+      try { Object.defineProperty(window, 'WebGL2RenderingContext', { value: undefined, writable: false }); } catch(_){}
     })();
-    // Safety net: suppress any remaining Human.js/TF errors
+    // Suppress Human.js/TF unhandled promise rejections
     window.addEventListener('unhandledrejection', function(event) {
       var reason = event && event.reason;
       if (!reason) return;
       var msg = reason.message || String(reason);
       var stack = reason.stack || '';
-      if (msg.indexOf("'backend'") !== -1 ||
-          msg.indexOf('disposed') !== -1 ||
-          msg.indexOf('WebGL') !== -1 ||
+      if (msg.indexOf("'backend'") !== -1 || msg.indexOf('disposed') !== -1 ||
+          msg.indexOf('WebGL') !== -1 || msg.indexOf('webgl') !== -1 ||
           stack.indexOf('human.js') !== -1) {
         event.preventDefault();
+        event.stopImmediatePropagation();
+        return false;
       }
     });
   </script>
