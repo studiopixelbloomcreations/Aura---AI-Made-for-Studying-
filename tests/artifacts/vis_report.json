@@ -1,0 +1,140 @@
+{
+  "url": "http://127.0.0.1:8080/app.html?visMock=1",
+  "browser": "chromium",
+  "metrics": {
+    "timings": {
+      "model_load_time_ms": 0,
+      "camera_start_time_ms": 150.30000000004657,
+      "face_detection_last_ms": 0.2000000000698492,
+      "verification_start_ms": 596,
+      "identity_match_time_ms": 0.09999999997671694,
+      "total_verification_time_ms": 307.20000000006985
+    },
+    "counters": {
+      "camera_init_attempts": 2,
+      "detect_samples": 4
+    },
+    "events": [
+      {
+        "type": "vis_start",
+        "data": null,
+        "at": 1773475989495
+      },
+      {
+        "type": "timing",
+        "name": "model_load_time_ms",
+        "value": 0.09999999997671694,
+        "at": 1773475989495
+      },
+      {
+        "type": "vis_start",
+        "data": null,
+        "at": 1773475989497
+      },
+      {
+        "type": "timing",
+        "name": "model_load_time_ms",
+        "value": 0,
+        "at": 1773475989497
+      },
+      {
+        "type": "timing",
+        "name": "camera_start_time_ms",
+        "value": 150.40000000002328,
+        "at": 1773475989646
+      },
+      {
+        "type": "timing",
+        "name": "camera_start_time_ms",
+        "value": 150.30000000004657,
+        "at": 1773475989647
+      },
+      {
+        "type": "profiles_loaded",
+        "data": {
+          "count": 1
+        },
+        "at": 1773475989674
+      },
+      {
+        "type": "verification_started",
+        "data": null,
+        "at": 1773475989675
+      },
+      {
+        "type": "profiles_loaded",
+        "data": {
+          "count": 1
+        },
+        "at": 1773475989675
+      },
+      {
+        "type": "timing",
+        "name": "total_verification_time_ms",
+        "value": 307.20000000006985,
+        "at": 1773475989982
+      },
+      {
+        "type": "verification_complete",
+        "data": {
+          "user": "test_user",
+          "total_ms": 307.20000000006985
+        },
+        "at": 1773475989983
+      }
+    ]
+  },
+  "consoleLogs": [
+    {
+      "type": "log",
+      "text": "Puter.js suppressed (offline or test)"
+    },
+    {
+      "type": "log",
+      "text": "[PersonalIntelligence] enabled: true"
+    },
+    {
+      "type": "log",
+      "text": "[PersonalIntelligence] cloud memory auth listener failed Firebase: Error (auth/invalid-api-key)."
+    },
+    {
+      "type": "log",
+      "text": "[PersonalIntelligence] VIS index loaded (repo) 1"
+    },
+    {
+      "type": "log",
+      "text": "Progress boot: starting initialization..."
+    },
+    {
+      "type": "error",
+      "text": "Firebase runtime config error: FirebaseError: Firebase: Error (auth/invalid-api-key).\n    at z (https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js:1:22612)\n    at B (https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js:1:22763)\n    at new _i (https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js:1:123692)\n    at INTERNAL.registerComponent.N.setServiceProps.ActionCodeInfo.Operation.EMAIL_SIGNIN [as instanceFactory] (https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js:1:131328)\n    at y.getOrInitializeService (https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js:1:10211)\n    at y.getImmediate (https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js:1:8211)\n    at Oe._getService (https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js:1:26502)\n    at r.type.a.<computed> [as auth] (https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js:1:27642)\n    at Object.e [as auth] (https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js:1:27509)\n    at http://127.0.0.1:8080/firebase_runtime_config.js:64:45"
+    },
+    {
+      "type": "log",
+      "text": "[VIS_METRIC] model_load_time_ms: 0ms"
+    },
+    {
+      "type": "log",
+      "text": "[TEST] Forcing startVIS manually"
+    },
+    {
+      "type": "log",
+      "text": "[VIS_METRIC] model_load_time_ms: 0ms"
+    },
+    {
+      "type": "log",
+      "text": "[VIS_METRIC] camera_start_time_ms: 150ms"
+    },
+    {
+      "type": "log",
+      "text": "[VIS_METRIC] camera_start_time_ms: 150ms"
+    },
+    {
+      "type": "log",
+      "text": "[VIS_METRIC] total_verification_time_ms: 307ms"
+    }
+  ],
+  "pageErrors": [],
+  "requestFailures": [],
+  "responses404": []
+}

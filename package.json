@@ -23,8 +23,8 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@vladmandic/human": "^3.3.6",
     "@vitejs/plugin-react": "^5.1.2",
+    "@vladmandic/human": "^3.3.6",
     "axios": "^1.6.0",
     "canvas-confetti": "^1.9.4",
     "electron-updater": "^6.3.9",
@@ -36,7 +36,8 @@
   },
   "devDependencies": {
     "electron": "^37.2.0",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "playwright": "^1.58.2"
   },
   "build": {
     "appId": "com.tutor.personalintelligence",

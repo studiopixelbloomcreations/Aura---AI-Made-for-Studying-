@@ -101,6 +101,7 @@
   }
 
   async function ensurePuterReady(interactive){
+    if(window.__VIS_TEST_USE_MOCK || navigator.onLine === false) return;
     if(!window.puter || !window.puter.ai) throw new Error('PUTER_NOT_LOADED');
     if(!window.puter.auth || !window.puter.auth.isSignedIn || !window.puter.auth.signIn) return;
     let signed = false;

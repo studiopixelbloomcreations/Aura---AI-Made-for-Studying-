@@ -35,6 +35,9 @@
   const VIS_SCAN_FRAME_COUNT = 8;
   const VIS_PROFILE_DOC_LIMIT = 100;
   const VIS_HUMAN_SCRIPT_CDN = "https://cdn.jsdelivr.net/npm/@vladmandic/human/dist/human.js";
+  function isOffline() {
+    return window.__OFFLINE_MODE__ === true || navigator.onLine === false;
+  }
   let enabled = false;
   let recognition = null;
   let wakeRecognition = null;
@@ -1442,6 +1445,7 @@
 
   function getFirestoreDb() {
     try {
+      if (isOffline()) return null;
       if (!window.firebase || !firebase.firestore) return null;
       return firebase.firestore();
     } catch (e) {
@@ -1451,6 +1455,7 @@
 
   function getFirebaseAuthedUser() {
     try {
+      if (isOffline()) return null;
       if (!window.firebase || !firebase.auth || !firebase.apps || !firebase.apps.length) return null;
       const u = firebase.auth().currentUser;
       if (!u || !u.uid) return null;
@@ -1558,6 +1563,10 @@
   function initCloudMemorySync() {
     (async function () {
       try {
+        if (isOffline()) {
+          dbg("cloud memory disabled: offline mode");
+          return;
+        }
         if (window.Auth && window.Auth.init) {
           try { await window.Auth.init(); } catch (e) {}
         }
@@ -2900,6 +2909,8 @@
   }
 
   async function ensurePuterReady(interactive) {
+    if (isOffline()) throw new Error("OFFLINE_MODE");
+    if (window.__VIS_TEST_USE_MOCK || navigator.onLine === false) return;
     if (!window.puter || !window.puter.ai) throw new Error("PUTER_NOT_LOADED");
     if (!window.puter.auth || !window.puter.auth.isSignedIn || !window.puter.auth.signIn) return;
     let signed = false;
@@ -2922,6 +2933,7 @@
   }
 
   async function fetchPuterModels() {
+    if (isOffline()) return fallbackPuterModels();
     try {
       await ensurePuterReady(false);
       const raw = await window.puter.ai.listModels();
@@ -3095,6 +3107,7 @@
   }
 
   async function fetchPuterVoices() {
+    if (isOffline()) return [];
     const catalog = window.PuterVoiceCatalog;
     if (catalog && Array.isArray(catalog.voices) && catalog.voices.length) {
       return catalog.voices.slice(0, 200);

@@ -4,6 +4,10 @@
     if(window.AppToast) return window.AppToast(msg);
   }
 
+  function isOffline(){
+    return window.__OFFLINE_MODE__ === true || navigator.onLine === false;
+  }
+
   function getUserEmail(){
     try {
       if(state.user && state.user.email) return state.user.email;
@@ -33,6 +37,7 @@
   }
 
   function getRefs(){
+    if (isOffline()) return null;
     const fb = ensureFirebase();
     if(!fb) return null;
     const auth = fb.auth();
@@ -310,6 +315,10 @@
   }
 
   async function initAuthListener(){
+    if (isOffline()) {
+      state.firestoreDisabled = true;
+      return;
+    }
     try {
       if(window.FirebaseRuntimeConfig && window.FirebaseRuntimeConfig.ensureInitialized){
         await window.FirebaseRuntimeConfig.ensureInitialized();

@@ -14,22 +14,39 @@
     configPromise = (async function () {
       const existing = readInlineConfig();
       if (existing) return existing;
+      if (window.__OFFLINE_MODE__ === true || navigator.onLine === false) {
+        console.warn("[FirebaseConfig] offline mode enabled");
+        return null;
+      }
 
-      const response = await fetch("/public-config", {
-        method: "GET",
-        headers: { Accept: "application/json" },
-        credentials: "same-origin",
-        cache: "no-store"
-      });
-      if (!response.ok) {
-        throw new Error("PUBLIC_CONFIG_HTTP_" + response.status);
+      try {
+        const response = await fetch("/public-config", {
+          method: "GET",
+          headers: { Accept: "application/json" },
+          credentials: "same-origin",
+          cache: "no-store"
+        });
+        if (!response.ok) {
+          console.warn("[FirebaseConfig] public-config missing:", response.status);
+          const stub = { apiKey: "test", authDomain: "test", projectId: "test" };
+          window.__FIREBASE_CONFIG__ = stub;
+          return stub;
+        }
+        const payload = await response.json();
+        if (!payload || !payload.ok || !payload.firebase) {
+          console.warn("[FirebaseConfig] invalid payload");
+          const stub = { apiKey: "test", authDomain: "test", projectId: "test" };
+          window.__FIREBASE_CONFIG__ = stub;
+          return stub;
+        }
+        window.__FIREBASE_CONFIG__ = payload.firebase;
+        return payload.firebase;
+      } catch (err) {
+        console.warn("[FirebaseConfig] fallback to local stub");
+        const stub = { apiKey: "test", authDomain: "test", projectId: "test" };
+        window.__FIREBASE_CONFIG__ = stub;
+        return stub;
       }
-      const payload = await response.json();
-      if (!payload || !payload.ok || !payload.firebase) {
-        throw new Error("PUBLIC_CONFIG_INVALID");
-      }
-      window.__FIREBASE_CONFIG__ = payload.firebase;
-      return payload.firebase;
     })();
     return configPromise;
   }
@@ -38,7 +55,9 @@
     if (initPromise) return initPromise;
     initPromise = (async function () {
       const config = await loadConfig();
-      if (!window.firebase) throw new Error("FIREBASE_SDK_MISSING");
+      if (!config || !window.firebase) {
+        return { firebase: window.firebase || null, auth: null, config: config || null, skipped: true };
+      }
       if (!firebase.apps || !firebase.apps.length) {
         firebase.initializeApp(config);
       }

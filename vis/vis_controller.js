@@ -18,6 +18,44 @@ let unknownSince = 0;
 const presence = createPresenceEngine();
 const confidence = createConfidenceEngine();
 
+function ensureMetrics() {
+  if (!window.__VIS_METRICS) {
+    window.__VIS_METRICS = {
+      timings: {},
+      counters: {},
+      events: []
+    };
+  }
+  return window.__VIS_METRICS;
+}
+
+function nowMs() {
+  return (window.performance && typeof window.performance.now === 'function')
+    ? window.performance.now()
+    : Date.now();
+}
+
+function recordTiming(name, value) {
+  const metrics = ensureMetrics();
+  metrics.timings[name] = value;
+  metrics.events.push({ type: 'timing', name, value, at: Date.now() });
+  console.log(`[VIS_METRIC] ${name}: ${Math.round(value)}ms`);
+}
+
+function recordEvent(name, data) {
+  const metrics = ensureMetrics();
+  metrics.events.push({ type: name, data: data || null, at: Date.now() });
+}
+
+function recordVerificationFailure(reason) {
+  const metrics = ensureMetrics();
+  if (metrics.timings.verification_start_ms && !metrics.timings.verification_failed_time_ms) {
+    const total = nowMs() - metrics.timings.verification_start_ms;
+    metrics.timings.verification_failed_time_ms = total;
+    recordEvent('verification_failed', { reason: reason || 'unknown', total_ms: total });
+  }
+}
+
 function buildSetupModal(step, progress) {
   const prog = progress || 0;
   if (step === 1) {
@@ -109,6 +147,7 @@ async function setupFlow(video) {
         step += 1;
         render(0);
         if (step === 4) {
+          const scanStart = nowMs();
           const vectors = [];
           for (let i = 0; i < EMBED_FRAMES; i += 1) {
             await new Promise(r => setTimeout(r, 120));
@@ -127,8 +166,10 @@ async function setupFlow(video) {
             conversation_memory: {},
             session_state: {}
           };
-          saveProfile(profile);
+          await saveProfile(profile);
           profiles = await loadProfiles();
+          recordTiming('biometric_signature_creation_time_ms', nowMs() - scanStart);
+          recordEvent('profile_created', { username: profile.user_identity.username });
           closeSetup();
         }
       }, { once: true });
@@ -157,32 +198,92 @@ function livenessCheck(face) {
 }
 
 export async function startVIS() {
+  ensureMetrics();
+  recordEvent('vis_start');
+  const modelStart = nowMs();
   await initHuman();
+  recordTiming('model_load_time_ms', nowMs() - modelStart);
+  const cameraStart = nowMs();
   const video = await initCamera();
+  recordTiming('camera_start_time_ms', nowMs() - cameraStart);
+  const metrics = ensureMetrics();
+  metrics.counters.camera_init_attempts = (metrics.counters.camera_init_attempts || 0) + 1;
+  if (!video) {
+    recordEvent('camera_init_failed', { reason: window.__VIS_CAMERA_ERROR || 'unknown' });
+    recordTiming('camera_init_failed_ms', nowMs() - cameraStart);
+    recordVerificationFailure('camera_unavailable');
+    if (metrics.counters.camera_init_attempts < 3) {
+      setTimeout(() => startVIS(), 2000);
+    }
+    return;
+  }
   profiles = await loadProfiles();
+  recordEvent('profiles_loaded', { count: profiles.length });
 
   async function loop() {
     try {
+      const detectStart = nowMs();
       const { face } = await detectFace(video);
+      const detectMs = nowMs() - detectStart;
+      const metrics = ensureMetrics();
+      metrics.timings.face_detection_last_ms = detectMs;
+      metrics.counters.detect_samples = (metrics.counters.detect_samples || 0) + 1;
+      if (metrics.counters.detect_samples % 10 === 0) {
+        recordTiming('face_detection_latency_ms', detectMs);
+      }
+      if (window.__visHumanInitFailed && !metrics.counters.human_init_failed) {
+        metrics.counters.human_init_failed = 1;
+        recordEvent('human_init_failed');
+      }
       const present = presence.update(!!face);
       if (!present) {
         confidence.reset();
         activeUser = null;
         pauseAI();
+        metrics.counters.no_face = (metrics.counters.no_face || 0) + 1;
+        if (metrics.counters.no_face % 10 === 0) {
+          recordEvent('no_face', { count: metrics.counters.no_face });
+          recordVerificationFailure('no_face');
+        }
         setTimeout(loop, DETECT_INTERVAL_MS);
         return;
       }
       if (!face || !livenessCheck(face)) {
+        metrics.counters.liveness_failed = (metrics.counters.liveness_failed || 0) + 1;
+        if (metrics.counters.liveness_failed % 10 === 0) {
+          recordEvent('liveness_failed', { count: metrics.counters.liveness_failed });
+          recordVerificationFailure('liveness_failed');
+        }
         setTimeout(loop, DETECT_INTERVAL_MS);
         return;
       }
       const embedding = face.embedding || [];
       if (!embedding.length) {
+        metrics.counters.embedding_missing = (metrics.counters.embedding_missing || 0) + 1;
+        if (metrics.counters.embedding_missing % 10 === 0) {
+          recordEvent('embedding_missing', { count: metrics.counters.embedding_missing });
+          recordVerificationFailure('embedding_missing');
+        }
         setTimeout(loop, DETECT_INTERVAL_MS);
         return;
       }
+      if (!metrics.timings.verification_start_ms) {
+        metrics.timings.verification_start_ms = nowMs();
+        recordEvent('verification_started');
+      }
+      const matchStart = nowMs();
       const match = matchIdentity(embedding, profiles, 0.88);
+      const matchMs = nowMs() - matchStart;
+      metrics.timings.identity_match_time_ms = matchMs;
+      if (metrics.counters.detect_samples % 10 === 0) {
+        recordTiming('identity_match_time_ms', matchMs);
+      }
       if (!match) {
+        metrics.counters.no_match = (metrics.counters.no_match || 0) + 1;
+        if (metrics.counters.no_match % 10 === 0) {
+          recordEvent('no_match', { count: metrics.counters.no_match });
+          recordVerificationFailure('no_match');
+        }
         if (!unknownSince) unknownSince = Date.now();
         if (Date.now() - unknownSince > 2000) {
           await setupFlow(video);
@@ -200,6 +301,12 @@ export async function startVIS() {
         activeUser.session_state.last_emotion = emotion;
         loadAI(activeUser);
         resumeAI(activeUser);
+        if (!metrics.timings.total_verification_time_ms && metrics.timings.verification_start_ms) {
+          const total = nowMs() - metrics.timings.verification_start_ms;
+          recordTiming('total_verification_time_ms', total);
+          recordEvent('verification_complete', { user: match.user_id, total_ms: total });
+          if (total > 15000) console.warn('[VIS] Verification exceeded 15s');
+        }
       }
       setTimeout(loop, DETECT_INTERVAL_MS);
     } catch (err) {
@@ -211,6 +318,4 @@ export async function startVIS() {
   loop();
 }
 
-window.addEventListener('load', () => {
-  startVIS();
-});
+if(document.readyState === 'complete') startVIS(); else window.addEventListener('load', startVIS);
