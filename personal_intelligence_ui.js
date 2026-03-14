@@ -1010,6 +1010,7 @@
       const modelBasePath = await resolveHumanModelBase();
       const cfg = {
         backend: "wasm",
+        wasmPath: "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/",
         cacheSensitivity: 0,
         modelBasePath: modelBasePath,
         face: {

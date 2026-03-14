@@ -51,6 +51,7 @@ export async function initHuman() {
   if (!window.Human || !window.Human.Human) throw new Error('Human.js not loaded');
   const humanConfig = {
     backend: 'wasm', // Force wasm to avoid WebGL context crashes
+    wasmPath: 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/',
     modelBasePath: 'https://cdn.jsdelivr.net/npm/@vladmandic/human/models/',
     cacheModels: true,
     face: {
