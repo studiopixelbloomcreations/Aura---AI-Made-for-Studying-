@@ -981,12 +981,35 @@
   async function ensureHumanReady() {
     if (visHumanReady) return true;
     if (visHumanLoading) return false;
+    // Reuse the shared Human instance from vis_controller / human_engine
+    if (window.__visHuman) {
+      visHuman = window.__visHuman;
+      visHumanReady = true;
+      pushVisDebug("Human.js reused from shared instance.");
+      return true;
+    }
+    // Wait for vis_controller to finish loading Human.js
+    var waitStart = Date.now();
+    while (!window.__visHuman && !window.__visHumanInitFailed && Date.now() - waitStart < 20000) {
+      await new Promise(function (r) { setTimeout(r, 500); });
+    }
+    if (window.__visHuman) {
+      visHuman = window.__visHuman;
+      visHumanReady = true;
+      pushVisDebug("Human.js reused from shared instance (waited).");
+      return true;
+    }
+    if (window.__visHumanInitFailed) {
+      pushVisDebug("Human.js init failed (shared flag).");
+      return false;
+    }
     const scriptOk = await ensureHumanScriptLoaded();
     if (!scriptOk || !window.Human || !window.Human.Human) return false;
     visHumanLoading = true;
     try {
       const modelBasePath = await resolveHumanModelBase();
-      const baseConfig = {
+      const cfg = {
+        backend: "wasm",
         cacheSensitivity: 0,
         modelBasePath: modelBasePath,
         face: {
@@ -1003,24 +1026,13 @@
         object: { enabled: false },
         segmentation: { enabled: false },
       };
-      const backends = ["webgl", "webgpu", "wasm", "cpu"];
-      let lastErr = null;
-      for (let i = 0; i < backends.length; i += 1) {
-        try {
-          const cfg = Object.assign({}, baseConfig, { backend: backends[i] });
-          const human = new window.Human.Human(cfg);
-          if (human.load) await human.load();
-          if (human.warmup) await human.warmup();
-          visHuman = human;
-          visHumanReady = true;
-          pushVisDebug("Human.js loaded for face recognition (backend=" + backends[i] + ").");
-          return true;
-        } catch (err) {
-          lastErr = err;
-        }
-      }
-      if (lastErr) throw lastErr;
-      return false;
+      const human = new window.Human.Human(cfg);
+      if (human.load) await human.load();
+      visHuman = human;
+      window.__visHuman = human;
+      visHumanReady = true;
+      pushVisDebug("Human.js loaded (wasm fallback, no warmup).");
+      return true;
     } catch (e) {
       pushVisDebug("Human.js init failed: " + String((e && e.message) || e));
       visHumanReady = false;
