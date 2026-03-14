@@ -575,6 +575,18 @@
       // Block WebGPU — Human.js falls back to WebGPU if WebGL is blocked
       try { Object.defineProperty(navigator, 'gpu', { value: undefined, configurable: true }); } catch(_){}
       try { Object.defineProperty(window, 'WebGL2RenderingContext', { value: undefined, writable: false }); } catch(_){}
+      
+      // INTERCEPT FETCH: Human.js ignores wasmPath and tries to load WASM from its own CDN path (404)
+      var origFetch = window.fetch;
+      window.fetch = function(resource, init) {
+        var url = typeof resource === 'string' ? resource : (resource && resource.url ? resource.url : '');
+        if (url.indexOf('tfjs-backend-wasm') !== -1 && url.indexOf('.wasm') !== -1) {
+          // Redirect the broken human.js wasm request to the actual tensorflow wasm CDN
+          var filename = url.substring(url.lastIndexOf('/')); // e.g., /tfjs-backend-wasm-simd.wasm
+          arguments[0] = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist' + filename;
+        }
+        return origFetch.apply(this, arguments);
+      };
     })();
     // Suppress Human.js/TF unhandled promise rejections
     window.addEventListener('unhandledrejection', function(event) {
