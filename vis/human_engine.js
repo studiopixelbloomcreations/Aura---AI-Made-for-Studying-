@@ -45,7 +45,7 @@ export async function initHuman() {
   if (window.__visHumanInitFailed) return null;
   if (!window.Human || !window.Human.Human) throw new Error('Human.js not loaded');
   const humanConfig = {
-    backend: 'webgl',
+    backend: 'webgpu', // Prefer webgpu or auto fallback
     modelBasePath: 'https://cdn.jsdelivr.net/npm/@vladmandic/human/models/',
     cacheModels: true,
     face: {
