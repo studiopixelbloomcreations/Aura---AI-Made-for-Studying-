@@ -36,7 +36,7 @@ function markHumanFailure(err) {
 async function loadHuman(humanConfig) {
   const human = new window.Human.Human(humanConfig);
   if (human.load) await human.load();
-  if (human.warmup) await human.warmup();
+  // Skip warmup — it triggers WebGL kernel operations that crash
   return human;
 }
 
@@ -45,7 +45,7 @@ export async function initHuman() {
   if (window.__visHumanInitFailed) return null;
   if (!window.Human || !window.Human.Human) throw new Error('Human.js not loaded');
   const humanConfig = {
-    backend: 'webgpu', // Prefer webgpu or auto fallback
+    backend: 'wasm', // Force wasm to avoid WebGL context crashes
     modelBasePath: 'https://cdn.jsdelivr.net/npm/@vladmandic/human/models/',
     cacheModels: true,
     face: {

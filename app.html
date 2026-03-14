@@ -555,6 +555,15 @@
     </div>
   </div>
 
+  <script>
+    // Suppress Human.js internal WebGL errors that escape try/catch
+    window.addEventListener('unhandledrejection', function(event) {
+      var msg = event && event.reason && (event.reason.message || String(event.reason));
+      if (msg && (msg.indexOf("reading 'backend'") !== -1 || msg.indexOf('Tensor is disposed') !== -1)) {
+        event.preventDefault();
+      }
+    });
+  </script>
   <script src="api.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
