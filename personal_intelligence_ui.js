@@ -1058,8 +1058,11 @@
 
   async function getHumanDetections() {
     if (!visVideoEl) return { faces: [], result: null };
+    // Skip if another detect call is in progress (vis_controller or us)
+    if (window.__visDetectBusy) return { faces: [], result: null };
     const ok = await ensureHumanReady();
     if (!ok || !visHuman) return { faces: [], result: null };
+    window.__visDetectBusy = true;
     try {
       const source = getHumanDetectionSource();
       const result = await visHuman.detect(source);
@@ -1067,6 +1070,8 @@
       return { faces: faces, result: result || null };
     } catch (e) {
       return { faces: [], result: null };
+    } finally {
+      window.__visDetectBusy = false;
     }
   }
 
