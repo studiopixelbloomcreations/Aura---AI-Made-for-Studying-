@@ -35,6 +35,14 @@ function markHumanFailure(err) {
 
 async function loadHuman(humanConfig) {
   const human = new window.Human.Human(humanConfig);
+  // Forcefully remove WebGL/WebGPU backends from TensorFlow to prevent
+  // internal kernel dispatch to a broken GPU context
+  if (human.tf) {
+    try { if (human.tf.removeBackend) human.tf.removeBackend('webgl'); } catch (_) {}
+    try { if (human.tf.removeBackend) human.tf.removeBackend('webgpu'); } catch (_) {}
+    try { await human.tf.setBackend('wasm'); } catch (_) {}
+    try { await human.tf.ready(); } catch (_) {}
+  }
   if (human.load) await human.load();
   // Skip warmup — it triggers WebGL kernel operations that crash
   return human;
