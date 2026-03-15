@@ -7,7 +7,10 @@ export async function initCamera() {
     window.dispatchEvent(new CustomEvent('vis:camera-error', { detail: { reason: 'MEDIA_UNAVAILABLE' } }));
     return null;
   }
-  const video = document.createElement('video');
+  let video = document.getElementById('vis-video');
+  if (!video) {
+    video = document.createElement('video');
+  }
   video.autoplay = true;
   video.playsInline = true;
   video.muted = true;

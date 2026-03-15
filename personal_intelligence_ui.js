@@ -1223,7 +1223,7 @@
   }
 
   function getHumanDetectionSource() {
-    return visLightingLow ? renderAdjustedFrame() : visVideoEl;
+    return visVideoEl;
   }
 
   function boxIoU(a, b) {
