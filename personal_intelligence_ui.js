@@ -1245,6 +1245,33 @@
     return visVideoEl;
   }
 
+  function waitForVideoReady(videoEl, timeoutMs) {
+    if (!videoEl) return Promise.resolve(false);
+    if (videoEl.videoWidth && videoEl.videoHeight) return Promise.resolve(true);
+    const timeout = typeof timeoutMs === "number" ? timeoutMs : 2000;
+    return new Promise(function (resolve) {
+      let settled = false;
+      const done = function (ok) {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(!!ok);
+      };
+      const onReady = function () {
+        if (videoEl.videoWidth && videoEl.videoHeight) done(true);
+      };
+      const cleanup = function () {
+        try { videoEl.removeEventListener("loadedmetadata", onReady); } catch (e) {}
+        try { videoEl.removeEventListener("loadeddata", onReady); } catch (e) {}
+        try { videoEl.removeEventListener("playing", onReady); } catch (e) {}
+      };
+      try { videoEl.addEventListener("loadedmetadata", onReady); } catch (e) {}
+      try { videoEl.addEventListener("loadeddata", onReady); } catch (e) {}
+      try { videoEl.addEventListener("playing", onReady); } catch (e) {}
+      setTimeout(function () { done(false); }, timeout);
+    });
+  }
+
   function getFaceCropCanvas(sourceCanvas, box) {
     if (!sourceCanvas || !box) return null;
     const canvas = visCanvasEl || document.createElement("canvas");
@@ -2687,9 +2714,16 @@
   }
 
   async function ensureVisCameraReady() {
-    if (window.__visVideoTarget) {
-      visVideoEl = window.__visVideoTarget;
-      return true;
+    if (window.__visVideoTarget && window.__visVideoTarget.srcObject) {
+      const target = window.__visVideoTarget;
+      if (visVideoEl && visVideoEl !== target) {
+        visVideoEl.srcObject = target.srcObject;
+      } else {
+        visVideoEl = target;
+      }
+      try { await visVideoEl.play(); } catch (e) {}
+      await waitForVideoReady(visVideoEl, 2500);
+      return !!(visVideoEl && visVideoEl.videoWidth && visVideoEl.videoHeight);
     }
     if (!visVideoEl) return false;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
@@ -2705,8 +2739,9 @@
       });
       visVideoEl.srcObject = stream;
       await visVideoEl.play();
+      await waitForVideoReady(visVideoEl, 2500);
       window.__visVideoTarget = visVideoEl;
-      return true;
+      return !!(visVideoEl.videoWidth && visVideoEl.videoHeight);
     } catch (e) {
       dbg("VIS webcam init failed", e && e.message);
       setAssistantStateForVisOffline("Offline - camera denied");
