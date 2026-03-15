@@ -2934,9 +2934,18 @@
     if (!window.puter || !window.puter.ai) throw new Error("PUTER_NOT_LOADED");
     if (!window.puter.auth || !window.puter.auth.isSignedIn || !window.puter.auth.signIn) return;
     let signed = false;
-    try { signed = !!(await window.puter.auth.isSignedIn()); } catch (e) {}
+    try { signed = !!(await window.puter.auth.isSignedIn()); } catch (socketErr) {
+      console.warn('[PI] Puter socket.io connection failed:', socketErr && socketErr.message);
+      window.__puterSocketIOFailed = true;
+      return;
+    }
     if (!signed && interactive) {
-      await window.puter.auth.signIn({ attempt_temp_user_creation: true });
+      try {
+        await window.puter.auth.signIn({ attempt_temp_user_creation: true });
+      } catch (authErr) {
+        console.warn('[PI] Puter auth failed:', authErr && authErr.message);
+        throw authErr;
+      }
     }
   }
 
@@ -2954,8 +2963,10 @@
 
   async function fetchPuterModels() {
     if (isOffline()) return fallbackPuterModels();
+    if (window.__puterSocketIOFailed) return fallbackPuterModels();
     try {
       await ensurePuterReady(false);
+      if (window.__puterSocketIOFailed) return fallbackPuterModels();
       const raw = await window.puter.ai.listModels();
       const list = Array.isArray(raw) ? raw : [];
       const mapped = list.map(function (m) {
@@ -2969,6 +2980,7 @@
       mapped.sort(function (a, b) { return String(a.id).localeCompare(String(b.id)); });
       return mapped;
     } catch (e) {
+      console.warn('[PI] Failed to fetch Puter models:', e && e.message);
       return fallbackPuterModels();
     }
   }
