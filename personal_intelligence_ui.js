@@ -15,9 +15,9 @@
   const PI_TTS_VOICE_KEY = (window.PuterVoiceCatalog && window.PuterVoiceCatalog.storageKey) ? String(window.PuterVoiceCatalog.storageKey) : "g9_tts_voice";
   const PI_TTS_VOICE_DEFAULT = (window.PuterVoiceCatalog && window.PuterVoiceCatalog.defaultId) ? String(window.PuterVoiceCatalog.defaultId) : "openai:alloy";
   const PI_MODEL_OPTIONS_FALLBACK = [
-    { id: "openai/gpt-5.2-chat", label: "openai/gpt-5.2-chat" },
-    { id: "google/gemini-2.5-flash", label: "google/gemini-2.5-flash" },
-    { id: "anthropic/claude-opus-4-6", label: "anthropic/claude-opus-4-6" },
+    { id: "openai/gpt-4o-mini", label: "GPT-4o Mini (Fallback)" },
+    { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash (Fallback)" },
+    { id: "anthropic/claude-3-5-haiku", label: "Claude 3.5 Haiku (Fallback)" },
   ];
   const MEMORY_KEY = "personal_intelligence_memory_v1";
   const HISTORY_KEY = "personal_intelligence_history_v1";
@@ -2622,6 +2622,10 @@
   }
 
   async function ensureVisCameraReady() {
+    if (window.__visVideoTarget) {
+      visVideoEl = window.__visVideoTarget;
+      return true;
+    }
     if (!visVideoEl) return false;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
     try {
@@ -2636,6 +2640,7 @@
       });
       visVideoEl.srcObject = stream;
       await visVideoEl.play();
+      window.__visVideoTarget = visVideoEl;
       return true;
     } catch (e) {
       dbg("VIS webcam init failed", e && e.message);
@@ -2931,7 +2936,15 @@
   async function ensurePuterReady(interactive) {
     if (isOffline()) throw new Error("OFFLINE_MODE");
     if (window.__VIS_TEST_USE_MOCK || navigator.onLine === false) return;
-    if (!window.puter || !window.puter.ai) throw new Error("PUTER_NOT_LOADED");
+    if (!window.puter || !window.puter.ai) {
+      // Wait up to 5 seconds for puter.js to load asynchronously
+      let attempts = 0;
+      while ((!window.puter || !window.puter.ai) && attempts < 50) {
+        await new Promise(r => setTimeout(r, 100));
+        attempts++;
+      }
+      if (!window.puter || !window.puter.ai) throw new Error("PUTER_NOT_LOADED");
+    }
     if (!window.puter.auth || !window.puter.auth.isSignedIn || !window.puter.auth.signIn) return;
     let signed = false;
     try { signed = !!(await window.puter.auth.isSignedIn()); } catch (socketErr) {

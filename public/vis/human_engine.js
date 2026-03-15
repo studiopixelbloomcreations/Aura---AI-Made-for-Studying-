@@ -36,6 +36,15 @@ function markHumanFailure(err) {
 async function loadHuman(humanConfig) {
   const human = new window.Human.Human(humanConfig);
   if (human.load) await human.load();
+  // Force CPU backend and disable GPU backends if not in test mode
+  if (human.tf) {
+    try { if (human.tf.removeBackend) human.tf.removeBackend('webgl'); } catch (_) {}
+    try { if (human.tf.removeBackend) human.tf.removeBackend('webgpu'); } catch (_) {}
+    try { if (human.tf.removeBackend) human.tf.removeBackend('wasm'); } catch (_) {}
+    try { await human.tf.setBackend('cpu'); } catch (_) {}
+    try { await human.tf.ready(); } catch (_) {}
+  }
+  if (!isTestMode() && !human.tf) throw new Error('Human.js TF backend missing');
   return human;
 }
 
@@ -44,9 +53,9 @@ export async function initHuman() {
   if (window.__visHumanInitFailed) return null;
   if (!window.Human || !window.Human.Human) throw new Error('Human.js not loaded');
 
-  // Let Human.js use its default backend (webgl).
-  // Do NOT force wasm/cpu — webgl works and is fastest.
+  // Force CPU backend to avoid WebGL/WebGPU crashes
   const humanConfig = {
+    backend: 'cpu',
     modelBasePath: 'https://cdn.jsdelivr.net/npm/@vladmandic/human/models/',
     cacheModels: true,
     face: {
@@ -64,8 +73,14 @@ export async function initHuman() {
   try {
     human = await loadHuman(humanConfig);
   } catch (err) {
-    markHumanFailure(err);
-    return null;
+    try {
+      console.warn('[VIS] Initial load failed, retrying with fallback CPU config...');
+      const fallbackConfig = Object.assign({}, humanConfig, { backend: 'cpu' });
+      human = await loadHuman(fallbackConfig);
+    } catch (fallbackErr) {
+      markHumanFailure(fallbackErr || err);
+      return null;
+    }
   }
   window.__visHuman = human;
   return human;
