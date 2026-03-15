@@ -2565,15 +2565,6 @@
       const face = detection && detection.faces ? selectPrimaryFace(detection.faces) : null;
       if (face && Array.isArray(face.embedding) && face.embedding.length) {
         vectors.push(face.embedding.slice(0));
-        const mesh = Array.isArray(face.mesh) ? face.mesh : [];
-        if (mesh.length) {
-          const meshSample = mesh.slice(0, 40).map(function (p) {
-            if (Array.isArray(p)) return [Number(p[0] || 0), Number(p[1] || 0), Number(p[2] || 0)];
-            if (p && typeof p === "object") return [Number(p.x || 0), Number(p.y || 0), Number(p.z || 0)];
-            return [0, 0, 0];
-          });
-          landmarks.push(meshSample);
-        }
         const box = getFaceBox(face);
         if (box) {
           geometrySnapshots.push({
