@@ -37,15 +37,9 @@ const MP_VISION_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/visi
 const MP_WASM_PATH = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm';
 const MP_FACE_DETECTOR_MODEL = 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite';
 const MP_IMAGE_EMBEDDER_MODEL = 'https://storage.googleapis.com/mediapipe-models/image_embedder/mobilenet_v3_small/float32/1/mobilenet_v3_small.tflite';
-const HUMAN_EMOTION_CDN = 'https://cdn.jsdelivr.net/npm/@vladmandic/human/dist/human.js';
-
 let mpReadyPromise = null;
 let mpFaceDetector = null;
 let mpImageEmbedder = null;
-let emotionReadyPromise = null;
-let emotionHuman = null;
-let lastEmotionAt = 0;
-let lastEmotion = [];
 
 async function ensureMediapipeReady() {
   if (mpReadyPromise) return mpReadyPromise;
@@ -100,66 +94,6 @@ function normalizeBox(bbox) {
   return { x, y, width: w, height: h };
 }
 
-async function loadHumanScript(src) {
-  return new Promise(function(resolve, reject) {
-    const existing = document.querySelector('script[data-vis-human-emotion="true"]');
-    if (existing) {
-      if (window.Human && window.Human.Human) return resolve();
-      existing.addEventListener('load', resolve, { once: true });
-      existing.addEventListener('error', reject, { once: true });
-      return;
-    }
-    const tag = document.createElement('script');
-    tag.src = src;
-    tag.async = true;
-    tag.defer = true;
-    tag.setAttribute('data-vis-human-emotion', 'true');
-    tag.onload = resolve;
-    tag.onerror = reject;
-    document.head.appendChild(tag);
-  });
-}
-
-async function ensureEmotionHumanReady() {
-  if (window.__VIS_EMOTION_DISABLED) return null;
-  if (emotionHuman) return emotionHuman;
-  if (emotionReadyPromise) return emotionReadyPromise;
-  emotionReadyPromise = (async function() {
-    if (!window.Human || !window.Human.Human) {
-      await loadHumanScript(HUMAN_EMOTION_CDN);
-    }
-    if (!window.Human || !window.Human.Human) throw new Error('Human.js not loaded');
-    const human = new window.Human.Human({
-      backend: 'wasm',
-      wasmPath: 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/',
-      modelBasePath: 'https://cdn.jsdelivr.net/npm/@vladmandic/human/models/',
-      face: { enabled: true, detector: { rotation: true, maxDetected: 1 }, mesh: false, iris: false, description: false },
-      emotion: { enabled: true },
-      body: { enabled: false },
-      hand: { enabled: false }
-    });
-    if (human.load) await human.load();
-    emotionHuman = human;
-    return emotionHuman;
-  })();
-  return emotionReadyPromise;
-}
-
-async function detectEmotion(video) {
-  if (!video) return [];
-  if ((Date.now() - lastEmotionAt) < 500) return lastEmotion;
-  try {
-    const human = await ensureEmotionHumanReady();
-    if (!human) return [];
-    const result = await human.detect(video);
-    const face = result && result.face && result.face[0] ? result.face[0] : null;
-    lastEmotion = (face && face.emotion) ? face.emotion : [];
-    lastEmotionAt = Date.now();
-    return lastEmotion;
-  } catch (_) {
-    return [];
-  }
-}
 
 export async function initHuman() {
   if (window.__visHuman) return window.__visHuman;
@@ -200,8 +134,7 @@ export async function detectFace(video) {
     const embedding = embedResult && embedResult.embeddings && embedResult.embeddings[0]
       ? (embedResult.embeddings[0].floatEmbedding || [])
       : [];
-    const emotion = await detectEmotion(video);
-    const face = { embedding, box: bbox, emotion };
+    const face = { embedding, box: bbox, emotion: [] };
     return { result: { face: [face] }, face };
   } catch (err) {
     return { result: null, face: null };

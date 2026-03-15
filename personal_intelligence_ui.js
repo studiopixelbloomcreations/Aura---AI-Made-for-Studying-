@@ -38,7 +38,6 @@
   const VIS_MEDIAPIPE_WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
   const VIS_FACE_DETECTOR_MODEL = "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite";
   const VIS_IMAGE_EMBEDDER_MODEL = "https://storage.googleapis.com/mediapipe-models/image_embedder/mobilenet_v3_small/float32/1/mobilenet_v3_small.tflite";
-  const VIS_HUMAN_EMOTION_CDN = "https://cdn.jsdelivr.net/npm/@vladmandic/human/dist/human.js";
   function isOffline() {
     return window.__OFFLINE_MODE__ === true || navigator.onLine === false;
   }
@@ -959,10 +958,6 @@
   let visMpReadyPromise = null;
   let visMpFaceDetector = null;
   let visMpImageEmbedder = null;
-  let visEmotionReadyPromise = null;
-  let visEmotionHuman = null;
-  let visLastEmotionAt = 0;
-  let visLastEmotionList = [];
 
   async function ensureMediapipeReady() {
     if (visMpReadyPromise) return visMpReadyPromise;
@@ -986,66 +981,6 @@
     return visMpReadyPromise;
   }
 
-  async function loadHumanEmotionScript() {
-    return new Promise(function (resolve, reject) {
-      const existing = document.querySelector('script[data-vis-human-emotion="true"]');
-      if (existing) {
-        if (window.Human && window.Human.Human) return resolve();
-        existing.addEventListener("load", resolve, { once: true });
-        existing.addEventListener("error", reject, { once: true });
-        return;
-      }
-      const tag = document.createElement("script");
-      tag.src = VIS_HUMAN_EMOTION_CDN;
-      tag.async = true;
-      tag.defer = true;
-      tag.setAttribute("data-vis-human-emotion", "true");
-      tag.onload = resolve;
-      tag.onerror = reject;
-      document.head.appendChild(tag);
-    });
-  }
-
-  async function ensureEmotionHumanReady() {
-    if (window.__VIS_EMOTION_DISABLED) return null;
-    if (visEmotionHuman) return visEmotionHuman;
-    if (visEmotionReadyPromise) return visEmotionReadyPromise;
-    visEmotionReadyPromise = (async function () {
-      if (!window.Human || !window.Human.Human) {
-        await loadHumanEmotionScript();
-      }
-      if (!window.Human || !window.Human.Human) throw new Error("Human.js not loaded");
-      const human = new window.Human.Human({
-        backend: "wasm",
-        wasmPath: "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/",
-        modelBasePath: "https://cdn.jsdelivr.net/npm/@vladmandic/human/models/",
-        face: { enabled: true, detector: { rotation: true, maxDetected: 1 }, mesh: false, iris: false, description: false },
-        emotion: { enabled: true },
-        body: { enabled: false },
-        hand: { enabled: false }
-      });
-      if (human.load) await human.load();
-      visEmotionHuman = human;
-      return visEmotionHuman;
-    })();
-    return visEmotionReadyPromise;
-  }
-
-  async function detectEmotionForVideo(videoEl) {
-    if (!videoEl) return [];
-    if ((Date.now() - visLastEmotionAt) < 500) return visLastEmotionList;
-    try {
-      const human = await ensureEmotionHumanReady();
-      if (!human) return [];
-      const result = await human.detect(videoEl);
-      const face = result && result.face && result.face[0] ? result.face[0] : null;
-      visLastEmotionList = (face && face.emotion) ? face.emotion : [];
-      visLastEmotionAt = Date.now();
-      return visLastEmotionList;
-    } catch (e) {
-      return [];
-    }
-  }
 
   async function ensureHumanReady() {
     if (visHumanReady) return true;
@@ -1107,8 +1042,7 @@
       const embedding = embedResult && embedResult.embeddings && embedResult.embeddings[0]
         ? (embedResult.embeddings[0].floatEmbedding || [])
         : [];
-      const emotion = await detectEmotionForVideo(visVideoEl);
-      const face = { embedding: embedding, box: box, emotion: emotion };
+      const face = { embedding: embedding, box: box, emotion: [] };
       return { faces: [face], result: detectionResult || null };
     } catch (e) {
       console.warn('[VIS] MediaPipe detect error:', e && e.message);
@@ -1264,22 +1198,8 @@
 
   function getHumanDetectionSource() {
     if (!visVideoEl) return null;
-    const vw = visVideoEl.videoWidth || 0;
-    const vh = visVideoEl.videoHeight || 0;
-    if (!vw || !vh) return null;
-    const canvas = visCanvasEl || document.createElement("canvas");
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    if (!ctx) return null;
-    const w = Math.min(320, vw);
-    const h = Math.min(240, vh);
-    canvas.width = w;
-    canvas.height = h;
-    try {
-      ctx.drawImage(visVideoEl, 0, 0, w, h);
-      return canvas;
-    } catch (e) {
-      return null;
-    }
+    if (!visVideoEl.videoWidth || !visVideoEl.videoHeight) return null;
+    return visVideoEl;
   }
 
   function getFaceCropCanvas(sourceCanvas, box) {
