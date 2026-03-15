@@ -1081,20 +1081,44 @@
     }
     // Global mutex queue for WebGL safety
     window.__visDetectQueue = window.__visDetectQueue || Promise.resolve();
+    if (window.__visDetectQueueStartedAt && (Date.now() - window.__visDetectQueueStartedAt) > 2000) {
+      window.__visDetectQueue = Promise.resolve();
+      window.__visDetectQueueStartedAt = 0;
+    }
 
     return new Promise(function(resolve) {
       window.__visDetectQueue = window.__visDetectQueue.then(async function() {
         try {
+          window.__visDetectQueueStartedAt = Date.now();
           const source = getHumanDetectionSource();
-          const result = await visHuman.detect(source);
+          const result = await Promise.race([
+            visHuman.detect(source),
+            new Promise(function(res) { setTimeout(function() { res({ __timeout: true }); }, 1200); })
+          ]);
+          if (result && result.__timeout) {
+            pushVisDebug("Human.js detect timed out; resetting.");
+            window.__visDetectQueue = Promise.resolve();
+            window.__visDetectQueueStartedAt = 0;
+            window.__visHuman = null;
+            visHumanReady = false;
+            resolve({ faces: [], result: null });
+            return;
+          }
           if (visHuman.tf && visHuman.tf.nextFrame) await visHuman.tf.nextFrame();
           const faces = result && Array.isArray(result.face) ? result.face.slice(0) : [];
           resolve({ faces: faces, result: result || null });
         } catch (e) {
           console.warn('[VIS] getHumanDetections error:', e && e.message);
-          window.__visHumanInitFailed = true;
-          window.__visHuman = null;
+          window.__visHumanDetectErrorCount = (window.__visHumanDetectErrorCount || 0) + 1;
+          window.__visHumanDetectLastErrorAt = Date.now();
+          if (window.__visHumanDetectErrorCount >= 3) {
+            window.__visHuman = null;
+            visHumanReady = false;
+            window.__visHumanDetectErrorCount = 0;
+          }
           resolve({ faces: [], result: null });
+        } finally {
+          window.__visDetectQueueStartedAt = 0;
         }
       });
     });
@@ -2442,6 +2466,10 @@
     visSetupState.step = 4;
     try { renderVisSetup(); } catch (e) { pushVisDebug("scan step render failed: " + String((e && e.message) || e)); }
     const signatureModel = "human-js";
+    // Reset failed init to allow retry on user action
+    window.__visHumanInitFailed = false;
+    window.__visHuman = null;
+    visHumanReady = false;
     const humanReady = await ensureHumanReady();
     if (!humanReady) {
       visScanning = false;

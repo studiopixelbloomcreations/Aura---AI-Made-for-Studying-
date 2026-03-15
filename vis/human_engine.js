@@ -99,11 +99,26 @@ export async function detectFace(video) {
   }
   // Global mutex queue for WebGL safety
   window.__visDetectQueue = window.__visDetectQueue || Promise.resolve();
+  if (window.__visDetectQueueStartedAt && (Date.now() - window.__visDetectQueueStartedAt) > 2000) {
+    window.__visDetectQueue = Promise.resolve();
+    window.__visDetectQueueStartedAt = 0;
+  }
 
   return new Promise(function(resolve) {
     window.__visDetectQueue = window.__visDetectQueue.then(async function() {
       try {
-        const result = await human.detect(video);
+        window.__visDetectQueueStartedAt = Date.now();
+        const result = await Promise.race([
+          human.detect(video),
+          new Promise(function(res) { setTimeout(function() { res({ __timeout: true }); }, 1200); })
+        ]);
+        if (result && result.__timeout) {
+          window.__visDetectQueue = Promise.resolve();
+          window.__visDetectQueueStartedAt = 0;
+          window.__visHuman = null;
+          resolve({ result: null, face: null });
+          return;
+        }
         const face = result && result.face && result.face[0] ? result.face[0] : null;
         if (!face && result) {
           window.__visDetectMissCount = (window.__visDetectMissCount || 0) + 1;
@@ -115,9 +130,15 @@ export async function detectFace(video) {
         }
         resolve({ result, face });
       } catch (detectErr) {
-        window.__visHuman = null;
-        window.__visHumanInitFailed = true;
+        window.__visHumanDetectErrorCount = (window.__visHumanDetectErrorCount || 0) + 1;
+        window.__visHumanDetectLastErrorAt = Date.now();
+        if (window.__visHumanDetectErrorCount >= 3) {
+          window.__visHuman = null;
+          window.__visHumanDetectErrorCount = 0;
+        }
         resolve({ result: null, face: null });
+      } finally {
+        window.__visDetectQueueStartedAt = 0;
       }
     });
   });
