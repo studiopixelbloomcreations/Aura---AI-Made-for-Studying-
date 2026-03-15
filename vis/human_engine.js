@@ -35,11 +35,9 @@ function markHumanFailure(err) {
 
 const MP_VISION_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs';
 const MP_WASM_PATH = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm';
-const MP_FACE_DETECTOR_MODEL = 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite';
 const MP_IMAGE_EMBEDDER_MODEL = 'https://storage.googleapis.com/mediapipe-models/image_embedder/mobilenet_v3_small/float32/1/mobilenet_v3_small.tflite';
 const MP_FACE_LANDMARKER_MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
 let mpReadyPromise = null;
-let mpFaceDetector = null;
 let mpImageEmbedder = null;
 let mpFaceLandmarker = null;
 
@@ -47,12 +45,8 @@ async function ensureMediapipeReady() {
   if (mpReadyPromise) return mpReadyPromise;
   mpReadyPromise = (async function() {
     const vision = await import(MP_VISION_CDN);
-    const { FilesetResolver, FaceDetector, ImageEmbedder, FaceLandmarker } = vision;
+    const { FilesetResolver, ImageEmbedder, FaceLandmarker } = vision;
     const fileset = await FilesetResolver.forVisionTasks(MP_WASM_PATH);
-    mpFaceDetector = await FaceDetector.createFromOptions(fileset, {
-      baseOptions: { modelAssetPath: MP_FACE_DETECTOR_MODEL },
-      runningMode: 'VIDEO'
-    });
     mpImageEmbedder = await ImageEmbedder.createFromOptions(fileset, {
       baseOptions: { modelAssetPath: MP_IMAGE_EMBEDDER_MODEL },
       runningMode: 'VIDEO',
@@ -102,6 +96,29 @@ function normalizeBox(bbox) {
   return { x, y, width: w, height: h };
 }
 
+function boxFromLandmarks(landmarks, vw, vh) {
+  if (!landmarks || !landmarks.length || !vw || !vh) return null;
+  let minX = 1, minY = 1, maxX = 0, maxY = 0;
+  for (let i = 0; i < landmarks.length; i += 1) {
+    const pt = landmarks[i];
+    const x = Math.min(1, Math.max(0, Number(pt.x || 0)));
+    const y = Math.min(1, Math.max(0, Number(pt.y || 0)));
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
+  }
+  const pad = 0.12;
+  minX = Math.max(0, minX - pad);
+  minY = Math.max(0, minY - pad);
+  maxX = Math.min(1, maxX + pad);
+  maxY = Math.min(1, maxY + pad);
+  const x = Math.round(minX * vw);
+  const y = Math.round(minY * vh);
+  const w = Math.max(1, Math.round((maxX - minX) * vw));
+  const h = Math.max(1, Math.round((maxY - minY) * vh));
+  return { x, y, width: w, height: h };
+}
 function extractEmbedding(embedResult) {
   if (!embedResult || !embedResult.embeddings || !embedResult.embeddings.length) return [];
   const emb = embedResult.embeddings[0] || {};
@@ -147,7 +164,7 @@ export async function initHuman() {
   if (window.__visHumanInitFailed) return null;
   try {
     await ensureMediapipeReady();
-    if (!mpFaceDetector || !mpImageEmbedder || !mpFaceLandmarker) throw new Error('MediaPipe not initialized');
+    if (!mpImageEmbedder || !mpFaceLandmarker) throw new Error('MediaPipe not initialized');
     window.__visHuman = { backend: 'mediapipe' };
     return window.__visHuman;
   } catch (err) {
@@ -169,17 +186,19 @@ export async function detectFace(video) {
   window.__visBackendDetectBusy = true;
   try {
     await ensureMediapipeReady();
-    if (!mpFaceDetector || !mpImageEmbedder || !mpFaceLandmarker) return { result: null, face: null };
+    if (!mpImageEmbedder || !mpFaceLandmarker) return { result: null, face: null };
     const ts = (window.performance && performance.now) ? performance.now() : Date.now();
-    const detectionResult = mpFaceDetector.detectForVideo(video, ts);
-    const detections = detectionResult && Array.isArray(detectionResult.detections) ? detectionResult.detections : [];
-    if (!detections.length) return { result: { face: [] }, face: null };
-    const bbox = normalizeBox(detections[0].boundingBox);
+    const landmarkerResult = mpFaceLandmarker.detectForVideo(video, ts);
+    const landmarks = landmarkerResult && landmarkerResult.faceLandmarks && landmarkerResult.faceLandmarks[0]
+      ? landmarkerResult.faceLandmarks[0]
+      : null;
+    if (!landmarks || !landmarks.length) return { result: { face: [] }, face: null };
+    const bbox = boxFromLandmarks(landmarks, video.videoWidth || 0, video.videoHeight || 0);
+    if (!bbox) return { result: { face: [] }, face: null };
     const crop = captureFaceCrop(video, bbox);
     if (!crop) return { result: { face: [] }, face: null };
     const embedResult = mpImageEmbedder.embedForVideo(crop, ts);
     const embedding = extractEmbedding(embedResult);
-    const landmarkerResult = mpFaceLandmarker.detectForVideo(video, ts);
     const blendshapes = landmarkerResult && landmarkerResult.faceBlendshapes && landmarkerResult.faceBlendshapes[0]
       ? landmarkerResult.faceBlendshapes[0].categories
       : [];
