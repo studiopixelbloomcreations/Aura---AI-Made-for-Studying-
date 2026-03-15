@@ -88,6 +88,15 @@ export async function detectFace(video) {
   try {
     const result = await human.detect(video);
     const face = result && result.face && result.face[0] ? result.face[0] : null;
+    if (!face && result) {
+      // Log once every 10 failed detections to avoid console spam
+      window.__visDetectMissCount = (window.__visDetectMissCount || 0) + 1;
+      if (window.__visDetectMissCount <= 3 || window.__visDetectMissCount % 10 === 0) {
+        console.log('[VIS] detect returned', result.face ? result.face.length : 0, 'faces (miss #' + window.__visDetectMissCount + ')');
+      }
+    } else if (face) {
+      window.__visDetectMissCount = 0;
+    }
     return { result, face };
   } catch (detectErr) {
     // Silently handle — the unhandledrejection handler in app.html catches escaping errors

@@ -4343,6 +4343,19 @@
     dbg("VIS init failed", e && e.message);
     setAssistantStateForVisOffline("Offline - VIS init failed");
   });
+
+  // Wire vis_controller events to PI UI offline/online behavior
+  window.addEventListener('vis:offline', function (e) {
+    var reason = (e && e.detail && e.detail.reason) || 'no_face';
+    pauseForVisOffline("Offline - " + reason);
+  });
+  window.addEventListener('vis:online', function () {
+    resumeFromVisOnline();
+  });
+  window.addEventListener('vis:resume', function () {
+    resumeFromVisOnline();
+  });
+
   try {
     if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
   } catch (e) {}

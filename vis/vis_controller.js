@@ -14,9 +14,49 @@ const EMBED_FRAMES = 12;
 let profiles = [];
 let activeUser = null;
 let unknownSince = 0;
+let lastActiveUserId = null;
+let visOffline = true; // Start offline until face detected
 
 const presence = createPresenceEngine();
 const confidence = createConfidenceEngine();
+
+// --- Offline/Online mode ---
+function setVisOffline(offline, reason) {
+  const wasOffline = visOffline;
+  visOffline = !!offline;
+  if (visOffline !== wasOffline) {
+    const eventName = visOffline ? 'vis:offline' : 'vis:online';
+    window.dispatchEvent(new CustomEvent(eventName, {
+      detail: { reason: reason || '', lastUser: lastActiveUserId }
+    }));
+  }
+  // Toggle overlay
+  let overlay = document.getElementById('vis-offline-overlay');
+  if (visOffline) {
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'vis-offline-overlay';
+      overlay.innerHTML = '<div class="vis-offline-msg">No face detected — AI paused</div>';
+      document.body.appendChild(overlay);
+    }
+    overlay.style.display = '';
+    document.body.classList.add('vis-offline-body');
+  } else {
+    if (overlay) overlay.style.display = 'none';
+    document.body.classList.remove('vis-offline-body');
+  }
+}
+
+function ensureOfflineStyles() {
+  if (document.getElementById('visOfflineCSS')) return;
+  const s = document.createElement('style');
+  s.id = 'visOfflineCSS';
+  s.textContent =
+    '.vis-offline-body { filter: grayscale(0.85) brightness(0.7); pointer-events: none; transition: filter 0.6s ease; }' +
+    '#vis-offline-overlay { position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;pointer-events:none; }' +
+    '.vis-offline-msg { background:rgba(6,10,20,0.85);color:#8ba3cc;padding:14px 28px;border-radius:14px;font-size:15px;letter-spacing:0.3px;border:1px solid rgba(100,140,200,0.25);box-shadow:0 12px 40px rgba(0,0,0,0.4);pointer-events:none; }';
+  document.head.appendChild(s);
+}
 
 function ensureMetrics() {
   if (!window.__VIS_METRICS) {
@@ -199,12 +239,15 @@ function livenessCheck(face) {
 
 export async function startVIS() {
   ensureMetrics();
+  ensureOfflineStyles();
+  setVisOffline(true, 'initializing');
   recordEvent('vis_start');
   const modelStart = nowMs();
   await initHuman();
   if (!window.__visHuman) {
     console.warn('[VIS] Human init failed, disabling VIS');
     recordEvent('vis_disabled', { reason: 'human_init_failed' });
+    setVisOffline(true, 'human_init_failed');
     return;
   }
   recordTiming('model_load_time_ms', nowMs() - modelStart);
@@ -243,7 +286,8 @@ export async function startVIS() {
       const present = presence.update(!!face);
       if (!present) {
         confidence.reset();
-        activeUser = null;
+        // Go OFFLINE — grey out everything
+        setVisOffline(true, 'no_face');
         pauseAI();
         metrics.counters.no_face = (metrics.counters.no_face || 0) + 1;
         if (metrics.counters.no_face % 10 === 0) {
@@ -253,6 +297,8 @@ export async function startVIS() {
         setTimeout(loop, DETECT_INTERVAL_MS);
         return;
       }
+      // Face IS present — come back online
+      setVisOffline(false, 'face_detected');
       if (!face || !livenessCheck(face)) {
         metrics.counters.liveness_failed = (metrics.counters.liveness_failed || 0) + 1;
         if (metrics.counters.liveness_failed % 10 === 0) {
@@ -300,12 +346,22 @@ export async function startVIS() {
       unknownSince = 0;
       const confirmed = confidence.update(match.user_id);
       if (confirmed) {
+        const isSameUser = lastActiveUserId === match.user_id;
         activeUser = match.profile;
+        lastActiveUserId = match.user_id;
         const emotion = topEmotion(face.emotion || []);
         activeUser.session_state = activeUser.session_state || {};
         activeUser.session_state.last_emotion = emotion;
-        loadAI(activeUser);
-        resumeAI(activeUser);
+        if (isSameUser) {
+          // Same user returned — resume where they left off
+          resumeAI(activeUser);
+          window.dispatchEvent(new CustomEvent('vis:resume', { detail: { user: match.user_id } }));
+        } else {
+          // Different user — switch context
+          loadAI(activeUser);
+          resumeAI(activeUser);
+          window.dispatchEvent(new CustomEvent('vis:user_changed', { detail: { user: match.user_id } }));
+        }
         if (!metrics.timings.total_verification_time_ms && metrics.timings.verification_start_ms) {
           const total = nowMs() - metrics.timings.verification_start_ms;
           recordTiming('total_verification_time_ms', total);
