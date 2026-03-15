@@ -1048,9 +1048,7 @@
       const crop = getFaceCropCanvas(sourceCanvas, box);
       if (!crop) return { faces: [], result: detectionResult || null };
       const embedResult = visMpImageEmbedder.embedForVideo(crop, ts);
-      const embedding = embedResult && embedResult.embeddings && embedResult.embeddings[0]
-        ? (embedResult.embeddings[0].floatEmbedding || [])
-        : [];
+      const embedding = extractEmbedding(embedResult);
       const landmarkerResult = visMpFaceLandmarker.detectForVideo(visVideoEl, ts);
       const blendshapes = landmarkerResult && landmarkerResult.faceBlendshapes && landmarkerResult.faceBlendshapes[0]
         ? landmarkerResult.faceBlendshapes[0].categories
@@ -1165,6 +1163,17 @@
       { emotion: "surprised", score: surprise },
       { emotion: "neutral", score: neutral }
     ];
+  }
+
+  function extractEmbedding(embedResult) {
+    if (!embedResult || !embedResult.embeddings || !embedResult.embeddings.length) return [];
+    const emb = embedResult.embeddings[0] || {};
+    if (Array.isArray(emb.floatEmbedding) && emb.floatEmbedding.length) return emb.floatEmbedding;
+    if (Array.isArray(emb.embedding) && emb.embedding.length) return emb.embedding;
+    if (Array.isArray(emb.quantizedEmbedding) && emb.quantizedEmbedding.length) {
+      return emb.quantizedEmbedding.map(function(v) { return Number(v) / 255; });
+    }
+    return [];
   }
 
   function estimateFrameLuma() {

@@ -102,6 +102,17 @@ function normalizeBox(bbox) {
   return { x, y, width: w, height: h };
 }
 
+function extractEmbedding(embedResult) {
+  if (!embedResult || !embedResult.embeddings || !embedResult.embeddings.length) return [];
+  const emb = embedResult.embeddings[0] || {};
+  if (Array.isArray(emb.floatEmbedding) && emb.floatEmbedding.length) return emb.floatEmbedding;
+  if (Array.isArray(emb.embedding) && emb.embedding.length) return emb.embedding;
+  if (Array.isArray(emb.quantizedEmbedding) && emb.quantizedEmbedding.length) {
+    return emb.quantizedEmbedding.map(function(v) { return Number(v) / 255; });
+  }
+  return [];
+}
+
 function blendshapeToEmotion(blendshapes) {
   if (!blendshapes || !blendshapes.length) return [];
   const scores = {};
@@ -167,9 +178,7 @@ export async function detectFace(video) {
     const crop = captureFaceCrop(video, bbox);
     if (!crop) return { result: { face: [] }, face: null };
     const embedResult = mpImageEmbedder.embedForVideo(crop, ts);
-    const embedding = embedResult && embedResult.embeddings && embedResult.embeddings[0]
-      ? (embedResult.embeddings[0].floatEmbedding || [])
-      : [];
+    const embedding = extractEmbedding(embedResult);
     const landmarkerResult = mpFaceLandmarker.detectForVideo(video, ts);
     const blendshapes = landmarkerResult && landmarkerResult.faceBlendshapes && landmarkerResult.faceBlendshapes[0]
       ? landmarkerResult.faceBlendshapes[0].categories
