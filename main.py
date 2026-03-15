@@ -47,6 +47,17 @@ def _include_optional_upload_routers(app: FastAPI) -> None:
 
 _include_optional_upload_routers(app)
 
+
+def _include_optional_vis_face_router(app: FastAPI) -> None:
+    try:
+        from vis_face_router import router as vis_face_router
+    except Exception:
+        return
+    app.include_router(vis_face_router)
+
+
+_include_optional_vis_face_router(app)
+
 _is_vercel = bool(os.environ.get("VERCEL"))
 
 if not _is_vercel:

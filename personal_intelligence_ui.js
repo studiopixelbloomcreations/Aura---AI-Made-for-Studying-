@@ -34,7 +34,10 @@
   const VIS_SCAN_INTERVAL_MS = 80;
   const VIS_SCAN_FRAME_COUNT = 8;
   const VIS_PROFILE_DOC_LIMIT = 100;
-  const VIS_HUMAN_SCRIPT_CDN = "https://cdn.jsdelivr.net/npm/@vladmandic/human/dist/human.js";
+  const VIS_FACE_API_PATH = "/vis/face/embedding";
+  const VIS_FACE_HEALTH_PATH = "/vis/face/health";
+  const VIS_DEEPFACE_MODEL = "Facenet512";
+  const VIS_DEEPFACE_DETECTOR = "opencv";
   function isOffline() {
     return window.__OFFLINE_MODE__ === true || navigator.onLine === false;
   }
@@ -821,8 +824,8 @@
       visVerificationBusy = false;
       return;
     }
-    if (targetModel !== "human-js") {
-      if (statusEl) statusEl.textContent = "Verification failed: profile not enrolled with Human.js.";
+    if (targetModel !== "deepface") {
+      if (statusEl) statusEl.textContent = "Verification failed: profile not enrolled with DeepFace.";
       visVerificationBusy = false;
       return;
     }
@@ -953,101 +956,29 @@
     }, 5000);
   }
 
-  async function ensureHumanScriptLoaded() {
-    if (window.Human && window.Human.Human) return true;
-    try {
-      await loadHumanScript(VIS_HUMAN_SCRIPT_CDN);
-    } catch (e) {
-      pushVisDebug("Human.js CDN load failed: " + String((e && e.message) || e));
-      setAssistantStateForVisOffline("Offline - Human.js failed to load");
-      return false;
-    }
-    const startedAt = Date.now();
-    while (!(window.Human && window.Human.Human)) {
-      if (Date.now() - startedAt > 5000) {
-        pushVisDebug("Human.js load timeout.");
-        setAssistantStateForVisOffline("Offline - Human.js failed to load");
-        return false;
-      }
-      await new Promise(function (r) { setTimeout(r, 100); });
-    }
-    return true;
-  }
-
-  async function resolveHumanModelBase() {
-    return String(window.HUMAN_MODEL_BASE || VIS_HUMAN_MODEL_BASE);
+  function getVisApiFetch() {
+    return (window.Api && window.Api.apiFetch) ? window.Api.apiFetch : function (path, options) {
+      return fetch(path, options);
+    };
   }
 
   async function ensureHumanReady() {
     if (visHumanReady) return true;
     if (visHumanLoading) return false;
-    // Reuse the shared Human instance from vis_controller / human_engine
-    if (window.__visHuman) {
-      visHuman = window.__visHuman;
-      visHumanReady = true;
-      pushVisDebug("Human.js reused from shared instance.");
-      return true;
-    }
-    // Wait for vis_controller to finish loading Human.js
-    var waitStart = Date.now();
-    while (!window.__visHuman && !window.__visHumanInitFailed && Date.now() - waitStart < 20000) {
-      await new Promise(function (r) { setTimeout(r, 500); });
-    }
-    if (window.__visHuman) {
-      visHuman = window.__visHuman;
-      visHumanReady = true;
-      pushVisDebug("Human.js reused from shared instance (waited).");
-      return true;
-    }
-    if (window.__visHumanInitFailed) {
-      pushVisDebug("Human.js init failed (shared flag).");
-      return false;
-    }
-    const scriptOk = await ensureHumanScriptLoaded();
-    if (!scriptOk || !window.Human || !window.Human.Human) return false;
     visHumanLoading = true;
     try {
-      const modelBasePath = await resolveHumanModelBase();
-      const cfg = {
-        cacheSensitivity: 0,
-        modelBasePath: modelBasePath,
-        face: {
-          enabled: true,
-          detector: { enabled: true, maxDetected: 1 },
-          mesh: { enabled: false },
-          description: { enabled: true },
-          iris: { enabled: false },
-          emotion: { enabled: true },
-        },
-        body: { enabled: false },
-        hand: { enabled: false },
-        gesture: { enabled: false },
-        object: { enabled: false },
-        segmentation: { enabled: false },
-      };
-      const human = new window.Human.Human(cfg);
-      if (human.load) await human.load();
-      if (!human.tf) throw new Error("Human.js TF backend missing");
-      try { if (human.tf.removeBackend) human.tf.removeBackend('webgl'); } catch (_) {}
-      try { if (human.tf.removeBackend) human.tf.removeBackend('webgpu'); } catch (_) {}
-      try { await human.tf.setBackend('wasm'); } catch (_) {}
-      try { await human.tf.ready(); } catch (_) {}
-      if (human.tf.getBackend && human.tf.getBackend() !== 'wasm') {
-        try { await human.tf.setBackend('wasm'); } catch (_) {}
-        try { await human.tf.ready(); } catch (_) {}
-      }
-      if (human.tf.getBackend && human.tf.getBackend() !== 'wasm') {
-        throw new Error("Human.js backend not ready (wasm)");
-      }
-      visHuman = human;
-      window.__visHuman = human;
+      const res = await getVisApiFetch()(VIS_FACE_HEALTH_PATH, { method: "GET" });
+      const data = res && res.ok ? await res.json() : null;
+      if (!data || !data.ok) throw new Error("DeepFace backend not ready");
+      visHuman = { backend: "deepface" };
+      window.__visHuman = visHuman;
+      window.__visHumanInitFailed = false;
       visHumanReady = true;
-      pushVisDebug("Human.js loaded (wasm backend).");
+      pushVisDebug("DeepFace backend ready.");
       return true;
     } catch (e) {
-      pushVisDebug("Human.js init failed: " + String((e && e.message) || e));
+      pushVisDebug("DeepFace backend not ready: " + String((e && e.message) || e));
       window.__visHumanInitFailed = true;
-      window.__visHuman = null;
       visHumanReady = false;
       return false;
     } finally {
@@ -1067,61 +998,40 @@
     };
   }
 
-  // Human.js integration active; legacy pipeline disabled for VIS.
+  // DeepFace backend integration active; legacy pipeline disabled for VIS.
 
   async function getHumanDetections() {
     if (!visVideoEl) return { faces: [], result: null };
     const ok = await ensureHumanReady();
     if (!ok || !visHuman) return { faces: [], result: null };
-    if (!visHuman.tf || (visHuman.tf.getBackend && visHuman.tf.getBackend() !== 'wasm')) {
-      window.__visHumanInitFailed = true;
-      window.__visHuman = null;
-      pushVisDebug("Human.js backend not ready; skipping detection.");
-      return { faces: [], result: null };
-    }
-    // Global mutex queue for WebGL safety
-    window.__visDetectQueue = window.__visDetectQueue || Promise.resolve();
-    if (window.__visDetectQueueStartedAt && (Date.now() - window.__visDetectQueueStartedAt) > 2000) {
-      window.__visDetectQueue = Promise.resolve();
-      window.__visDetectQueueStartedAt = 0;
-    }
-
-    return new Promise(function(resolve) {
-      window.__visDetectQueue = window.__visDetectQueue.then(async function() {
-        try {
-          window.__visDetectQueueStartedAt = Date.now();
-          const source = getHumanDetectionSource();
-          const result = await Promise.race([
-            visHuman.detect(source),
-            new Promise(function(res) { setTimeout(function() { res({ __timeout: true }); }, 1200); })
-          ]);
-          if (result && result.__timeout) {
-            pushVisDebug("Human.js detect timed out; resetting.");
-            window.__visDetectQueue = Promise.resolve();
-            window.__visDetectQueueStartedAt = 0;
-            window.__visHuman = null;
-            visHumanReady = false;
-            resolve({ faces: [], result: null });
-            return;
-          }
-          if (visHuman.tf && visHuman.tf.nextFrame) await visHuman.tf.nextFrame();
-          const faces = result && Array.isArray(result.face) ? result.face.slice(0) : [];
-          resolve({ faces: faces, result: result || null });
-        } catch (e) {
-          console.warn('[VIS] getHumanDetections error:', e && e.message);
-          window.__visHumanDetectErrorCount = (window.__visHumanDetectErrorCount || 0) + 1;
-          window.__visHumanDetectLastErrorAt = Date.now();
-          if (window.__visHumanDetectErrorCount >= 3) {
-            window.__visHuman = null;
-            visHumanReady = false;
-            window.__visHumanDetectErrorCount = 0;
-          }
-          resolve({ faces: [], result: null });
-        } finally {
-          window.__visDetectQueueStartedAt = 0;
-        }
+    if (visDetectBusy) return { faces: [], result: null };
+    const sourceCanvas = getHumanDetectionSource();
+    if (!sourceCanvas) return { faces: [], result: null };
+    const dataUrl = (sourceCanvas && sourceCanvas.toDataURL)
+      ? sourceCanvas.toDataURL("image/jpeg", 0.7)
+      : null;
+    if (!dataUrl) return { faces: [], result: null };
+    visDetectBusy = true;
+    try {
+      const res = await getVisApiFetch()(VIS_FACE_API_PATH, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image_base64: dataUrl,
+          model: VIS_DEEPFACE_MODEL,
+          detector: VIS_DEEPFACE_DETECTOR
+        })
       });
-    });
+      if (!res || !res.ok) return { faces: [], result: null };
+      const data = await res.json();
+      const faces = data && Array.isArray(data.faces) ? data.faces : [];
+      return { faces: faces, result: data || null };
+    } catch (e) {
+      console.warn('[VIS] DeepFace detect error:', e && e.message);
+      return { faces: [], result: null };
+    } finally {
+      visDetectBusy = false;
+    }
   }
 
   function getFaceBox(face) {
@@ -1269,7 +1179,23 @@
   }
 
   function getHumanDetectionSource() {
-    return visVideoEl;
+    if (!visVideoEl) return null;
+    const vw = visVideoEl.videoWidth || 0;
+    const vh = visVideoEl.videoHeight || 0;
+    if (!vw || !vh) return null;
+    const canvas = visCanvasEl || document.createElement("canvas");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return null;
+    const w = Math.min(320, vw);
+    const h = Math.min(240, vh);
+    canvas.width = w;
+    canvas.height = h;
+    try {
+      ctx.drawImage(visVideoEl, 0, 0, w, h);
+      return canvas;
+    } catch (e) {
+      return null;
+    }
   }
 
   function boxIoU(a, b) {
@@ -2025,7 +1951,7 @@
           if (!vector.length && !profile) return;
           nextIndex.push({
             profileFile: fileName,
-            vector: signatureModel === "human-js" ? vector.slice(0) : vector.slice(0, 256),
+            vector: signatureModel === "deepface" ? vector.slice(0) : vector.slice(0, 256),
             username: String(data.username || (profile && profile.user_identity && profile.user_identity.username) || fileName),
             profile: profile,
             vector_model: signatureModel,
@@ -2041,7 +1967,7 @@
           if (!vector.length) return;
           nextIndex.push({
             profileFile: fileName,
-            vector: signatureModel === "human-js" ? vector.slice(0) : vector.slice(0, 256),
+            vector: signatureModel === "deepface" ? vector.slice(0) : vector.slice(0, 256),
             username: String((profile.user_identity && profile.user_identity.username) || fileName),
             profile: profile,
             vector_model: signatureModel,
@@ -2425,7 +2351,7 @@
     }
     const identityHints = getSignedInIdentityHints();
     const requested = sanitizeVisUsername(visSetupState.username) || sanitizeVisUsername(identityHints.username) || "user";
-    const signatureModel = "human-js";
+    const signatureModel = "deepface";
     const profile = getDefaultVisProfile(requested, identityHints.account_identifier, {
       scan_mode: visSetupState.infrared ? "infrared_assisted" : "high_precision_rgb",
       frame_count: payload.frameCount || payload.vectorsLength || 0,
@@ -2439,7 +2365,7 @@
       },
       geometry_map: {
         geometry_snapshots: (payload.geometry || []).slice(0, 6),
-        extraction: "human-js face mesh + bounding geometry",
+        extraction: "deepface embedding + bounding box",
       },
       created_at: nowIso(),
     });
@@ -2465,7 +2391,7 @@
     visScanning = true;
     visSetupState.step = 4;
     try { renderVisSetup(); } catch (e) { pushVisDebug("scan step render failed: " + String((e && e.message) || e)); }
-    const signatureModel = "human-js";
+    const signatureModel = "deepface";
     // Reset failed init to allow retry on user action
     window.__visHumanInitFailed = false;
     window.__visHuman = null;
@@ -2475,10 +2401,10 @@
       visScanning = false;
       visSetupState.step = 3;
       try { renderVisSetup(); } catch (e) {}
-      pushVisDebug("Human.js models not ready. Check network/CSP and retry.");
+      pushVisDebug("DeepFace backend not ready. Check backend and retry.");
       return;
     }
-    pushVisDebug("Face scan started (human-js).");
+    pushVisDebug("Face scan started (deepface).");
     if (!visVideoEl || !visVideoEl.srcObject || !visVideoEl.videoWidth || !visVideoEl.videoHeight) {
       const cameraReady = await ensureVisCameraReady();
       if (!cameraReady) {
@@ -2545,7 +2471,7 @@
       addLog("assistant", "Tutor: Setup scan failed. Keep face in frame and retry.");
       return;
     }
-    pushVisDebug("Scan completed with Human.js frames: " + String(vectors.length));
+    pushVisDebug("Scan completed with DeepFace frames: " + String(vectors.length));
     const avgVector = averageVectors(vectors);
     visPendingEnrollmentPayload = {
       avgVector: avgVector,
@@ -2565,7 +2491,7 @@
       setAssistantStateForVisOffline("Recognizing user...");
       return;
     }
-    const match = findVisMatch(vector, "human-js");
+    const match = findVisMatch(vector, "deepface");
     if (!match || match.score < VIS_RECOGNITION_THRESHOLD) {
       visNoMatchCount += 1;
       if (visNoMatchCount >= VIS_MATCH_STABLE_COUNT) {

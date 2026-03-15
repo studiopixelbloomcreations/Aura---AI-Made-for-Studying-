@@ -29,59 +29,47 @@ function buildTestFace() {
 function markHumanFailure(err) {
   if (!window.__visHumanInitFailed) {
     window.__visHumanInitFailed = true;
-    window.__visHumanInitError = err || new Error('Human.js init failed');
+    window.__visHumanInitError = err || new Error('DeepFace backend init failed');
   }
 }
 
-async function loadHuman(humanConfig) {
-  const human = new window.Human.Human(humanConfig);
-  if (human.load) await human.load();
-  // Force wasm backend to avoid WebGL/WebGPU crashes
-  if (!human.tf) throw new Error('Human.js TF backend missing');
-  try { if (human.tf.removeBackend) human.tf.removeBackend('webgl'); } catch (_) {}
-  try { if (human.tf.removeBackend) human.tf.removeBackend('webgpu'); } catch (_) {}
-  try { await human.tf.setBackend('wasm'); } catch (_) {}
-  try { await human.tf.ready(); } catch (_) {}
-  if (human.tf.getBackend && human.tf.getBackend() !== 'wasm') {
-    try { await human.tf.setBackend('wasm'); } catch (_) {}
-    try { await human.tf.ready(); } catch (_) {}
+function getApiFetch() {
+  return (window.Api && window.Api.apiFetch) ? window.Api.apiFetch : function(path, options) {
+    return fetch(path, options);
+  };
+}
+
+function captureFrameDataUrl(video) {
+  if (!video || !video.videoWidth || !video.videoHeight) return null;
+  const canvas = window.__visCaptureCanvas || document.createElement('canvas');
+  window.__visCaptureCanvas = canvas;
+  const w = Math.min(320, video.videoWidth);
+  const h = Math.min(240, video.videoHeight);
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  try {
+    ctx.drawImage(video, 0, 0, w, h);
+    return canvas.toDataURL('image/jpeg', 0.7);
+  } catch (_) {
+    return null;
   }
-  if (human.tf.getBackend && human.tf.getBackend() !== 'wasm') {
-    throw new Error('Human.js backend not ready (wasm)');
-  }
-  return human;
 }
 
 export async function initHuman() {
   if (window.__visHuman) return window.__visHuman;
   if (window.__visHumanInitFailed) return null;
-  if (!window.Human || !window.Human.Human) throw new Error('Human.js not loaded');
-
-  const humanConfig = {
-    backend: 'wasm',
-    wasmPath: 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/',
-    modelBasePath: 'https://cdn.jsdelivr.net/npm/@vladmandic/human/models/',
-    cacheModels: true,
-    face: {
-      enabled: true,
-      detector: { rotation: true },
-      mesh: false,
-      iris: false,
-      description: true
-    },
-    emotion: { enabled: true },
-    body: { enabled: false },
-    hand: { enabled: false }
-  };
-  let human;
   try {
-    human = await loadHuman(humanConfig);
+    const res = await getApiFetch()('/vis/face/health', { method: 'GET' });
+    const data = res && res.ok ? await res.json() : null;
+    if (!data || !data.ok) throw new Error('DeepFace backend not ready');
+    window.__visHuman = { backend: 'deepface' };
+    return window.__visHuman;
   } catch (err) {
     markHumanFailure(err);
     return null;
   }
-  window.__visHuman = human;
-  return human;
 }
 
 export async function detectFace(video) {
@@ -91,55 +79,30 @@ export async function detectFace(video) {
     const face = buildTestFace();
     return { result: { face: [face] }, face };
   }
-  const human = await initHuman();
-  if (!human || !human.tf || (human.tf.getBackend && human.tf.getBackend() !== 'wasm')) {
-    window.__visHuman = null;
-    window.__visHumanInitFailed = true;
-    return { result: null, face: null };
-  }
-  // Global mutex queue for WebGL safety
-  window.__visDetectQueue = window.__visDetectQueue || Promise.resolve();
-  if (window.__visDetectQueueStartedAt && (Date.now() - window.__visDetectQueueStartedAt) > 2000) {
-    window.__visDetectQueue = Promise.resolve();
-    window.__visDetectQueueStartedAt = 0;
-  }
-
-  return new Promise(function(resolve) {
-    window.__visDetectQueue = window.__visDetectQueue.then(async function() {
-      try {
-        window.__visDetectQueueStartedAt = Date.now();
-        const result = await Promise.race([
-          human.detect(video),
-          new Promise(function(res) { setTimeout(function() { res({ __timeout: true }); }, 1200); })
-        ]);
-        if (result && result.__timeout) {
-          window.__visDetectQueue = Promise.resolve();
-          window.__visDetectQueueStartedAt = 0;
-          window.__visHuman = null;
-          resolve({ result: null, face: null });
-          return;
-        }
-        const face = result && result.face && result.face[0] ? result.face[0] : null;
-        if (!face && result) {
-          window.__visDetectMissCount = (window.__visDetectMissCount || 0) + 1;
-          if (window.__visDetectMissCount <= 3 || window.__visDetectMissCount % 10 === 0) {
-            console.log('[VIS] detect returned', result.face ? result.face.length : 0, 'faces (miss #' + window.__visDetectMissCount + ')');
-          }
-        } else if (face) {
-          window.__visDetectMissCount = 0;
-        }
-        resolve({ result, face });
-      } catch (detectErr) {
-        window.__visHumanDetectErrorCount = (window.__visHumanDetectErrorCount || 0) + 1;
-        window.__visHumanDetectLastErrorAt = Date.now();
-        if (window.__visHumanDetectErrorCount >= 3) {
-          window.__visHuman = null;
-          window.__visHumanDetectErrorCount = 0;
-        }
-        resolve({ result: null, face: null });
-      } finally {
-        window.__visDetectQueueStartedAt = 0;
-      }
+  const ready = await initHuman();
+  if (!ready) return { result: null, face: null };
+  if (window.__visBackendDetectBusy) return { result: null, face: null };
+  const dataUrl = captureFrameDataUrl(video);
+  if (!dataUrl) return { result: null, face: null };
+  window.__visBackendDetectBusy = true;
+  try {
+    const res = await getApiFetch()('/vis/face/embedding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image_base64: dataUrl,
+        model: window.__VIS_DEEPFACE_MODEL || 'Facenet512',
+        detector: window.__VIS_DEEPFACE_DETECTOR || 'opencv'
+      })
     });
-  });
+    if (!res || !res.ok) return { result: null, face: null };
+    const data = await res.json();
+    const faces = data && Array.isArray(data.faces) ? data.faces : [];
+    const face = faces[0] || null;
+    return { result: { face: faces }, face };
+  } catch (err) {
+    return { result: null, face: null };
+  } finally {
+    window.__visBackendDetectBusy = false;
+  }
 }
