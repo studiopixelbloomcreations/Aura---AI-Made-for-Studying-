@@ -604,8 +604,10 @@
     visVerificationBusy = true;
     visTestEl.hidden = false;
     const statusEl = visTestEl.querySelector(".pi-vis-test-status");
+    const retryBtn = visTestEl.querySelector('[data-vis-test="retry"]');
     const activateBtn = visTestEl.querySelector('[data-vis-test="activate"]');
     if (statusEl) statusEl.textContent = "Testing stage started. Look at the camera for verification...";
+    if (retryBtn) retryBtn.hidden = false;
     if (activateBtn) activateBtn.hidden = true;
   }
 
@@ -857,6 +859,7 @@
     if (!profile) return;
     openVisTestStage(profile);
     const statusEl = visTestEl ? visTestEl.querySelector(".pi-vis-test-status") : null;
+    const retryBtn = visTestEl ? visTestEl.querySelector('[data-vis-test="retry"]') : null;
     const activateBtn = visTestEl ? visTestEl.querySelector('[data-vis-test="activate"]') : null;
     const targetUser = String((profile && profile.user_identity && profile.user_identity.username) || "");
     if (!targetUser) {
@@ -888,6 +891,7 @@
             "Verification complete at " + bestScore.toFixed(1) +
             " confidence for " + uname + ". Press Continue to start personalization.";
         }
+        if (retryBtn) retryBtn.hidden = true;
         if (activateBtn) activateBtn.hidden = false;
         visVerificationBusy = false;
         visAllowTestingStage = false;
@@ -899,6 +903,8 @@
         "Verification timeout. Best confidence " + bestScore.toFixed(1) +
         ". Keep face centered, improve lighting, and press Retry.";
     }
+    if (retryBtn) retryBtn.hidden = false;
+    if (activateBtn) activateBtn.hidden = true;
     visVerificationBusy = false;
   }
 
