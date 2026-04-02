@@ -10,6 +10,7 @@ const DETECT_INTERVAL_MS = 500;
 const UNKNOWN_SETUP_DELAY_MS = 2000;
 const REGISTRATION_FRAME_COUNT = 10;
 const REGISTRATION_RETRY_COOLDOWN_MS = 15000;
+const MANAGED_FLOW_RETRY_COOLDOWN_MS = 60000;
 
 let activeUserId = null;
 let activeProfile = null;
@@ -125,6 +126,23 @@ async function runRegistrationFlow(video, seedResult) {
     const hooks = window.PI_VIS_HOOKS || {};
     let requested = null;
     const hasManagedSetupFlow = typeof hooks.startSetupFlow === 'function';
+    const suppressManagedSetupMs = () => {
+      const value = typeof hooks.getSetupSuppressMs === 'function'
+        ? Number(hooks.getSetupSuppressMs() || 0)
+        : 0;
+      return Math.max(REGISTRATION_RETRY_COOLDOWN_MS, value || MANAGED_FLOW_RETRY_COOLDOWN_MS);
+    };
+    const managedFlowActive = typeof hooks.isManagedFlowActive === 'function' && hooks.isManagedFlowActive();
+    if (managedFlowActive) {
+      registrationRetryBlockedUntil = Date.now() + suppressManagedSetupMs();
+      recordEvent('registration_suppressed_by_managed_flow', {
+        retry_after_ms: registrationRetryBlockedUntil - Date.now()
+      });
+      emit('vis:setup-awaiting-enrollment', {
+        retry_after_ms: registrationRetryBlockedUntil - Date.now()
+      });
+      return;
+    }
     if (hasManagedSetupFlow) {
       requested = await hooks.startSetupFlow({
         reason: 'unknown_user',
@@ -138,12 +156,15 @@ async function runRegistrationFlow(video, seedResult) {
       : {};
 
     if (!userId && hasManagedSetupFlow) {
-      registrationRetryBlockedUntil = Date.now() + REGISTRATION_RETRY_COOLDOWN_MS;
+      const suppressMs = requested && requested.suppress_setup_ms
+        ? Number(requested.suppress_setup_ms || 0)
+        : suppressManagedSetupMs();
+      registrationRetryBlockedUntil = Date.now() + Math.max(REGISTRATION_RETRY_COOLDOWN_MS, suppressMs || 0);
       recordEvent('registration_deferred_to_setup', {
-        retry_after_ms: REGISTRATION_RETRY_COOLDOWN_MS
+        retry_after_ms: registrationRetryBlockedUntil - Date.now()
       });
       emit('vis:setup-awaiting-enrollment', {
-        retry_after_ms: REGISTRATION_RETRY_COOLDOWN_MS
+        retry_after_ms: registrationRetryBlockedUntil - Date.now()
       });
       return;
     }

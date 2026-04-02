@@ -111,6 +111,15 @@ class DeepFaceService:
         buffer.append(signature)
         return len(buffer) >= 3 and len(set(buffer)) == len(buffer)
 
+    def _has_registered_faces(self) -> bool:
+        db_root = Path(self.face_db_path)
+        if not db_root.exists():
+            return False
+        for ext in ("*.jpg", "*.jpeg", "*.png", "*.webp"):
+            if any(db_root.rglob(ext)):
+                return True
+        return False
+
     def recognize_user(self, image_b64: str, client_key: str) -> Tuple[Optional[str], float, float, bool]:
         self._ensure_available()
         image = self._decode(image_b64)
@@ -118,15 +127,34 @@ class DeepFaceService:
         if not liveness:
             return None, 0.0, 0.0, False
 
-        result = DeepFace.find(
-            img_path=image,
-            db_path=self.face_db_path,
-            model_name=self.model_name,
-            distance_metric=self.distance_metric,
-            detector_backend=self.detector_backend,
-            enforce_detection=False,
-            silent=True,
-        )
+        if not self._has_registered_faces():
+            return None, 0.0, 0.0, True
+
+        result = None
+        for attempt in range(2):
+            try:
+                result = DeepFace.find(
+                    img_path=image,
+                    db_path=self.face_db_path,
+                    model_name=self.model_name,
+                    distance_metric=self.distance_metric,
+                    detector_backend=self.detector_backend,
+                    enforce_detection=False,
+                    silent=True,
+                )
+                break
+            except Exception as exc:
+                message = str(exc)
+                lowered = message.lower()
+                missing_face_db = "no item found in face_db" in lowered or (
+                    "no item found" in lowered and "face_db" in lowered
+                )
+                if missing_face_db:
+                    self._refresh_embeddings_cache()
+                    if attempt == 0 and self._has_registered_faces():
+                        continue
+                    return None, 0.0, 0.0, True
+                raise
         rows = result[0] if isinstance(result, list) else result
         if rows is None or getattr(rows, "empty", True):
             return None, 0.0, 0.0, True

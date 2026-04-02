@@ -2,6 +2,19 @@
 (function(){
   const LOCAL_DEFAULT_BASE = 'http://127.0.0.1:8000';
 
+  function isLoopbackHost(hostname){
+    return hostname === 'localhost' || hostname === '127.0.0.1';
+  }
+
+  function normalizeConfiguredBase(value){
+    if(!value) return '';
+    try {
+      return new URL(value, window.location.origin).origin;
+    } catch (e) {
+      return '';
+    }
+  }
+
   function inferBaseUrl(){
     // Allow explicit override
     if(window.__API_BASE_URL__) return window.__API_BASE_URL__;
@@ -9,7 +22,19 @@
     // Allow runtime configuration without code changes
     try {
       const stored = localStorage.getItem('g9_api_base');
-      if(stored) return stored;
+      const normalizedStored = normalizeConfiguredBase(stored);
+      if(normalizedStored){
+        const pageHost = window.location.hostname;
+        const storedHost = new URL(normalizedStored).hostname;
+        const pageIsLocal = isLoopbackHost(pageHost);
+        const storedIsLocal = isLoopbackHost(storedHost);
+        const mixedHttpsToHttp = window.location.protocol === 'https:' && normalizedStored.startsWith('http://');
+        if((!pageIsLocal && storedIsLocal) || mixedHttpsToHttp){
+          localStorage.removeItem('g9_api_base');
+        } else {
+          return normalizedStored;
+        }
+      }
     } catch (e) {}
 
     const host = window.location.hostname;
@@ -27,7 +52,7 @@
     if(window.location.protocol === 'https:') return window.location.origin;
 
     // If served from a localhost dev server (or the API itself), use same-origin
-    if(host === 'localhost' || host === '127.0.0.1'){
+    if(isLoopbackHost(host)){
       // Prefer same-origin so it works regardless of which port the backend is using (e.g. 5000)
       return window.location.origin;
     }

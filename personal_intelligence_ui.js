@@ -2665,6 +2665,19 @@
     visPendingEnrollmentPayload = null;
     await loadVisProfilesFromCloud();
     window.PI_VIS_HOOKS = {
+      isManagedFlowActive: function () {
+        return !!(
+          visSetupOpen ||
+          visScanning ||
+          visEnrollmentSubmitting ||
+          visVerificationBusy ||
+          visPersonalizeOpen ||
+          (visTestEl && !visTestEl.hidden)
+        );
+      },
+      getSetupSuppressMs: function () {
+        return 90000;
+      },
       loadProfile: function (profile) {
         if (!profile) return;
         visActiveProfile = {
@@ -2694,8 +2707,10 @@
         else setVisOfflineState(false, "Online - " + String(visLastKnownUserLabel || "User"));
       },
       startSetupFlow: async function () {
-        if (!visSetupOpen) openVisSetup();
-        return null;
+        if (!this.isManagedFlowActive()) {
+          openVisSetup();
+        }
+        return { suppress_setup_ms: this.getSetupSuppressMs() };
       },
     };
     setVisOfflineState(true, "Scanning for face...");
