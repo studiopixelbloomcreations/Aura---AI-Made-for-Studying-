@@ -1,1 +1,9 @@
-[]
+[
+  {
+    "profileFile": "studio_pixel_bloom.piuser.json",
+    "username": "studio_pixel_bloom",
+    "vector": [],
+    "vector_model": "deepface",
+    "updated_at": "2026-04-02T18:34:35.428Z"
+  }
+]
