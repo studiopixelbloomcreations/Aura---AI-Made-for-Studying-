@@ -33,9 +33,9 @@
   const VIS_LIGHTING_MIN_LUMA = 0.22;
   const VIS_SCAN_INTERVAL_MS = 80;
   const VIS_SCAN_FRAME_COUNT = 16;
-  const VIS_TEST_MAX_TRIES = 60;
-  const VIS_TEST_STABLE_COUNT = 3;
-  const VIS_TEST_FRAME_DELAY_MS = 140;
+  const VIS_TEST_MAX_TRIES = 45;
+  const VIS_TEST_STABLE_COUNT = 1;
+  const VIS_TEST_FRAME_DELAY_MS = 80;
   const VIS_AGENT_CREATION_DELAY_MS = 150000;
   const VIS_SETUP_RETRIEVE_MAX_TRIES = 20;
   const VIS_SETUP_RETRIEVE_DELAY_MS = 900;
@@ -864,7 +864,6 @@
       visVerificationBusy = false;
       return;
     }
-    let stable = 0;
     let tries = 0;
     let bestScore = 0;
     while (tries < VIS_TEST_MAX_TRIES) {
@@ -878,17 +877,11 @@
           "Testing recognition... confidence " + score.toFixed(1) +
           " / best " + bestScore.toFixed(1);
       }
-      if (
+      const matchedTarget =
         result &&
         result.faceDetected &&
-        String(result.user_id || "") === targetUser &&
-        score >= VIS_RECOGNITION_THRESHOLD
-      ) {
-        stable += 1;
-      } else {
-        stable = 0;
-      }
-      if (stable >= VIS_TEST_STABLE_COUNT) {
+        String(result.user_id || "") === targetUser;
+      if (matchedTarget && bestScore >= VIS_RECOGNITION_THRESHOLD) {
         const uname = String((profile.user_identity && profile.user_identity.username) || "user");
         if (statusEl) {
           statusEl.textContent =
