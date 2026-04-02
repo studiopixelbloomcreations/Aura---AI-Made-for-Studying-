@@ -36,6 +36,7 @@
   const VIS_TEST_MAX_TRIES = 60;
   const VIS_TEST_STABLE_COUNT = 3;
   const VIS_TEST_FRAME_DELAY_MS = 140;
+  const VIS_AGENT_CREATION_DELAY_MS = 150000;
   const VIS_PROFILE_DOC_LIMIT = 100;
   const VIS_FACE_PROCESS_ENDPOINT = "/recognize-user";
   const VIS_FACE_REGISTER_ENDPOINT = "/register-user";
@@ -258,7 +259,7 @@
         <div class="pi-vis-test-status">Preparing verification...</div>
         <div class="pi-vis-test-actions">
           <button type="button" class="pi-vis-btn ghost" data-vis-test="retry">Retry</button>
-          <button type="button" class="pi-vis-btn" data-vis-test="activate" hidden>Activate AI</button>
+          <button type="button" class="pi-vis-btn" data-vis-test="activate" hidden>Continue</button>
         </div>
       </div>
     </div>
@@ -638,7 +639,7 @@
         '<div class="pi-vis-personalize-loading">' +
         '<div class="pi-vis-personalize-spinner"></div>' +
         '<div class="pi-vis-personalize-loading-title">Creating your Personal Intelligence...</div>' +
-        '<div class="pi-vis-personalize-loading-note">Calibrating preferences, memory, and tone profile.</div>' +
+        '<div class="pi-vis-personalize-loading-note">Building your unique agent, preparing baseline knowledge, and calibrating tone and memory. This can take 2 to 3 minutes.</div>' +
         "</div>";
       return;
     }
@@ -810,7 +811,7 @@
           });
         }
       });
-    }, 1200);
+    }, VIS_AGENT_CREATION_DELAY_MS);
   }
 
   async function startVisVerificationStage(profile) {
@@ -851,18 +852,14 @@
       }
       if (stable >= VIS_TEST_STABLE_COUNT) {
         const uname = String((profile.user_identity && profile.user_identity.username) || "user");
-        if (statusEl) statusEl.textContent = "Verification complete. Recognized user: " + uname;
+        if (statusEl) {
+          statusEl.textContent =
+            "Verification complete at " + bestScore.toFixed(1) +
+            " confidence for " + uname + ". Press Continue to start personalization.";
+        }
         if (activateBtn) activateBtn.hidden = false;
         visVerificationBusy = false;
         visAllowTestingStage = false;
-        // Auto-activate within 1s to keep flow moving.
-        setTimeout(function () {
-          if (!profile) return;
-          closeVisTestStage();
-          switchToVisProfile(profile).then(function () {
-            ensureVisPersonalAgent(profile, "post_test_auto");
-          });
-        }, 900);
         return;
       }
     }
