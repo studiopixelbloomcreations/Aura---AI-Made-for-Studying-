@@ -9,6 +9,7 @@ import { processFaceFrame, loadProfileByUserId, registerFaceFrames } from './ide
 const DETECT_INTERVAL_MS = 500;
 const UNKNOWN_SETUP_DELAY_MS = 2000;
 const REGISTRATION_FRAME_COUNT = 10;
+const REGISTRATION_RETRY_COOLDOWN_MS = 15000;
 
 let activeUserId = null;
 let activeProfile = null;
@@ -16,6 +17,7 @@ let videoRef = null;
 let loopTimer = null;
 let setupInProgress = false;
 let unknownSince = 0;
+let registrationRetryBlockedUntil = 0;
 
 const presence = createPresenceEngine();
 const confidence = createConfidenceEngine();
@@ -122,7 +124,8 @@ async function runRegistrationFlow(video, seedResult) {
   try {
     const hooks = window.PI_VIS_HOOKS || {};
     let requested = null;
-    if (typeof hooks.startSetupFlow === 'function') {
+    const hasManagedSetupFlow = typeof hooks.startSetupFlow === 'function';
+    if (hasManagedSetupFlow) {
       requested = await hooks.startSetupFlow({
         reason: 'unknown_user',
         recommendedFrameCount: REGISTRATION_FRAME_COUNT
@@ -133,6 +136,17 @@ async function runRegistrationFlow(video, seedResult) {
     let profileData = requested && requested.profile_data && typeof requested.profile_data === 'object'
       ? requested.profile_data
       : {};
+
+    if (!userId && hasManagedSetupFlow) {
+      registrationRetryBlockedUntil = Date.now() + REGISTRATION_RETRY_COOLDOWN_MS;
+      recordEvent('registration_deferred_to_setup', {
+        retry_after_ms: REGISTRATION_RETRY_COOLDOWN_MS
+      });
+      emit('vis:setup-awaiting-enrollment', {
+        retry_after_ms: REGISTRATION_RETRY_COOLDOWN_MS
+      });
+      return;
+    }
 
     if (!userId) {
       userId = String(window.prompt('Enter a user ID to register this face') || '').trim();
@@ -159,6 +173,7 @@ async function runRegistrationFlow(video, seedResult) {
 
     activeProfile = await loadProfileByUserId(userId);
     activeUserId = userId;
+    registrationRetryBlockedUntil = 0;
     confidence.reset();
     confidence.update(userId);
     confidence.update(userId);
@@ -167,11 +182,15 @@ async function runRegistrationFlow(video, seedResult) {
     resumeAI(activeProfile);
   } catch (error) {
     console.error('[VIS] registration failed:', error);
+    registrationRetryBlockedUntil = Date.now() + REGISTRATION_RETRY_COOLDOWN_MS;
     recordEvent('registration_failed', { error: String(error && error.message ? error.message : error) });
-    emit('vis:setup-error', { error: String(error && error.message ? error.message : error) });
+    emit('vis:setup-error', {
+      error: String(error && error.message ? error.message : error),
+      retry_after_ms: REGISTRATION_RETRY_COOLDOWN_MS
+    });
   } finally {
     setupInProgress = false;
-    unknownSince = 0;
+    unknownSince = registrationRetryBlockedUntil > Date.now() ? Date.now() : 0;
   }
 }
 
@@ -224,8 +243,16 @@ async function runLoop() {
       emotion: emotionLabel
     });
 
-    if (!unknownSince) unknownSince = Date.now();
-    if (!setupInProgress && Date.now() - unknownSince >= UNKNOWN_SETUP_DELAY_MS) {
+    const now = Date.now();
+    if (registrationRetryBlockedUntil && now < registrationRetryBlockedUntil) {
+      scheduleNextLoop();
+      return;
+    }
+    if (registrationRetryBlockedUntil && now >= registrationRetryBlockedUntil) {
+      registrationRetryBlockedUntil = 0;
+    }
+    if (!unknownSince) unknownSince = now;
+    if (!setupInProgress && now - unknownSince >= UNKNOWN_SETUP_DELAY_MS) {
       await runRegistrationFlow(videoRef, result);
     }
   } catch (error) {

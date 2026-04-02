@@ -91,6 +91,7 @@
   let visFacePresent = false;
   let visOffline = true;
   let visSetupOpen = false;
+  let visEnrollmentSubmitting = false;
   let visScanning = false;
   let visRecognitionIndex = [];
   let visIndexLoaded = false;
@@ -933,7 +934,7 @@
       body: JSON.stringify(payload || {}),
     });
     const data = await response.json().catch(function () { return {}; });
-    if (!response.ok) throw new Error(String((data && data.error) || ("HTTP_" + response.status)));
+    if (!response.ok) throw new Error(String((data && (data.detail || data.error)) || ("HTTP_" + response.status)));
     return data;
   }
 
@@ -2366,57 +2367,68 @@
   }
 
   async function completeVisEnrollmentAndStartTesting() {
+    if (visEnrollmentSubmitting) return;
     const payload = visPendingEnrollmentPayload;
     if (!payload || !Array.isArray(payload.frames) || !payload.frames.length) {
       pushVisDebug("Enrollment continue clicked without pending payload.");
       return;
     }
-    const identityHints = getSignedInIdentityHints();
-    const requested = sanitizeVisUsername(visSetupState.username) || sanitizeVisUsername(identityHints.username) || "user";
-    const signatureModel = "deepface";
-    const profile = getDefaultVisProfile(requested, identityHints.account_identifier, {
-      scan_mode: visSetupState.infrared ? "infrared_assisted" : "standard_rgb",
-      frame_count: payload.frameCount || 0,
-      landmark_vectors: [],
-      feature_embedding: [],
-      feature_vector: [],
-      signature_model: signatureModel,
-      symmetry_metrics: {
-        embedding_dimensions: 0,
-        sample_count: payload.frameCount || 0,
-      },
-      geometry_map: {
-        geometry_snapshots: [],
-        extraction: "deepface backend registration",
-      },
-      created_at: nowIso(),
-    });
-    profile.face_registration = {
-      provider: "deepface",
-      registered_frames: payload.frameCount || 0,
-    };
-    await postVisJson(getVisEndpoint("__VIS_FACE_REGISTER_URL", VIS_FACE_REGISTER_ENDPOINT), {
-      username: requested,
-      images: payload.frames.slice(0),
-      personalization_profile: profile.personalization_profile || {},
-      ai_config: profile.ai_config || {},
-      memory: profile.memory || {},
-    });
-    await saveVisProfileToCloud(profile);
-    await createVisProfileArtifactInRepo(profile);
-    visRecognitionIndex.push({
-      profileFile: profile.file_name,
-      username: profile.user_identity.username,
-      vector: [],
-      profile: profile,
-      vector_model: signatureModel,
-    });
-    pushVisDebug("Identity profile file created: " + profile.file_name);
-    pushVisDebug("Identity username resolved as: " + String((profile.user_identity && profile.user_identity.username) || "unknown"));
-    visPendingEnrollmentPayload = null;
-    visAllowTestingStage = true;
-    closeVisSetup();
-    await startVisVerificationStage(profile);
+    visEnrollmentSubmitting = true;
+    try {
+      const identityHints = getSignedInIdentityHints();
+      const requested = sanitizeVisUsername(visSetupState.username) || sanitizeVisUsername(identityHints.username) || "user";
+      const signatureModel = "deepface";
+      const profile = getDefaultVisProfile(requested, identityHints.account_identifier, {
+        scan_mode: visSetupState.infrared ? "infrared_assisted" : "standard_rgb",
+        frame_count: payload.frameCount || 0,
+        landmark_vectors: [],
+        feature_embedding: [],
+        feature_vector: [],
+        signature_model: signatureModel,
+        symmetry_metrics: {
+          embedding_dimensions: 0,
+          sample_count: payload.frameCount || 0,
+        },
+        geometry_map: {
+          geometry_snapshots: [],
+          extraction: "deepface backend registration",
+        },
+        created_at: nowIso(),
+      });
+      profile.face_registration = {
+        provider: "deepface",
+        registered_frames: payload.frameCount || 0,
+      };
+      await postVisJson(getVisEndpoint("__VIS_FACE_REGISTER_URL", VIS_FACE_REGISTER_ENDPOINT), {
+        username: requested,
+        images: payload.frames.slice(0),
+        personalization_profile: profile.personalization_profile || {},
+        ai_config: profile.ai_config || {},
+        memory: profile.memory || {},
+      });
+      await saveVisProfileToCloud(profile);
+      await createVisProfileArtifactInRepo(profile);
+      visRecognitionIndex.push({
+        profileFile: profile.file_name,
+        username: profile.user_identity.username,
+        vector: [],
+        profile: profile,
+        vector_model: signatureModel,
+      });
+      pushVisDebug("Identity profile file created: " + profile.file_name);
+      pushVisDebug("Identity username resolved as: " + String((profile.user_identity && profile.user_identity.username) || "unknown"));
+      visPendingEnrollmentPayload = null;
+      visAllowTestingStage = true;
+      closeVisSetup();
+      await startVisVerificationStage(profile);
+    } catch (error) {
+      pushVisDebug("Enrollment failed: " + String((error && error.message) || error));
+      addLog("assistant", "Tutor: Visual setup could not finish yet. Please try the scan again.");
+      visSetupState.step = 5;
+      renderVisSetup();
+    } finally {
+      visEnrollmentSubmitting = false;
+    }
   }
 
   async function startVisEnrollment() {
