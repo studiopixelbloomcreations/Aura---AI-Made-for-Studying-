@@ -137,6 +137,7 @@
   let visVerificationBusy = false;
   let visVerificationProfile = null;
   let visAllowTestingStage = false;
+  let visScanLoopTimer = null;
   let visProfileSaveTimer = null;
   let visExpectedProfileFile = "";
   let visUnknownFaceSince = 0;
@@ -399,6 +400,10 @@
           visAllowTestingStage = false;
           closeVisTestStage();
           switchToVisProfile(visVerificationProfile).then(function () {
+            if (!hasVisPersonalAgent(visVerificationProfile)) {
+              openVisPersonalize(visVerificationProfile);
+              return;
+            }
             ensureVisPersonalAgent(visVerificationProfile, "post_test");
           });
         }
@@ -596,6 +601,7 @@
     visVerificationBusy = false;
     visVerificationProfile = null;
     if (visTestEl) visTestEl.hidden = true;
+    scheduleVisFrameLoop(250);
   }
 
   function hasVisPersonalAgent(profile) {
@@ -628,6 +634,7 @@
     visPersonalizeState.loading = false;
     panel.classList.remove("pi-vis-personalize-open");
     if (visPersonalizeEl) visPersonalizeEl.hidden = true;
+    scheduleVisFrameLoop(250);
   }
 
   function renderVisPersonalize() {
@@ -807,11 +814,30 @@
             // Force a quick rescan to confirm identity and resume.
             visRecognitionCandidate = { profileFile: "", count: 0 };
             visNoMatchCount = 0;
-            setTimeout(function () { processVisFrame(); }, 400);
+            scheduleVisFrameLoop(400);
           });
         }
       });
     }, VIS_AGENT_CREATION_DELAY_MS);
+  }
+
+  function clearVisFrameLoop() {
+    if (visScanLoopTimer) {
+      clearTimeout(visScanLoopTimer);
+      visScanLoopTimer = null;
+    }
+  }
+
+  function scheduleVisFrameLoop(delayMs) {
+    clearVisFrameLoop();
+    const delay = typeof delayMs === "number" ? delayMs : VIS_SCAN_INTERVAL_MS;
+    visScanLoopTimer = setTimeout(async function () {
+      visScanLoopTimer = null;
+      try {
+        await processVisFrame();
+      } catch (e) {}
+      scheduleVisFrameLoop(VIS_SCAN_INTERVAL_MS);
+    }, Math.max(40, delay));
   }
 
   async function startVisVerificationStage(profile) {
@@ -2673,6 +2699,7 @@
       },
     };
     setVisOfflineState(true, "Scanning for face...");
+    scheduleVisFrameLoop(300);
   }
 
   function clearIdleTimer() {
