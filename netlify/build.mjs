@@ -13,6 +13,8 @@ const rootFilesToCopy = [
   "badges.js",
   "chat.js",
   "firebase_runtime_config.js",
+  "gamification.js",
+  "gamification_sync.js",
   "googleSync.js",
   "googlef11f1400b8d2bbab.html",
   "index.html",
@@ -26,6 +28,7 @@ const rootFilesToCopy = [
   "loginRedirect.js",
   "mic.js",
   "personal_intelligence_ui.js",
+  "personalization_sync.js",
   "points.js",
   "profile.js",
   "progress.js",
@@ -44,8 +47,10 @@ const rootFilesToCopy = [
 ];
 
 const rootDirsToCopy = [
+  "ExamModeToggle",
   "public",
   "vis",
+  "vis_identity_profiles",
 ];
 
 function cleanDir(target) {
