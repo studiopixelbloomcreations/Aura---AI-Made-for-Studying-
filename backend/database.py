@@ -53,7 +53,7 @@ class SupabaseUsersRepository:
             "memory": memory or {},
         }
         response = requests.post(
-            self._url("users"),
+            self._url("users?on_conflict=username"),
             headers={**self._headers(), "Prefer": "resolution=merge-duplicates,return=representation"},
             json=payload,
             timeout=20,

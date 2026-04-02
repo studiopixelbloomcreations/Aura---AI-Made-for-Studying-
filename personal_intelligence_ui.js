@@ -508,7 +508,8 @@
     const json = JSON.stringify(profile, null, 2) + "\n";
     // Web-first path: commit to GitHub via Netlify function.
     try {
-      const cloudOut = await fetchJson("/vis/identity-profile-commit", {
+      const cloudUrl = String(window.location.origin || "").replace(/\/$/, "") + "/vis/identity-profile-commit";
+      const cloudResponse = await fetch(cloudUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -517,6 +518,10 @@
           commit_message: "vis: save " + fileName,
         }),
       });
+      const cloudOut = await cloudResponse.json().catch(function () { return {}; });
+      if (!cloudResponse.ok) {
+        throw new Error(String((cloudOut && (cloudOut.detail || cloudOut.error)) || "Request failed"));
+      }
       if (cloudOut && cloudOut.ok) {
         pushVisDebug("Repo artifact committed (web): " + String(cloudOut.file_path || fileName));
         return cloudOut;
