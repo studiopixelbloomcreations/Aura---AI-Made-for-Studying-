@@ -37,6 +37,8 @@
   const VIS_TEST_STABLE_COUNT = 3;
   const VIS_TEST_FRAME_DELAY_MS = 140;
   const VIS_AGENT_CREATION_DELAY_MS = 150000;
+  const VIS_SETUP_RETRIEVE_MAX_TRIES = 20;
+  const VIS_SETUP_RETRIEVE_DELAY_MS = 900;
   const VIS_PROFILE_DOC_LIMIT = 100;
   const VIS_FACE_PROCESS_ENDPOINT = "/recognize-user";
   const VIS_FACE_REGISTER_ENDPOINT = "/register-user";
@@ -159,6 +161,9 @@
     agreed: false,
     infrared: false,
     username: "",
+    retrievalReady: false,
+    retrievalMessage: "",
+    pendingProfile: null,
   };
   let visPersonalizeOpen = false;
   let visPersonalizeState = {
@@ -357,6 +362,13 @@
       pushVisDebug("Setup action: " + action + " (step " + String(visSetupState.step || 1) + ")");
       syncVisSetupStateFromDom();
       if (action === "continue") {
+        if (visSetupState.step === 6) {
+          if (!visSetupState.retrievalReady || !visSetupState.pendingProfile) return;
+          visAllowTestingStage = true;
+          closeVisSetup();
+          startVisVerificationStage(visSetupState.pendingProfile);
+          return;
+        }
         if (visSetupState.step === 2 && !visSetupState.agreed) return;
         visSetupState.step = Math.min(3, Number(visSetupState.step || 1) + 1);
         try { renderVisSetup(); } catch (e) { pushVisDebug("continue->render failed: " + String((e && e.message) || e)); }
@@ -2307,7 +2319,13 @@
     visUseLegacySetupFallback = true;
     if (visSetupOpen) return;
     visSetupOpen = true;
-    visSetupState = Object.assign({}, visSetupState, { step: 1, agreed: false });
+    visSetupState = Object.assign({}, visSetupState, {
+      step: 1,
+      agreed: false,
+      retrievalReady: false,
+      retrievalMessage: "",
+      pendingProfile: null,
+    });
     setAssistantStateForVisOffline("Setup required - enroll visual identity");
     panel.classList.add("pi-vis-setup-open");
     if (visSetupEl) visSetupEl.hidden = false;
@@ -2356,6 +2374,21 @@
         '<p><strong>Scan completed successfully.</strong></p>' +
         '<p>Your biometric identity signature is ready.</p>' +
         '<div class="pi-vis-actions"><button type="button" class="pi-vis-btn" data-vis-action="complete-enrollment">Continue</button></div>';
+    } else if (visSetupState.step === 6) {
+      const ready = !!visSetupState.retrievalReady;
+      const message = String(visSetupState.retrievalMessage || (ready
+        ? "Identity file retrieved successfully. Continue to start testing."
+        : "Waiting for file creation and retrieval..."));
+      body.innerHTML =
+        '<p><strong>Creating and retrieving your visual identity file...</strong></p>' +
+        '<p>This stage waits until your enrolled identity file is available to the assistant runtime.</p>' +
+        '<div class="pi-vis-progress"><div class="pi-vis-progress-bar"></div></div>' +
+        '<div class="pi-vis-note">' + message.replace(/[<>&]/g, function (ch) {
+          return ch === "<" ? "&lt;" : (ch === ">" ? "&gt;" : "&amp;");
+        }) + '</div>' +
+        '<div class="pi-vis-actions"><button type="button" class="pi-vis-btn" data-vis-action="continue" ' + (ready ? "" : "disabled") + '>Continue</button></div>';
+      const bar = body.querySelector(".pi-vis-progress-bar");
+      if (bar) bar.style.width = ready ? "100%" : "72%";
     } else {
       body.innerHTML =
         '<p>Scanning in progress...</p>' +
@@ -2387,7 +2420,9 @@
     const actionBtns = body.querySelectorAll("[data-vis-action]");
     if (actionBtns && actionBtns.length) {
       actionBtns.forEach(function (btn) {
-        btn.addEventListener("click", function () {
+        btn.addEventListener("click", function (ev) {
+          if (ev && typeof ev.preventDefault === "function") ev.preventDefault();
+          if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
           const action = String(btn.getAttribute("data-vis-action") || "");
           if (action === "back") {
             visSetupState.step = Math.max(1, visSetupState.step - 1);
@@ -2395,6 +2430,13 @@
             return;
           }
           if (action === "continue") {
+            if (visSetupState.step === 6) {
+              if (!visSetupState.retrievalReady || !visSetupState.pendingProfile) return;
+              visAllowTestingStage = true;
+              closeVisSetup();
+              startVisVerificationStage(visSetupState.pendingProfile);
+              return;
+            }
             if (visSetupState.step === 2 && !visSetupState.agreed) return;
             visSetupState.step = Math.min(3, visSetupState.step + 1);
             renderVisSetup();
@@ -2445,6 +2487,12 @@
         provider: "deepface",
         registered_frames: payload.frameCount || 0,
       };
+      visSetupState.step = 6;
+      visSetupState.retrievalReady = false;
+      visSetupState.retrievalMessage = "Waiting for file creation and retrieval...";
+      visSetupState.pendingProfile = null;
+      renderVisSetup();
+      pushVisDebug("Creating identity file and waiting for retrieval.");
       await postVisJson(getVisEndpoint("__VIS_FACE_REGISTER_URL", VIS_FACE_REGISTER_ENDPOINT), {
         username: requested,
         images: payload.frames.slice(0),
@@ -2454,27 +2502,71 @@
       });
       await saveVisProfileToCloud(profile);
       await createVisProfileArtifactInRepo(profile);
-      visRecognitionIndex.push({
-        profileFile: profile.file_name,
-        username: profile.user_identity.username,
-        vector: [],
-        profile: profile,
-        vector_model: signatureModel,
+      const retrievedProfile = await waitForRetrievedVisProfile(profile);
+      const existingIndex = visRecognitionIndex.find(function (row) {
+        return row && String(row.profileFile || "") === String(retrievedProfile.file_name || "");
       });
+      if (existingIndex) {
+        existingIndex.username = String((retrievedProfile.user_identity && retrievedProfile.user_identity.username) || existingIndex.username || "");
+        existingIndex.profile = retrievedProfile;
+        existingIndex.vector_model = signatureModel;
+      } else {
+        visRecognitionIndex.push({
+          profileFile: retrievedProfile.file_name,
+          username: retrievedProfile.user_identity.username,
+          vector: [],
+          profile: retrievedProfile,
+          vector_model: signatureModel,
+        });
+      }
       pushVisDebug("Identity profile file created: " + profile.file_name);
       pushVisDebug("Identity username resolved as: " + String((profile.user_identity && profile.user_identity.username) || "unknown"));
+      pushVisDebug("Identity profile retrieval complete. Continue to start testing stage.");
       visPendingEnrollmentPayload = null;
-      visAllowTestingStage = true;
-      closeVisSetup();
-      await startVisVerificationStage(profile);
+      visSetupState.retrievalReady = true;
+      visSetupState.retrievalMessage = "Identity file retrieved successfully. Continue to start testing.";
+      visSetupState.pendingProfile = retrievedProfile;
+      renderVisSetup();
     } catch (error) {
       pushVisDebug("Enrollment failed: " + String((error && error.message) || error));
       addLog("assistant", "Tutor: Visual setup could not finish yet. Please try the scan again.");
       visSetupState.step = 5;
+      visSetupState.retrievalReady = false;
+      visSetupState.retrievalMessage = "";
+      visSetupState.pendingProfile = null;
       renderVisSetup();
     } finally {
       visEnrollmentSubmitting = false;
     }
+  }
+
+  async function waitForRetrievedVisProfile(profile) {
+    const targetFile = String((profile && profile.file_name) || "").trim();
+    const targetUser = String((profile && profile.user_identity && profile.user_identity.username) || "").trim();
+    if (!targetFile && !targetUser) throw new Error("Missing identity file reference");
+    for (let attempt = 1; attempt <= VIS_SETUP_RETRIEVE_MAX_TRIES; attempt += 1) {
+      visSetupState.retrievalMessage =
+        "Waiting for file creation and retrieval... attempt " + attempt + " of " + VIS_SETUP_RETRIEVE_MAX_TRIES + ".";
+      renderVisSetup();
+      const index = await loadVisProfilesFromCloud();
+      const row = (Array.isArray(index) ? index : []).find(function (entry) {
+        if (!entry) return false;
+        const fileMatch = targetFile && String(entry.profileFile || "") === targetFile;
+        const userMatch = targetUser && String(entry.username || "") === targetUser;
+        return !!(fileMatch || userMatch);
+      }) || null;
+      if (row && row.profile && row.profile.file_name) {
+        return row.profile;
+      }
+      const repoProfile = await fetchVisProfileFromRepo(targetFile);
+      if (repoProfile && repoProfile.file_name) {
+        return repoProfile;
+      }
+      if (attempt < VIS_SETUP_RETRIEVE_MAX_TRIES) {
+        await new Promise(function (resolve) { setTimeout(resolve, VIS_SETUP_RETRIEVE_DELAY_MS); });
+      }
+    }
+    throw new Error("Timed out waiting for identity file retrieval");
   }
 
   async function startVisEnrollment() {
