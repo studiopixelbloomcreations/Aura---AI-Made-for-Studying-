@@ -34,10 +34,8 @@
   const VIS_SCAN_INTERVAL_MS = 80;
   const VIS_SCAN_FRAME_COUNT = 8;
   const VIS_PROFILE_DOC_LIMIT = 100;
-  const VIS_MEDIAPIPE_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs";
-  const VIS_MEDIAPIPE_WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
-  const VIS_IMAGE_EMBEDDER_MODEL = "https://storage.googleapis.com/mediapipe-models/image_embedder/mobilenet_v3_small/float32/1/mobilenet_v3_small.tflite";
-  const VIS_FACE_LANDMARKER_MODEL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+  const VIS_FACE_PROCESS_ENDPOINT = "/recognize-user";
+  const VIS_FACE_REGISTER_ENDPOINT = "/register-user";
   function isOffline() {
     return window.__OFFLINE_MODE__ === true || navigator.onLine === false;
   }
@@ -138,9 +136,7 @@
   let visExpectedProfileFile = "";
   let visUnknownFaceSince = 0;
   const VIS_DISABLE_EXTERNAL_RUNTIME = true;
-  let visHuman = null;
-  let visHumanReady = false;
-  let visHumanLoading = false;
+  let visBackendRequestBusy = false;
   let visLastFaceSeenAt = 0;
   let visLastEmotion = "neutral";
   let visLightingLow = false;
@@ -814,32 +810,21 @@
     openVisTestStage(profile);
     const statusEl = visTestEl ? visTestEl.querySelector(".pi-vis-test-status") : null;
     const activateBtn = visTestEl ? visTestEl.querySelector('[data-vis-test="activate"]') : null;
-    const targetVector = profile && profile.facial_signature && Array.isArray(profile.facial_signature.feature_vector)
-      ? profile.facial_signature.feature_vector
-      : [];
-    const targetModel = String((profile && profile.facial_signature && profile.facial_signature.signature_model) || "legacy");
-    if (!targetVector.length) {
-      if (statusEl) statusEl.textContent = "Verification failed: no biometric signature found in profile.";
+    const targetUser = String((profile && profile.user_identity && profile.user_identity.username) || "");
+    if (!targetUser) {
+      if (statusEl) statusEl.textContent = "Verification failed: no enrolled user ID found.";
       visVerificationBusy = false;
       return;
     }
-    if (targetModel !== "mediapipe") {
-      if (statusEl) statusEl.textContent = "Verification failed: profile not enrolled with MediaPipe.";
-      visVerificationBusy = false;
-      return;
-    }
-    await ensureHumanReady();
     let stable = 0;
     let tries = 0;
     while (tries < 25) {
       tries += 1;
       await new Promise(function (resolve) { setTimeout(resolve, 90); });
-      const human = await getHumanEmbedding();
-      const probe = human && human.embedding ? human.embedding : [];
-      if (!probe.length) continue;
-      const score = cosineSimilarity(probe, targetVector);
-      if (statusEl) statusEl.textContent = "Testing recognition... score " + score.toFixed(3);
-      if (score >= Math.max(0.88, VIS_RECOGNITION_THRESHOLD - 0.03)) {
+      const result = await processVisBackendFrame();
+      const score = Number(result && result.confidence || 0);
+      if (statusEl) statusEl.textContent = "Testing recognition... confidence " + score.toFixed(1);
+      if (result && result.faceDetected && String(result.user_id || "") === targetUser) {
         stable += 1;
       } else {
         stable = 0;
@@ -905,29 +890,6 @@
     return dot / (Math.sqrt(ax) * Math.sqrt(by));
   }
 
-  function loadHumanScript(src) {
-    return new Promise(function (resolve, reject) {
-      try {
-        const existing = document.querySelector('script[data-vis-human="true"][src="' + src + '"]');
-        if (existing) {
-          if (window.Human && window.Human.Human) resolve(true);
-          else existing.addEventListener("load", function () { resolve(true); }, { once: true });
-          return;
-        }
-        const tag = document.createElement("script");
-        tag.src = src;
-        tag.async = true;
-        tag.defer = true;
-        tag.setAttribute("data-vis-human", "true");
-        tag.onload = function () { resolve(true); };
-        tag.onerror = function () { reject(new Error("HUMAN_SCRIPT_LOAD_FAILED")); };
-        document.head.appendChild(tag);
-      } catch (e) {
-        reject(e);
-      }
-    });
-  }
-
   function ensureVisWelcomeStyles() {
     if (document.getElementById("piVisWelcomeStyle")) return;
     const style = document.createElement("style");
@@ -955,104 +917,43 @@
     }, 5000);
   }
 
-  let visMpReadyPromise = null;
-  let visMpImageEmbedder = null;
-  let visMpFaceLandmarker = null;
-
-  async function ensureMediapipeReady() {
-    if (visMpReadyPromise) return visMpReadyPromise;
-    visMpReadyPromise = (async function () {
-      const vision = await import(VIS_MEDIAPIPE_CDN);
-      const FilesetResolver = vision.FilesetResolver;
-      const ImageEmbedder = vision.ImageEmbedder;
-      const FaceLandmarker = vision.FaceLandmarker;
-      const fileset = await FilesetResolver.forVisionTasks(VIS_MEDIAPIPE_WASM);
-      visMpImageEmbedder = await ImageEmbedder.createFromOptions(fileset, {
-        baseOptions: { modelAssetPath: VIS_IMAGE_EMBEDDER_MODEL },
-        runningMode: "VIDEO",
-        l2Normalize: true,
-        quantize: false
-      });
-      visMpFaceLandmarker = await FaceLandmarker.createFromOptions(fileset, {
-        baseOptions: { modelAssetPath: VIS_FACE_LANDMARKER_MODEL },
-        runningMode: "VIDEO",
-        outputFaceBlendshapes: true,
-        numFaces: 1
-      });
-    })();
-    return visMpReadyPromise;
+  function getVisEndpoint(globalKey, fallback) {
+    const direct = window[globalKey];
+    if (typeof direct === "string" && direct.trim()) return direct.trim();
+    return fallback;
   }
 
+  async function postVisJson(url, payload) {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload || {}),
+    });
+    const data = await response.json().catch(function () { return {}; });
+    if (!response.ok) throw new Error(String((data && data.error) || ("HTTP_" + response.status)));
+    return data;
+  }
 
-  async function ensureHumanReady() {
-    if (visHumanReady) return true;
-    if (visHumanLoading) return false;
-    visHumanLoading = true;
+  function captureVisFrameDataUrl() {
+    if (!visVideoEl || !visVideoEl.videoWidth || !visVideoEl.videoHeight) return "";
+    const canvas = visCanvasEl || document.createElement("canvas");
+    canvas.width = Math.max(1, Math.min(640, visVideoEl.videoWidth));
+    canvas.height = Math.max(1, Math.round(canvas.width * (visVideoEl.videoHeight / visVideoEl.videoWidth)));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return "";
+    ctx.drawImage(visVideoEl, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.82);
+  }
+
+  async function processVisBackendFrame() {
+    if (visBackendRequestBusy) return null;
+    const image = captureVisFrameDataUrl();
+    if (!image) return null;
+    visBackendRequestBusy = true;
     try {
-      await ensureMediapipeReady();
-      if (!visMpImageEmbedder || !visMpFaceLandmarker) throw new Error("MediaPipe not initialized");
-      visHuman = { backend: "mediapipe" };
-      window.__visHuman = visHuman;
-      window.__visHumanInitFailed = false;
-      visHumanReady = true;
-      pushVisDebug("MediaPipe backend ready.");
-      return true;
-    } catch (e) {
-      pushVisDebug("MediaPipe backend not ready: " + String((e && e.message) || e));
-      window.__visHumanInitFailed = true;
-      visHumanReady = false;
-      return false;
+      return await postVisJson(getVisEndpoint("__VIS_FACE_PROCESS_URL", VIS_FACE_PROCESS_ENDPOINT), { image: image });
     } finally {
-      visHumanLoading = false;
-    }
-  }
-
-  async function getHumanEmbedding() {
-    const detection = await getHumanDetections();
-    if (!detection || !detection.faces || !detection.faces.length) return null;
-    const primary = selectPrimaryFace(detection.faces);
-    if (!primary || !primary.embedding || !primary.embedding.length) return null;
-    return {
-      embedding: primary.embedding.slice(0),
-      face: primary,
-      faces: detection.faces,
-    };
-  }
-
-  // MediaPipe backend integration active; legacy pipeline disabled for VIS.
-
-  async function getHumanDetections() {
-    if (!visVideoEl) return { faces: [], result: null };
-    const ok = await ensureHumanReady();
-    if (!ok || !visHuman || !visMpFaceLandmarker || !visMpImageEmbedder) return { faces: [], result: null };
-    if (visDetectBusy) return { faces: [], result: null };
-    const sourceCanvas = getHumanDetectionSource();
-    if (!sourceCanvas) return { faces: [], result: null };
-    visDetectBusy = true;
-    try {
-      const ts = (window.performance && performance.now) ? performance.now() : Date.now();
-      const landmarkerResult = visMpFaceLandmarker.detectForVideo(sourceCanvas, ts);
-      const landmarks = landmarkerResult && landmarkerResult.faceLandmarks && landmarkerResult.faceLandmarks[0]
-        ? landmarkerResult.faceLandmarks[0]
-        : null;
-      if (!landmarks || !landmarks.length) return { faces: [], result: landmarkerResult || null };
-      const box = boxFromLandmarks(landmarks, sourceCanvas.width || 0, sourceCanvas.height || 0);
-      if (!box) return { faces: [], result: landmarkerResult || null };
-      const crop = getFaceCropCanvas(sourceCanvas, box);
-      if (!crop) return { faces: [], result: landmarkerResult || null };
-      const embedResult = visMpImageEmbedder.embedForVideo(crop, ts);
-      const embedding = extractEmbedding(embedResult);
-      const blendshapes = landmarkerResult && landmarkerResult.faceBlendshapes && landmarkerResult.faceBlendshapes[0]
-        ? landmarkerResult.faceBlendshapes[0].categories
-        : [];
-      const emotion = blendshapeToEmotion(blendshapes);
-      const face = { embedding: embedding, box: box, emotion: emotion };
-      return { faces: [face], result: landmarkerResult || null };
-    } catch (e) {
-      console.warn('[VIS] MediaPipe detect error:', e && e.message);
-      return { faces: [], result: null };
-    } finally {
-      visDetectBusy = false;
+      visBackendRequestBusy = false;
     }
   }
 
@@ -1264,7 +1165,7 @@
     }
   }
 
-  function getHumanDetectionSource() {
+  function getVisFrameSource() {
     if (!visVideoEl) return null;
     if (!visVideoEl.videoWidth || !visVideoEl.videoHeight) return null;
     const canvas = visCanvasEl || document.createElement("canvas");
@@ -2083,7 +1984,7 @@
           if (!vector.length && !profile) return;
           nextIndex.push({
             profileFile: fileName,
-            vector: signatureModel === "mediapipe" ? vector.slice(0) : vector.slice(0, 256),
+            vector: Array.isArray(vector) ? vector.slice(0) : [],
             username: String(data.username || (profile && profile.user_identity && profile.user_identity.username) || fileName),
             profile: profile,
             vector_model: signatureModel,
@@ -2099,7 +2000,7 @@
           if (!vector.length) return;
           nextIndex.push({
             profileFile: fileName,
-            vector: signatureModel === "mediapipe" ? vector.slice(0) : vector.slice(0, 256),
+            vector: Array.isArray(vector) ? vector.slice(0) : [],
             username: String((profile.user_identity && profile.user_identity.username) || fileName),
             profile: profile,
             vector_model: signatureModel,
@@ -2268,21 +2169,7 @@
   }
 
   async function detectFacesFromVideo() {
-    if (!visVideoEl) return [];
-    if (!visDetector) {
-      try {
-        if ("FaceDetector" in window) visDetector = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
-      } catch (e) {
-        visDetector = null;
-      }
-    }
-    if (!visDetector) return [];
-    try {
-      const faces = await visDetector.detect(visVideoEl);
-      return Array.isArray(faces) ? faces : [];
-    } catch (e) {
-      return [];
-    }
+    return [];
   }
 
   function extractVisFaceVector(face) {
@@ -2477,36 +2364,45 @@
 
   async function completeVisEnrollmentAndStartTesting() {
     const payload = visPendingEnrollmentPayload;
-    if (!payload || !payload.avgVector || !payload.avgVector.length) {
+    if (!payload || !Array.isArray(payload.frames) || !payload.frames.length) {
       pushVisDebug("Enrollment continue clicked without pending payload.");
       return;
     }
     const identityHints = getSignedInIdentityHints();
     const requested = sanitizeVisUsername(visSetupState.username) || sanitizeVisUsername(identityHints.username) || "user";
-    const signatureModel = "mediapipe";
+    const signatureModel = "facepp";
     const profile = getDefaultVisProfile(requested, identityHints.account_identifier, {
-      scan_mode: visSetupState.infrared ? "infrared_assisted" : "high_precision_rgb",
-      frame_count: payload.frameCount || payload.vectorsLength || 0,
-      landmark_vectors: (payload.landmarks || []).slice(0, 6),
-      feature_embedding: payload.avgVector,
-      feature_vector: payload.avgVector,
+      scan_mode: visSetupState.infrared ? "infrared_assisted" : "standard_rgb",
+      frame_count: payload.frameCount || 0,
+      landmark_vectors: [],
+      feature_embedding: [],
+      feature_vector: [],
       signature_model: signatureModel,
       symmetry_metrics: {
-        embedding_dimensions: payload.avgVector.length,
-        sample_count: payload.frameCount || payload.vectorsLength || 0,
+        embedding_dimensions: 0,
+        sample_count: payload.frameCount || 0,
       },
       geometry_map: {
-        geometry_snapshots: (payload.geometry || []).slice(0, 6),
-        extraction: "mediapipe embedder + bounding box",
+        geometry_snapshots: [],
+        extraction: "facepp backend registration",
       },
       created_at: nowIso(),
+    });
+    profile.face_registration = {
+      provider: "facepp",
+      registered_frames: payload.frameCount || 0,
+    };
+    await postVisJson(getVisEndpoint("__VIS_FACE_REGISTER_URL", VIS_FACE_REGISTER_ENDPOINT), {
+      user_id: requested,
+      images: payload.frames.slice(0),
+      profile_data: profile,
     });
     await saveVisProfileToCloud(profile);
     await createVisProfileArtifactInRepo(profile);
     visRecognitionIndex.push({
       profileFile: profile.file_name,
       username: profile.user_identity.username,
-      vector: payload.avgVector.slice(0),
+      vector: [],
       profile: profile,
       vector_model: signatureModel,
     });
@@ -2523,20 +2419,7 @@
     visScanning = true;
     visSetupState.step = 4;
     try { renderVisSetup(); } catch (e) { pushVisDebug("scan step render failed: " + String((e && e.message) || e)); }
-    const signatureModel = "mediapipe";
-    // Reset failed init to allow retry on user action
-    window.__visHumanInitFailed = false;
-    window.__visHuman = null;
-    visHumanReady = false;
-    const humanReady = await ensureHumanReady();
-    if (!humanReady) {
-      visScanning = false;
-      visSetupState.step = 3;
-      try { renderVisSetup(); } catch (e) {}
-      pushVisDebug("MediaPipe backend not ready. Check browser support and retry.");
-      return;
-    }
-    pushVisDebug("Face scan started (mediapipe).");
+    pushVisDebug("Face scan started (facepp backend).");
     if (!visVideoEl || !visVideoEl.srcObject || !visVideoEl.videoWidth || !visVideoEl.videoHeight) {
       const cameraReady = await ensureVisCameraReady();
       if (!cameraReady) {
@@ -2547,24 +2430,13 @@
         return;
       }
     }
-    const vectors = [];
-    const landmarks = [];
-    const geometrySnapshots = [];
+    const frames = [];
     const scanStart = Date.now();
-    let timeoutHits = 0;
-    function withTimeout(promise, ms) {
-      return Promise.race([
-        promise,
-        new Promise(function (resolve) {
-          setTimeout(function () { resolve({ faces: [], result: null, timeout: true }); }, ms);
-        })
-      ]);
-    }
     for (let i = 0; i < VIS_SCAN_FRAME_COUNT; i += 1) {
       await new Promise(function (resolve) { setTimeout(resolve, VIS_ENROLL_FRAME_DELAY_MS); });
-      const detection = await withTimeout(getHumanDetections(), 1200);
-      if (detection && detection.timeout) timeoutHits += 1;
-      if (window.__visHumanInitFailed || (Date.now() - scanStart) > 8000 || timeoutHits >= 3) {
+      const frame = captureVisFrameDataUrl();
+      if (frame) frames.push(frame);
+      if ((Date.now() - scanStart) > 8000) {
         visScanning = false;
         visSetupState.step = 3;
         try { renderVisSetup(); } catch (e) {}
@@ -2572,50 +2444,35 @@
         addLog("assistant", "Tutor: Setup scan timed out. Please try again.");
         return;
       }
-      const face = detection && detection.faces ? selectPrimaryFace(detection.faces) : null;
-      if (face && Array.isArray(face.embedding) && face.embedding.length) {
-        vectors.push(face.embedding.slice(0));
-        const box = getFaceBox(face);
-        if (box) {
-          geometrySnapshots.push({
-            box: box,
-            area: Math.max(0, box.width) * Math.max(0, box.height),
-          });
-        }
-      }
       const bar = visSetupEl ? visSetupEl.querySelector(".pi-vis-progress-bar") : null;
       if (bar) bar.style.width = Math.min(100, Math.round(((i + 1) / VIS_SCAN_FRAME_COUNT) * 100)) + "%";
     }
     visScanning = false;
-    if (!vectors.length) {
+    if (!frames.length) {
       visSetupState.step = 3;
       try { renderVisSetup(); } catch (e) { pushVisDebug("scan fail render failed: " + String((e && e.message) || e)); }
       pushVisDebug("Face scan captured 0 valid frames.");
       addLog("assistant", "Tutor: Setup scan failed. Keep face in frame and retry.");
       return;
     }
-    pushVisDebug("Scan completed with MediaPipe frames: " + String(vectors.length));
-    const avgVector = averageVectors(vectors);
+    pushVisDebug("Scan completed with backend registration frames: " + String(frames.length));
     visPendingEnrollmentPayload = {
-      avgVector: avgVector,
-      landmarks: landmarks.slice(0, 8),
-      geometry: geometrySnapshots.slice(0, 8),
-      frameCount: vectors.length,
-      vectorsLength: vectors.length,
-      signatureModel: signatureModel,
+      frames: frames.slice(0),
+      frameCount: frames.length,
+      signatureModel: "facepp",
     };
     visSetupState.step = 5;
     renderVisSetup();
     pushVisDebug("Scan complete step ready. Click Continue to create file and run testing stage.");
   }
 
-  async function handleVisRecognitionVector(vector) {
-    if (!vector || !vector.length) {
+  async function handleVisRecognitionVector(result) {
+    if (!result || !result.faceDetected) {
       setAssistantStateForVisOffline("Recognizing user...");
       return;
     }
-    const match = findVisMatch(vector, "mediapipe");
-    if (!match || match.score < VIS_RECOGNITION_THRESHOLD) {
+    const userId = String(result.user_id || "");
+    if (!userId) {
       visNoMatchCount += 1;
       if (visNoMatchCount >= VIS_MATCH_STABLE_COUNT) {
         if (visExpectedProfileFile) {
@@ -2632,28 +2489,28 @@
     }
     visUnknownFaceSince = 0;
     visNoMatchCount = 0;
-    if (visRecognitionCandidate.profileFile === match.profileFile) {
+    if (visRecognitionCandidate.profileFile === userId) {
       visRecognitionCandidate.count += 1;
     } else {
-      visRecognitionCandidate = { profileFile: match.profileFile, count: 1 };
+      visRecognitionCandidate = { profileFile: userId, count: 1 };
     }
     if (visRecognitionCandidate.count < VIS_MATCH_STABLE_COUNT) {
       setAssistantStateForVisOffline("Recognizing user...");
       return;
     }
     dbg("recognized user = true");
-    dbg("recognized users username = " + String(match.username || match.profileFile || "unknown"));
-    const activeFile = visActiveProfile && visActiveProfile.file_name ? String(visActiveProfile.file_name) : "";
-    if (activeFile !== match.profileFile) {
-      let profile = match.profile || null;
-      if (!profile) {
-        await loadVisProfilesFromCloud();
-        const hit = visRecognitionIndex.find(function (r) { return r.profileFile === match.profileFile; });
-        profile = hit && hit.profile ? hit.profile : null;
-      }
-      if (!profile) {
-        profile = await fetchVisProfileFromRepo(match.profileFile);
-      }
+    dbg("recognized users username = " + String(userId || "unknown"));
+    const activeUser = visActiveProfile && visActiveProfile.user_identity && visActiveProfile.user_identity.username
+      ? String(visActiveProfile.user_identity.username)
+      : "";
+    if (activeUser !== userId) {
+      await loadVisProfilesFromCloud();
+      let profile = null;
+      const hit = visRecognitionIndex.find(function (row) {
+        return String(row && (row.username || row.user_id || "")) === userId;
+      });
+      if (hit && hit.profile) profile = hit.profile;
+      if (!profile) profile = await fetchVisProfileFromRepo(userId + VIS_PROFILE_EXTENSION);
       if (profile) await switchToVisProfile(profile);
     } else {
       if (visOffline) await resumeFromVisOnline();
@@ -2666,57 +2523,17 @@
     visDetectBusy = true;
     try {
       if (!visIndexLoaded) await loadVisProfilesFromCloud();
-      const now = Date.now();
-      if (visTrackingState && visTrackingState.stable && visTrackingState.lastEmbedding &&
-          (now - visTrackingState.lastDetectAt) < (VIS_SCAN_INTERVAL_MS * 2)) {
-        if (Array.isArray(visRecognitionIndex) && visRecognitionIndex.length === 0) {
-          if (!visSetupOpen) openVisSetup();
-          else maybeOpenVisSetupForFirstRun("no_index");
-          setAssistantStateForVisOffline("Offline - no visual identity on record");
-          return;
-        }
-        await handleVisRecognitionVector(visTrackingState.lastEmbedding);
+      const result = await processVisBackendFrame();
+      if (!result || !result.faceDetected) {
+        visFacePresent = false;
+        visRecognitionCandidate = { profileFile: "", count: 0 };
+        visNoMatchCount = 0;
+        pauseForVisOffline("Offline - no face");
         return;
       }
-      updateLightingStatus();
-      const detection = await getHumanDetections();
-      const faces = detection && Array.isArray(detection.faces) ? detection.faces : [];
-      if (!faces.length) {
-        const hadFace = visFacePresent;
-        if (visLastFaceSeenAt && (now - visLastFaceSeenAt) < VIS_FACE_LOST_MS) {
-          visFacePresent = true;
-        } else {
-          visFacePresent = false;
-          visRecognitionCandidate = { profileFile: "", count: 0 };
-          visNoMatchCount = 0;
-          if (hadFace || !visOffline) pauseForVisOffline("Offline - no face");
-        }
-        return;
-      }
-      visLastFaceSeenAt = now;
+      visLastFaceSeenAt = Date.now();
       visFacePresent = true;
-      if (faces.length > 1 && (!visTrackingState.lastMultiFaceAt || (now - visTrackingState.lastMultiFaceAt) > 2000)) {
-        visTrackingState.lastMultiFaceAt = now;
-        pushVisDebug("Multiple faces detected. Selecting primary face by size/center.");
-      }
-      const primaryFace = selectPrimaryFace(faces);
-      if (!primaryFace) {
-        if (!visOffline) pauseForVisOffline("Offline - no face");
-        return;
-      }
-      const faceBox = getFaceBox(primaryFace);
-      if (faceBox) {
-        const lastBox = visTrackingState.lastBox;
-        const stable = lastBox ? (boxIoU(lastBox, faceBox) > 0.6) : false;
-        visTrackingState = {
-          lastBox: faceBox,
-          lastEmbedding: Array.isArray(primaryFace.embedding) ? primaryFace.embedding.slice(0) : null,
-          lastDetectAt: now,
-          lastMultiFaceAt: visTrackingState.lastMultiFaceAt || 0,
-          stable: stable,
-        };
-      }
-      const emotion = extractDominantEmotion(primaryFace);
+      const emotion = topEmotionLabel(result.emotion || {});
       if (emotion && emotion !== visLastEmotion) {
         visLastEmotion = emotion;
         if (visActiveProfile && visActiveProfile.session_state) {
@@ -2730,8 +2547,7 @@
         setAssistantStateForVisOffline("Offline - no visual identity on record");
         return;
       }
-      const vector = Array.isArray(primaryFace.embedding) ? primaryFace.embedding : [];
-      await handleVisRecognitionVector(vector);
+      await handleVisRecognitionVector(result);
     } catch (e) {
       dbg("VIS frame processing failed", e && e.message);
     } finally {
@@ -2776,102 +2592,50 @@
   }
 
   function initVisDetector() {
-    try {
-      if ("FaceDetector" in window) {
-        visDetector = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
-        visDetectorUnsupported = false;
-      } else {
-        visDetector = null;
-        visDetectorUnsupported = true;
-        setAssistantStateForVisOffline("Offline - face API unsupported");
-      }
-    } catch (e) {
-      visDetector = null;
-      visDetectorUnsupported = true;
-      setAssistantStateForVisOffline("Offline - face API unsupported");
-    }
+    visDetector = null;
+    visDetectorUnsupported = false;
   }
 
   async function initVisualIntelligenceSystem() {
     closeVisTestStage();
     visAllowTestingStage = false;
     visPendingEnrollmentPayload = null;
-    if (!VIS_DISABLE_EXTERNAL_RUNTIME && window.PI_VIS_RUNTIME && typeof window.PI_VIS_RUNTIME.createRuntime === "function") {
-      visRuntime = window.PI_VIS_RUNTIME.createRuntime({
-        panelEl: panel,
-        videoEl: visVideoEl,
-        canvasEl: visCanvasEl,
-        setupEl: visSetupEl,
-        threshold: VIS_RECOGNITION_THRESHOLD,
-        stableCount: VIS_MATCH_STABLE_COUNT,
-        scanIntervalMs: VIS_SCAN_INTERVAL_MS,
-        scanFrameCount: VIS_SCAN_FRAME_COUNT,
-        getIdentityHints: function () {
-          return getSignedInIdentityHints();
-        },
-        loadIndex: async function () {
-          return await loadVisProfilesFromCloud();
-        },
-        saveProfile: async function (profile) {
-          await saveVisProfileToCloud(profile);
-        },
-        onStatus: function (status) {
-          if (!status) return;
-          if (String(status).toLowerCase().includes("online - ")) {
-            setVisOfflineState(false, String(status));
-            return;
-          }
-          setAssistantStateForVisOffline(String(status));
-        },
-        onRecognizing: function () {
-          setAssistantStateForVisOffline("Recognizing user...");
-        },
-        onOffline: function (reason) {
-          pauseForVisOffline(String(reason || "Offline - no face"));
-        },
-        onProfileMatched: async function (match) {
-          const activeFile = visActiveProfile && visActiveProfile.file_name ? String(visActiveProfile.file_name) : "";
-          const profileFile = String(match && match.profileFile ? match.profileFile : "");
-          if (!profileFile) return;
-          if (activeFile === profileFile) {
-            if (visOffline) await resumeFromVisOnline();
-            return;
-          }
-          const profile = match && match.profile ? match.profile : null;
-          if (profile) {
-            await switchToVisProfile(profile);
-            return;
-          }
-          await loadVisProfilesFromCloud();
-          const hit = visRecognitionIndex.find(function (r) { return r.profileFile === profileFile; });
-          if (hit && hit.profile) await switchToVisProfile(hit.profile);
-        },
-        onProfileCreated: async function (profile) {
-          await switchToVisProfile(profile);
-          addLog("assistant", "Tutor: Visual identity created for " + String((profile && profile.user_identity && profile.user_identity.username) || "user") + ".");
-        },
-        onScanFailed: function () {
-          addLog("assistant", "Tutor: Setup scan failed. Keep face in frame and retry.");
-        },
-        onRequireSetupFallback: function () {
-          if (!visSetupOpen) openVisSetup();
-        },
-      });
-      if (visRuntime && visRuntime.start) {
-        const okExternal = await visRuntime.start();
-        if (okExternal) return;
-      }
-    }
-
-    initVisDetector();
     await loadVisProfilesFromCloud();
-    const ok = await ensureVisCameraReady();
-    if (!ok) return;
+    window.PI_VIS_HOOKS = {
+      loadProfile: function (profile) {
+        if (!profile) return;
+        visActiveProfile = {
+          user_identity: { username: String(profile.user_id || "user") },
+          personalization_profile: Object.assign({}, profile.personalization_profile || {}),
+          ai_behavior_configuration: Object.assign({}, profile.ai_config || {}),
+          conversation_memory: Object.assign({}, profile.memory || {}),
+          session_state: Object.assign({}, profile.session_state || {}),
+          face_folder_path: String(profile.face_folder_path || ""),
+        };
+        visLastKnownUserLabel = String(profile.user_id || "User");
+        applyVisProfileToRuntime(visActiveProfile);
+      },
+      activateAI: function () {
+        if (visOffline) {
+          resumeFromVisOnline();
+        } else {
+          setVisOfflineState(false, "Online - " + String(visLastKnownUserLabel || "User"));
+        }
+        if (visActiveProfile) ensureVisPersonalAgent(visActiveProfile, "vis_controller");
+      },
+      pauseAI: function () {
+        pauseForVisOffline("Offline - no face");
+      },
+      setOfflineUI: function (offline) {
+        if (offline) pauseForVisOffline("Offline - no face");
+        else setVisOfflineState(false, "Online - " + String(visLastKnownUserLabel || "User"));
+      },
+      startSetupFlow: async function () {
+        if (!visSetupOpen) openVisSetup();
+        return null;
+      },
+    };
     setVisOfflineState(true, "Scanning for face...");
-    if (visMonitorTimer) clearInterval(visMonitorTimer);
-    visMonitorTimer = setInterval(function () {
-      processVisFrame();
-    }, VIS_SCAN_INTERVAL_MS);
   }
 
   function clearIdleTimer() {

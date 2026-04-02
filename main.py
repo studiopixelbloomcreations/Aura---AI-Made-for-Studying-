@@ -14,6 +14,7 @@ from user_personalization_router import router as personalization_router
 from gamification_router import router as gamification_router
 from exam_mode.exam_routes import router as exam_mode_router
 from personal_assistant_router import router as personal_assistant_router
+from backend import router as vis_backend_router
 
 # Initialize Groq client
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
@@ -24,6 +25,7 @@ app.include_router(personalization_router)
 app.include_router(gamification_router)
 app.include_router(exam_mode_router)
 app.include_router(personal_assistant_router)
+app.include_router(vis_backend_router)
 
 
 def _include_optional_upload_routers(app: FastAPI) -> None:

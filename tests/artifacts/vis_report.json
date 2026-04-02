@@ -3,106 +3,62 @@
   "browser": "chromium",
   "metrics": {
     "timings": {
-      "model_load_time_ms": 0,
-      "camera_start_time_ms": 653.0999999996275,
-      "camera_init_failed_ms": 457.19999999925494,
-      "face_detection_last_ms": 0.30000000074505806,
-      "verification_start_ms": 1293.0999999996275,
-      "identity_match_time_ms": 0.19999999925494194,
-      "total_verification_time_ms": 619.5999999996275
+      "camera_start_time_ms": 413.5,
+      "verification_start_ms": 1527.2000000029802,
+      "face_detection_last_ms": 111.60000000149012,
+      "backend_roundtrip_ms": 111.60000000149012,
+      "total_verification_time_ms": 1299
     },
     "counters": {
-      "camera_init_attempts": 2,
-      "detect_samples": 3
+      "polls": 3
     },
     "events": [
       {
         "type": "vis_start",
         "data": null,
-        "at": 1773566259610
+        "at": 1775144194652
       },
       {
-        "type": "timing",
-        "name": "model_load_time_ms",
-        "value": 0.19999999925494194,
-        "at": 1773566259611
-      },
-      {
-        "type": "vis_start",
-        "data": null,
-        "at": 1773566259614
-      },
-      {
-        "type": "timing",
-        "name": "model_load_time_ms",
-        "value": 0,
-        "at": 1773566259614
-      },
-      {
-        "type": "timing",
-        "name": "camera_start_time_ms",
-        "value": 455.90000000037253,
-        "at": 1773566260067
-      },
-      {
-        "type": "camera_init_failed",
+        "type": "timing:camera_start_time_ms",
         "data": {
-          "reason": "AbortError"
+          "value": 413.5
         },
-        "at": 1773566260068
+        "at": 1775144195065
       },
       {
-        "type": "timing",
-        "name": "camera_init_failed_ms",
-        "value": 457.19999999925494,
-        "at": 1773566260068
-      },
-      {
-        "type": "timing",
-        "name": "camera_start_time_ms",
-        "value": 653.0999999996275,
-        "at": 1773566260267
-      },
-      {
-        "type": "profiles_loaded",
+        "type": "timing:face_detection_last_ms",
         "data": {
-          "count": 1
+          "value": 79.70000000298023
         },
-        "at": 1773566260315
+        "at": 1775144195767
       },
       {
-        "type": "verification_started",
-        "data": null,
-        "at": 1773566260316
-      },
-      {
-        "type": "timing",
-        "name": "total_verification_time_ms",
-        "value": 619.5999999996275,
-        "at": 1773566260936
-      },
-      {
-        "type": "verification_complete",
+        "type": "timing:face_detection_last_ms",
         "data": {
-          "user": "test_user",
-          "total_ms": 619.5999999996275
+          "value": 42.899999998509884
         },
-        "at": 1773566260937
+        "at": 1775144196330
+      },
+      {
+        "type": "timing:face_detection_last_ms",
+        "data": {
+          "value": 111.60000000149012
+        },
+        "at": 1775144196960
+      },
+      {
+        "type": "timing:total_verification_time_ms",
+        "data": {
+          "value": 1299
+        },
+        "at": 1775144196986
       }
     ]
   },
   "consoleLogs": [
     {
       "type": "log",
-      "text": "Puter.js suppressed (offline or test)"
-    },
-    {
-      "type": "log",
       "text": "[PersonalIntelligence] enabled: true"
-    },
-    {
-      "type": "warning",
-      "text": "[PI] Failed to fetch Puter models: Cannot read properties of undefined (reading 'ai')"
     },
     {
       "type": "log",
@@ -122,31 +78,7 @@
     },
     {
       "type": "log",
-      "text": "[VIS_METRIC] model_load_time_ms: 0ms"
-    },
-    {
-      "type": "log",
       "text": "[TEST] Forcing startVIS manually"
-    },
-    {
-      "type": "log",
-      "text": "[VIS_METRIC] model_load_time_ms: 0ms"
-    },
-    {
-      "type": "log",
-      "text": "[VIS_METRIC] camera_start_time_ms: 456ms"
-    },
-    {
-      "type": "log",
-      "text": "[VIS_METRIC] camera_init_failed_ms: 457ms"
-    },
-    {
-      "type": "log",
-      "text": "[VIS_METRIC] camera_start_time_ms: 653ms"
-    },
-    {
-      "type": "log",
-      "text": "[VIS_METRIC] total_verification_time_ms: 620ms"
     }
   ],
   "pageErrors": [],

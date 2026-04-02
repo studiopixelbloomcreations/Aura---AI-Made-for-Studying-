@@ -1,0 +1,147 @@
+from __future__ import annotations
+
+import os
+from collections import defaultdict, deque
+from pathlib import Path
+from typing import Deque, Dict, List, Optional, Tuple
+
+import numpy as np
+
+from .utils import (
+    decode_base64_image,
+    face_db_root,
+    image_signature,
+    movement_score,
+    resize_for_deepface,
+    save_face_images,
+)
+
+try:
+    from deepface import DeepFace
+except Exception as exc:  # pragma: no cover
+    DeepFace = None
+    DEEPFACE_IMPORT_ERROR = exc
+else:
+    DEEPFACE_IMPORT_ERROR = None
+
+
+class DeepFaceService:
+    def __init__(self) -> None:
+        self.face_db_path = str(face_db_root())
+        Path(self.face_db_path).mkdir(parents=True, exist_ok=True)
+        self.model_name = os.environ.get("VIS_DEEPFACE_MODEL", "Facenet")
+        self.distance_metric = os.environ.get("VIS_DISTANCE_METRIC", "cosine")
+        self.detector_backend = os.environ.get("VIS_DETECTOR_BACKEND", "opencv")
+        self._model = None
+        self._liveness_frames: Dict[str, Deque[str]] = defaultdict(lambda: deque(maxlen=3))
+        self._preload()
+
+    def _preload(self) -> None:
+        if DeepFace is None:
+            return
+        try:
+            self._model = DeepFace.build_model(self.model_name)
+        except Exception:
+            self._model = None
+
+    def _ensure_available(self) -> None:
+        if DeepFace is None:
+            raise RuntimeError(f"DeepFace is not available: {DEEPFACE_IMPORT_ERROR}")
+
+    def _decode(self, image_b64: str) -> np.ndarray:
+        return resize_for_deepface(decode_base64_image(image_b64))
+
+    def detect_face(self, image_b64: str) -> Tuple[bool, int]:
+        self._ensure_available()
+        image = self._decode(image_b64)
+        faces = DeepFace.extract_faces(
+            img_path=image,
+            detector_backend=self.detector_backend,
+            enforce_detection=False,
+        )
+        valid_faces = [face for face in faces if face.get("confidence", 0) >= 0]
+        return bool(valid_faces), len(valid_faces)
+
+    def analyze_emotion(self, image_b64: str) -> str:
+        self._ensure_available()
+        image = self._decode(image_b64)
+        result = DeepFace.analyze(
+            img_path=image,
+            actions=["emotion"],
+            detector_backend=self.detector_backend,
+            enforce_detection=False,
+            silent=True,
+        )
+        payload = result[0] if isinstance(result, list) else result
+        return str(payload.get("dominant_emotion", "neutral"))
+
+    def _liveness_passed(self, client_key: str, image: np.ndarray) -> bool:
+        signature = image_signature(image)
+        buffer = self._liveness_frames[client_key]
+        if signature in buffer:
+            buffer.append(signature)
+            return False
+        buffer.append(signature)
+        return len(buffer) >= 3 and len(set(buffer)) == len(buffer)
+
+    def recognize_user(self, image_b64: str, client_key: str) -> Tuple[Optional[str], float, float, bool]:
+        self._ensure_available()
+        image = self._decode(image_b64)
+        liveness = self._liveness_passed(client_key, image)
+        if not liveness:
+            return None, 0.0, 0.0, False
+
+        result = DeepFace.find(
+            img_path=image,
+            db_path=self.face_db_path,
+            model_name=self.model_name,
+            distance_metric=self.distance_metric,
+            detector_backend=self.detector_backend,
+            enforce_detection=False,
+            silent=True,
+        )
+        rows = result[0] if isinstance(result, list) else result
+        if rows is None or getattr(rows, "empty", True):
+            return None, 0.0, 0.0, True
+
+        best = rows.iloc[0]
+        identity = str(best.get("identity", ""))
+        distance = float(best.get(self.distance_metric, best.get("distance", 1.0)))
+        username = Path(identity).parent.name if identity else ""
+        similarity = max(0.0, 1.0 - distance)
+        confidence = max(0.0, min(100.0, similarity * 100.0))
+        return (username or None), similarity, confidence, True
+
+    def register_user(self, username: str, images_b64: List[str]) -> str:
+        self._ensure_available()
+        images = [self._decode(image) for image in images_b64 if image]
+        if len(images) < 3:
+            raise ValueError("At least 3 frames are required for registration")
+        if movement_score(images[:3]) <= 1.0:
+            raise ValueError("Registration failed liveness check")
+        verification = DeepFace.verify(
+            img1_path=images[0],
+            img2_path=images[-1],
+            model_name=self.model_name,
+            distance_metric=self.distance_metric,
+            detector_backend=self.detector_backend,
+            enforce_detection=False,
+            silent=True,
+        )
+        if not verification.get("verified", False):
+            raise ValueError("Registration frames are not consistent enough for one user")
+        folder = save_face_images(username, images)
+        self._refresh_embeddings_cache()
+        return folder
+
+    def _refresh_embeddings_cache(self) -> None:
+        try:
+            db_root = Path(self.face_db_path)
+            cache = db_root / f"representations_{self.model_name.lower()}.pkl"
+            if cache.exists():
+                cache.unlink()
+        except Exception:
+            pass
+
+
+face_service = DeepFaceService()

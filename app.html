@@ -554,23 +554,6 @@
     </div>
   </div>
 
-  <script>
-    // Suppress Human.js/TF internal errors that escape try/catch blocks
-    window.addEventListener('unhandledrejection', function(event) {
-      var reason = event && event.reason;
-      if (!reason) return;
-      var msg = reason.message || String(reason);
-      var stack = reason.stack || '';
-      if (msg.indexOf("'backend'") !== -1 || msg.indexOf('disposed') !== -1 ||
-          msg.indexOf('WebGL') !== -1 || msg.indexOf('webgl') !== -1 ||
-          msg.indexOf('wasm') !== -1 || msg.indexOf('moveData') !== -1 ||
-          stack.indexOf('human.js') !== -1 || stack.indexOf('human_engine.js') !== -1) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        return false;
-      }
-    });
-  </script>
   <script src="api.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>

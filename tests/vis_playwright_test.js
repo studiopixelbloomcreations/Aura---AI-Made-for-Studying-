@@ -140,19 +140,50 @@ async function run() {
   });
   await context.addInitScript(() => {
     window.__VIS_TEST_MODE = true;
-    window.__VIS_TEST_USE_MOCK = true;
-    window.Human = { Human: class { async load(){} async warmup(){} } };
-    const mockVec = new Array(128);
-    for (let i = 0; i < 128; i += 1) mockVec[i] = ((i % 13) + 1) / 13;
-    localStorage.setItem('vis_profiles_local', JSON.stringify([{
-      user_identity: { username: "test_user" },
-      facial_signature: { feature_vector: mockVec }
-    }]));
   });
   await context.route('**/*puter.com*', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
   await context.route('**/*firestore.googleapis.com*', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
   await context.route('**/gamification/*', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"points":0,"badges":[]}' }));
   await context.route('**/public-config', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true,"firebase":{}}' }));
+  await context.route('**/detect-face', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      face_detected: true,
+      face_count: 1
+    })
+  }));
+  await context.route('**/recognize-user', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      user_id: 'test_user',
+      similarity: 0.972,
+      confidence: 97.2,
+      liveness_passed: true
+    })
+  }));
+  await context.route('**/analyze-emotion', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ emotion: 'happy' })
+  }));
+  await context.route('**/user-profile/test_user', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      username: 'test_user',
+      face_folder_path: 'face_db/test_user',
+      personalization_profile: { tone: 'friendly' },
+      ai_config: { mode: 'study' },
+      memory: { lesson: 'algebra' }
+    })
+  }));
+  await context.route('**/register-user', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ success: true })
+  }));
 
   const page = await context.newPage();
   page.on('console', (msg) => {
