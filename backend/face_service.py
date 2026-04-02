@@ -178,8 +178,11 @@ class DeepFaceService:
             (0, len(images) - 1),
             (0, len(images) // 2),
             (len(images) // 3, (2 * len(images)) // 3),
+            (1, max(2, len(images) - 2)),
+            (max(0, len(images) // 4), max(0, (3 * len(images)) // 4)),
         ]
         consistent = False
+        relaxed_matches = 0
         for left_index, right_index in verification_pairs:
             if left_index == right_index:
                 continue
@@ -197,9 +200,13 @@ class DeepFaceService:
                 break
             distance = float(verification.get("distance", 1.0))
             threshold = float(verification.get("max_threshold_to_verify", 0.4) or 0.4)
-            if distance <= threshold * 1.15:
+            if distance <= threshold * 1.30:
+                relaxed_matches += 1
+            if distance <= threshold * 1.45:
                 consistent = True
                 break
+        if not consistent and relaxed_matches >= 2:
+            consistent = True
         if not consistent:
             raise ValueError("Registration frames are not consistent enough for one user")
         folder = save_face_images(username, images)

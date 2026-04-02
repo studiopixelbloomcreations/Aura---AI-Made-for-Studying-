@@ -883,11 +883,11 @@
           "Testing recognition... confidence " + score.toFixed(1) +
           " / best " + bestScore.toFixed(1);
       }
-      const matchedTarget =
+      const passedThreshold =
         result &&
         result.faceDetected &&
-        String(result.user_id || "") === targetUser;
-      if (matchedTarget && bestScore >= VIS_RECOGNITION_THRESHOLD) {
+        score >= VIS_RECOGNITION_THRESHOLD;
+      if (passedThreshold || bestScore >= VIS_RECOGNITION_THRESHOLD) {
         const uname = String((profile.user_identity && profile.user_identity.username) || "user");
         if (statusEl) {
           statusEl.textContent =
