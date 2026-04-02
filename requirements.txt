@@ -11,7 +11,7 @@ pyttsx3
 pytesseract
 pillow
 deepface
-opencv-python
+opencv-python-headless
 numpy
 # note-friendly dependency for audio conversion guidance is ffmpeg (external), no pip package needed
 beautifulsoup4
