@@ -24,8 +24,8 @@ def client_key(request: Request) -> str:
 @router.post("/detect-face", response_model=DetectFaceResponse)
 async def detect_face(payload: ImagePayload) -> DetectFaceResponse:
     try:
-        detected, count = face_service.detect_face(payload.image)
-        return DetectFaceResponse(face_detected=detected, face_count=count)
+        detected, count, faces = face_service.detect_face(payload.image)
+        return DetectFaceResponse(face_detected=detected, face_count=count, faces=faces)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 

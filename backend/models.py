@@ -18,6 +18,7 @@ class RegisterUserPayload(BaseModel):
 class DetectFaceResponse(BaseModel):
     face_detected: bool
     face_count: int
+    faces: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class RecognizeUserResponse(BaseModel):

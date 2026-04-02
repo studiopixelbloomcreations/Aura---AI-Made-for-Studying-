@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VIS Preview</title>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #08111f; color: #e8f1ff; }
+    .wrap { max-width: 1000px; margin: 0 auto; padding: 24px; }
+    .hud { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+    .card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 14px 16px; min-width: 180px; }
+    .viewer { position: relative; width: min(100%, 900px); aspect-ratio: 16 / 9; background: #000; border-radius: 18px; overflow: hidden; }
+    video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .help { margin-top: 14px; color: #b8c9e6; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Visual Intelligence Preview</h1>
+    <div class="hud">
+      <div class="card">API: <strong id="apiBase"></strong></div>
+      <div class="card">Face: <strong id="faceState">starting...</strong></div>
+      <div class="card">Emotion: <strong id="emotionState">-</strong></div>
+      <div class="card">Confidence: <strong id="confidenceState">-</strong></div>
+    </div>
+    <div class="viewer">
+      <video id="video" autoplay muted playsinline></video>
+      <canvas id="overlay"></canvas>
+    </div>
+    <div class="help">
+      Run <code>python -m http.server 5500</code> and open
+      <code>http://127.0.0.1:5500/vis_preview.html</code>.
+      This preview shows the live camera, backend face box, backend emotion, and any landmarks returned by the API.
+    </div>
+  </div>
+  <script>
+    (async function () {
+      const apiBase = localStorage.getItem('g9_api_base') || window.location.origin;
+      document.getElementById('apiBase').textContent = apiBase;
+      const video = document.getElementById('video');
+      const canvas = document.getElementById('overlay');
+      const ctx = canvas.getContext('2d');
+      const faceState = document.getElementById('faceState');
+      const emotionState = document.getElementById('emotionState');
+      const confidenceState = document.getElementById('confidenceState');
+
+      function snap() {
+        const tmp = document.createElement('canvas');
+        const w = Math.max(1, Math.min(640, video.videoWidth || 640));
+        const h = Math.max(1, Math.round(w * ((video.videoHeight || 360) / (video.videoWidth || 640))));
+        tmp.width = w;
+        tmp.height = h;
+        const tctx = tmp.getContext('2d');
+        tctx.drawImage(video, 0, 0, w, h);
+        return tmp.toDataURL('image/jpeg', 0.9);
+      }
+
+      function drawFace(face) {
+        if (!face || !face.box) return;
+        const w = canvas.width;
+        const h = canvas.height;
+        const box = face.box;
+        const x = box.x * w;
+        const y = box.y * h;
+        const bw = box.width * w;
+        const bh = box.height * h;
+        ctx.strokeStyle = '#6ee7ff';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x, y, bw, bh);
+        const points = Array.isArray(face.landmarks) ? face.landmarks : [];
+        ctx.fillStyle = '#ffd166';
+        for (const point of points) {
+          ctx.beginPath();
+          ctx.arc(point.x * w, point.y * h, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      video.srcObject = stream;
+      await video.play();
+
+      async function tick() {
+        if (!video.videoWidth || !video.videoHeight) {
+          requestAnimationFrame(tick);
+          return;
+        }
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        try {
+          const image = snap();
+          const [detectRes, emotionRes, recognizeRes] = await Promise.all([
+            fetch(apiBase + '/detect-face', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ image })
+            }).then(r => r.json()),
+            fetch(apiBase + '/analyze-emotion', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ image })
+            }).then(r => r.json()),
+            fetch(apiBase + '/recognize-user', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ image })
+            }).then(r => r.json())
+          ]);
+          faceState.textContent = detectRes.face_detected ? ('yes (' + String(detectRes.face_count || 0) + ')') : 'no';
+          emotionState.textContent = String(emotionRes.emotion || '-');
+          confidenceState.textContent = Number(recognizeRes.confidence || 0).toFixed(1);
+          if (Array.isArray(detectRes.faces) && detectRes.faces.length) {
+            drawFace(detectRes.faces[0]);
+          }
+        } catch (error) {
+          faceState.textContent = 'error';
+          emotionState.textContent = String(error && error.message || error);
+        }
+        setTimeout(tick, 250);
+      }
+
+      tick();
+    })();
+  </script>
+</body>
+</html>

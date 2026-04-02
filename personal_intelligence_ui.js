@@ -26,13 +26,16 @@
   const HISTORY_MODEL_WINDOW = 120;
   const HISTORY_BACKEND_WINDOW = 120;
   const VIS_PROFILE_EXTENSION = ".piuser.json";
-  const VIS_RECOGNITION_THRESHOLD = 0.93;
+  const VIS_RECOGNITION_THRESHOLD = 85;
   const VIS_MATCH_STABLE_COUNT = 5;
   const VIS_FACE_LOST_MS = 700;
-  const VIS_ENROLL_FRAME_DELAY_MS = 80;
+  const VIS_ENROLL_FRAME_DELAY_MS = 140;
   const VIS_LIGHTING_MIN_LUMA = 0.22;
   const VIS_SCAN_INTERVAL_MS = 80;
-  const VIS_SCAN_FRAME_COUNT = 8;
+  const VIS_SCAN_FRAME_COUNT = 16;
+  const VIS_TEST_MAX_TRIES = 60;
+  const VIS_TEST_STABLE_COUNT = 3;
+  const VIS_TEST_FRAME_DELAY_MS = 140;
   const VIS_PROFILE_DOC_LIMIT = 100;
   const VIS_FACE_PROCESS_ENDPOINT = "/recognize-user";
   const VIS_FACE_REGISTER_ENDPOINT = "/register-user";
@@ -824,18 +827,29 @@
     }
     let stable = 0;
     let tries = 0;
-    while (tries < 25) {
+    let bestScore = 0;
+    while (tries < VIS_TEST_MAX_TRIES) {
       tries += 1;
-      await new Promise(function (resolve) { setTimeout(resolve, 90); });
+      await new Promise(function (resolve) { setTimeout(resolve, VIS_TEST_FRAME_DELAY_MS); });
       const result = await processVisBackendFrame();
       const score = Number(result && result.confidence || 0);
-      if (statusEl) statusEl.textContent = "Testing recognition... confidence " + score.toFixed(1);
-      if (result && result.faceDetected && String(result.user_id || "") === targetUser) {
+      if (score > bestScore) bestScore = score;
+      if (statusEl) {
+        statusEl.textContent =
+          "Testing recognition... confidence " + score.toFixed(1) +
+          " / best " + bestScore.toFixed(1);
+      }
+      if (
+        result &&
+        result.faceDetected &&
+        String(result.user_id || "") === targetUser &&
+        score >= VIS_RECOGNITION_THRESHOLD
+      ) {
         stable += 1;
       } else {
         stable = 0;
       }
-      if (stable >= 2) {
+      if (stable >= VIS_TEST_STABLE_COUNT) {
         const uname = String((profile.user_identity && profile.user_identity.username) || "user");
         if (statusEl) statusEl.textContent = "Verification complete. Recognized user: " + uname;
         if (activateBtn) activateBtn.hidden = false;
@@ -852,7 +866,11 @@
         return;
       }
     }
-    if (statusEl) statusEl.textContent = "Verification timeout. Keep face centered and press Retry.";
+    if (statusEl) {
+      statusEl.textContent =
+        "Verification timeout. Best confidence " + bestScore.toFixed(1) +
+        ". Keep face centered, improve lighting, and press Retry.";
+    }
     visVerificationBusy = false;
   }
 
@@ -2458,7 +2476,7 @@
       await new Promise(function (resolve) { setTimeout(resolve, VIS_ENROLL_FRAME_DELAY_MS); });
       const frame = captureVisFrameDataUrl();
       if (frame) frames.push(frame);
-      if ((Date.now() - scanStart) > 8000) {
+      if ((Date.now() - scanStart) > 12000) {
         visScanning = false;
         visSetupState.step = 3;
         try { renderVisSetup(); } catch (e) {}

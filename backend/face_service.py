@@ -51,7 +51,7 @@ class DeepFaceService:
     def _decode(self, image_b64: str) -> np.ndarray:
         return resize_for_deepface(decode_base64_image(image_b64))
 
-    def detect_face(self, image_b64: str) -> Tuple[bool, int]:
+    def detect_face(self, image_b64: str) -> Tuple[bool, int, List[Dict[str, object]]]:
         self._ensure_available()
         image = self._decode(image_b64)
         faces = DeepFace.extract_faces(
@@ -60,7 +60,34 @@ class DeepFaceService:
             enforce_detection=False,
         )
         valid_faces = [face for face in faces if face.get("confidence", 0) >= 0]
-        return bool(valid_faces), len(valid_faces)
+        ih, iw = image.shape[:2]
+        face_rows: List[Dict[str, object]] = []
+        for face in valid_faces:
+            area = face.get("facial_area") or {}
+            x = float(area.get("x", 0) or 0)
+            y = float(area.get("y", 0) or 0)
+            w = float(area.get("w", area.get("width", 0)) or 0)
+            h = float(area.get("h", area.get("height", 0)) or 0)
+            landmarks = []
+            for key in ("left_eye", "right_eye", "nose", "mouth_left", "mouth_right"):
+                point = area.get(key)
+                if isinstance(point, (list, tuple)) and len(point) >= 2:
+                    landmarks.append({
+                        "name": key,
+                        "x": float(point[0]) / max(1.0, iw),
+                        "y": float(point[1]) / max(1.0, ih),
+                    })
+            face_rows.append({
+                "confidence": float(face.get("confidence", 0) or 0),
+                "box": {
+                    "x": x / max(1.0, iw),
+                    "y": y / max(1.0, ih),
+                    "width": w / max(1.0, iw),
+                    "height": h / max(1.0, ih),
+                },
+                "landmarks": landmarks,
+            })
+        return bool(valid_faces), len(valid_faces), face_rows
 
     def analyze_emotion(self, image_b64: str) -> str:
         self._ensure_available()

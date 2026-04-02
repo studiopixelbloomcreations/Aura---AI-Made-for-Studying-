@@ -43,6 +43,7 @@ const rootFilesToCopy = [
   "styles.css",
   "timer.js",
   "upload.js",
+  "vis_preview.html",
   "voice_multimodal_ui.js",
 ];
 
