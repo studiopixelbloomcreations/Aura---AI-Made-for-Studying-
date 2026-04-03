@@ -41,6 +41,20 @@ async function getUserConfig(userId) {
   return Array.isArray(rows) && rows.length ? rows[0] : null;
 }
 
+async function getUserConfigByIdentifier(uniqueIdentifier) {
+  const config = ensureConfig();
+  const url = `${config.supabaseUrl}/rest/v1/${config.table}?select=*&unique_identifier=eq.${encodeURIComponent(String(uniqueIdentifier || "").trim())}&limit=1`;
+  const response = await fetch(url, {
+    method: "GET",
+    headers: headers(config),
+  });
+  const rows = await response.json().catch(() => []);
+  if (!response.ok) {
+    throw new Error((rows && rows.message) || `Supabase identifier lookup failed (${response.status})`);
+  }
+  return Array.isArray(rows) && rows.length ? rows[0] : null;
+}
+
 async function saveUserConfig(configPayload) {
   const config = ensureConfig();
   const payload = {
@@ -64,6 +78,7 @@ async function saveUserConfig(configPayload) {
 
 module.exports = {
   getUserConfig,
+  getUserConfigByIdentifier,
   saveUserConfig,
 };
 

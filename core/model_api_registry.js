@@ -19,6 +19,17 @@ function getModelApiKey(provider) {
   if (entry && typeof entry === "object" && entry.apiKey) {
     return String(entry.apiKey).trim();
   }
+  const envMap = {
+    openrouter: "OPENROUTER_API_KEY",
+    groq: "GROQ_API_KEY",
+    mistral: "MISTRAL_API_KEY",
+    huggingface: "HUGGINGFACE_API_KEY",
+    deepseek: "DEEPSEEK_API_KEY",
+  };
+  const envName = envMap[String(provider).toLowerCase()];
+  if (envName && process.env[envName]) {
+    return String(process.env[envName]).trim();
+  }
   return "";
 }
 
@@ -37,4 +48,3 @@ module.exports = {
   getModelApiKey,
   getProviderAvailability,
 };
-

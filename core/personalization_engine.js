@@ -22,12 +22,26 @@ function inferTraits(answers) {
   return Array.from(new Set(traits)).slice(0, 8);
 }
 
+function buildPersonalizationPrompt(input = {}) {
+  const answers = input.answers && typeof input.answers === "object" ? input.answers : {};
+  return [
+    "User Profile:",
+    `- Interests: ${asText(answers.interests) || "unknown"}`,
+    `- Communication style: ${asText(answers.preferred_tone) || "adaptive"}`,
+    `- Preferences: ${asText(answers.favorite_subjects) || "unknown"}`,
+    `- Behavior patterns: ${asText(answers.learning_style) || "adaptive"}`,
+    `- Goals: ${asText(answers.goals) || "unknown"}`,
+    "Generate a structured user_config.json object.",
+  ].join("\n");
+}
+
 function buildUserConfig(input = {}) {
   const answers = input.answers && typeof input.answers === "object" ? input.answers : {};
   const profile = input.profile && typeof input.profile === "object" ? input.profile : {};
   const userId = asText(input.user_id || (profile.user_identity && profile.user_identity.username) || profile.file_name || "user");
   return {
     user_id: userId,
+    prompt: buildPersonalizationPrompt(input),
     personality_traits: inferTraits(answers),
     interests: listFrom(answers.interests),
     communication_style: {
@@ -55,6 +69,7 @@ function buildUserConfig(input = {}) {
 }
 
 module.exports = {
+  buildPersonalizationPrompt,
   buildUserConfig,
 };
 

@@ -1,4 +1,4 @@
-const { getUserConfig, saveUserConfig } = require("../../core/agent_comm");
+const { getUserConfig, getUserConfigByIdentifier, saveUserConfig } = require("../../core/agent_comm");
 const { buildUserConfig } = require("../../core/personalization_engine");
 const { generateUniqueIdentifier } = require("../../core/identity_system");
 const { generateFallbackIdentity } = require("../../core/failsafe_identity");
@@ -22,8 +22,9 @@ exports.handler = async function handler(event) {
   try {
     if (event.httpMethod === "GET") {
       const userId = String((event.queryStringParameters && event.queryStringParameters.user_id) || "").trim();
-      if (!userId) return json(400, { ok: false, error: "user_id is required" });
-      const config = await getUserConfig(userId);
+      const uniqueIdentifier = String((event.queryStringParameters && event.queryStringParameters.unique_identifier) || "").trim();
+      if (!userId && !uniqueIdentifier) return json(400, { ok: false, error: "user_id or unique_identifier is required" });
+      const config = userId ? await getUserConfig(userId) : await getUserConfigByIdentifier(uniqueIdentifier);
       return json(200, { ok: true, config });
     }
 

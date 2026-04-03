@@ -1,12 +1,39 @@
 name: Netlify Deploy
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
+concurrency:
+  group: netlify-production
+  cancel-in-progress: true
+
 jobs:
-  trigger-netlify:
-    if: ${{ secrets.NETLIFY_BUILD_HOOK != '' }}
+  deploy:
+    if: ${{ secrets.NETLIFY_AUTH_TOKEN != '' && secrets.NETLIFY_SITE_ID != '' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Netlify build hook
-        run: curl -fsS -X POST "${{ secrets.NETLIFY_BUILD_HOOK }}"
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Netlify bundle dependencies
+        run: npm ci --prefix netlify
+
+      - name: Build Netlify bundle
+        run: node netlify/build.mjs
+
+      - name: Install Netlify CLI
+        run: npm install -g netlify-cli
+
+      - name: Deploy to Netlify Production
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: netlify deploy --dir=netlify/dist --functions=netlify/functions --prod --site="$NETLIFY_SITE_ID" --message="GitHub Actions deploy $GITHUB_SHA"

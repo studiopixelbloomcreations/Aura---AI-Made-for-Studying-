@@ -46,6 +46,7 @@ async function coordinateQuery(analysis, options = {}) {
   const preferred = preferredModelsFor(analysis);
   const adapters = options.adapters || {};
   const available = [];
+  const successful = [];
 
   for (const modelName of preferred) {
     const result = await tryAdapter(modelName, {
@@ -55,7 +56,8 @@ async function coordinateQuery(analysis, options = {}) {
       seed_answer: options.seedAnswer || "",
     }, adapters);
     available.push(result);
-    if (result.ok) {
+    if (result.ok) successful.push(result);
+    if (!analysis.requires_multi_models && result.ok) {
       return {
         final_answer: result.answer,
         model_used: modelName,
@@ -64,6 +66,49 @@ async function coordinateQuery(analysis, options = {}) {
         attempts: available,
       };
     }
+  }
+
+  if (analysis.requires_multi_models && successful.length) {
+    const synthesisModel = successful[0].model;
+    const synthesisAdapter = adapters && adapters[synthesisModel];
+    if (typeof synthesisAdapter === "function" && successful.length > 1) {
+      const synthesis = await tryAdapter(synthesisModel, {
+        query: analysis.text,
+        analysis,
+        seed_answer: options.seedAnswer || "",
+        council_prompt: [
+          "You are part of an AI council.",
+          "Combine the best ideas below into one final answer.",
+          "Be decisive and remove duplication.",
+          `Original query: ${analysis.text}`,
+          "",
+          ...successful.map((row, index) => `Model ${index + 1} (${row.model}): ${row.answer}`),
+        ].join("\n"),
+      }, { [synthesisModel]: synthesisAdapter });
+      if (synthesis.ok) {
+        available.push({
+          ok: true,
+          model: synthesisModel,
+          answer: synthesis.answer,
+          raw: synthesis.raw || null,
+          error: "",
+        });
+        return {
+          final_answer: synthesis.answer,
+          model_used: synthesisModel,
+          fallback_used: synthesisModel !== preferred[0],
+          discussion_mode: true,
+          attempts: available,
+        };
+      }
+    }
+    return {
+      final_answer: successful[0].answer,
+      model_used: successful[0].model,
+      fallback_used: successful[0].model !== preferred[0],
+      discussion_mode: true,
+      attempts: available,
+    };
   }
 
   return {

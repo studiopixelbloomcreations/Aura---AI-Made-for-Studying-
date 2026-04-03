@@ -6,6 +6,7 @@ const { enforceRateLimit } = require("./personal_intelligence_evolution/security
 const { analyzeInput } = require("../../core/observatory");
 const { coordinateAgentHarmony } = require("../../core/agent_harmony");
 const { getProviderAvailability } = require("../../core/model_api_registry");
+const { buildHarmonyAdapters } = require("../../core/model_adapters");
 
 function json(statusCode, obj) {
   return {
@@ -334,20 +335,24 @@ exports.handler = async function handler(event) {
   if (action && action.home_address) actionUpdates.home_address = String(action.home_address);
   const mergedKnownFacts = mergeKnownFacts(combinedKnownFacts, actionUpdates);
   const llm = action || cloudEvolveOnly ? null : await puterChatReplyFromPayload(message, payload);
-  const answer = cloudEvolveOnly
+  const seedAnswer = cloudEvolveOnly
     ? String(((payload && payload.puter_reply && payload.puter_reply.answer) || "Cloud evolution sync accepted.")).trim()
     : (action && action.message ? String(action.message) : llm.answer);
+  const harmony = await coordinateAgentHarmony(observatory, {
+    seedAnswer,
+    adapters: action || cloudEvolveOnly ? {} : buildHarmonyAdapters(),
+  });
+  const answer = cloudEvolveOnly || action
+    ? seedAnswer
+    : String(harmony.final_answer || seedAnswer).trim();
   const speakText = cloudEvolveOnly
     ? buildSpeakText(answer)
-    : (action && action.message ? buildSpeakText(action.message) : String(llm.speak_text || buildSpeakText(answer)));
+    : (action && action.message ? buildSpeakText(action.message) : buildSpeakText(answer || String(llm.speak_text || "")));
   const aiProvider = cloudEvolveOnly ? "puter_client" : (action ? "local_action" : String(llm.provider || "puter"));
   const aiOk = cloudEvolveOnly ? true : (action ? true : !!llm.ok);
   const aiError = cloudEvolveOnly ? "" : (action ? "" : String(llm.error || ""));
   const latencyMs = Math.max(0, Date.now() - startedAt);
   const runtimeMode = "cloud_only";
-  const harmony = await coordinateAgentHarmony(observatory, {
-    seedAnswer: answer,
-  });
   const modelApiAvailability = getProviderAvailability();
 
   let evolutionMeta = null;
@@ -415,7 +420,7 @@ exports.handler = async function handler(event) {
   return json(200, {
     answer,
     speak_text: speakText,
-    ai_provider: aiProvider,
+    ai_provider: action || cloudEvolveOnly ? aiProvider : `agent_harmony:${String(harmony.model_used || aiProvider)}`,
     ai_ok: aiOk,
     ai_error: aiError,
     used_google_context: false,
