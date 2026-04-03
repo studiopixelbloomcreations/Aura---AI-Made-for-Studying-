@@ -69,7 +69,70 @@
       "hobbies",
       "timezone_or_city",
       "preferred_language"
-    ]
+    ],
+    "cloud_config": {
+      "memory": {
+        "facts": {
+          "goals": "improve grades",
+          "hobbies": "gaming",
+          "full_name": "Thenuja Premasiri",
+          "interests": "Robotics",
+          "learning_style": "step by step",
+          "preferred_name": "Studio Pixel",
+          "preferred_tone": "energetic",
+          "timezone_or_city": "Kurunegala",
+          "favorite_subjects": "ICT",
+          "preferred_language": "English"
+        },
+        "profile_file": "studio_pixel_bloom.piuser.json",
+        "personalization_answers": {
+          "goals": "improve grades",
+          "hobbies": "gaming",
+          "full_name": "Thenuja Premasiri",
+          "interests": "Robotics",
+          "learning_style": "step by step",
+          "preferred_name": "Studio Pixel",
+          "preferred_tone": "energetic",
+          "timezone_or_city": "Kurunegala",
+          "favorite_subjects": "ICT",
+          "preferred_language": "English"
+        }
+      },
+      "prompt": "User Profile:\n- Interests: Robotics\n- Communication style: energetic\n- Preferences: ICT\n- Behavior patterns: step by step\n- Goals: improve grades\nGenerate a structured user_config.json object.",
+      "user_id": "studio_pixel_bloom",
+      "interests": [
+        "Robotics"
+      ],
+      "ai_behavior": {
+        "tone": "energetic",
+        "goals": [
+          "improve grades"
+        ],
+        "response_style": "step by step"
+      },
+      "preferences": {
+        "hobbies": [
+          "gaming"
+        ],
+        "timezone_or_city": "Kurunegala",
+        "favorite_subjects": [
+          "ICT"
+        ]
+      },
+      "unique_identifier": "studio_pixel_bloom_4cee8a9a5bfd6d63ffbdf831",
+      "personality_traits": [
+        "energetic",
+        "structured"
+      ],
+      "communication_style": {
+        "tone": "energetic",
+        "learning_style": "step by step",
+        "preferred_name": "Studio Pixel",
+        "preferred_language": "English"
+      },
+      "source_profile_file": "studio_pixel_bloom.piuser.json"
+    },
+    "unique_identifier": "studio_pixel_bloom_4cee8a9a5bfd6d63ffbdf831"
   },
   "facial_signature": {
     "signature_model": "deepface",
@@ -115,15 +178,15 @@
     "conversation_habits": [
       "step by step"
     ],
-    "timezone_or_city": "kurunegala",
+    "timezone_or_city": "Kurunegala",
     "tone_preferences": "energetic"
   },
   "session_state": {
     "pending_response": null,
     "pending_messages": [],
-    "last_active_timestamp": "2026-04-03T17:44:01.105Z",
-    "paused": true,
-    "assistant_state": "idle",
+    "last_active_timestamp": "2026-04-03T17:44:04.777Z",
+    "paused": false,
+    "assistant_state": "listening",
     "speech_state": {
       "active": false,
       "text": "",
@@ -133,8 +196,8 @@
     "last_emotion": "neutral",
     "user_instance": {
       "profile_file": "studio_pixel_bloom.piuser.json",
-      "runtime_key": "vis_instance_studio_pixel_bloom.piuser.json_mnj6z4ya",
-      "loaded_at": "2026-04-03T17:42:58.258Z"
+      "runtime_key": "vis_instance_studio_pixel_bloom.piuser.json_mnj70jt4",
+      "loaded_at": "2026-04-03T17:44:04.168Z"
     },
     "pause_reason": "No Face Detected"
   }
