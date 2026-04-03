@@ -306,7 +306,8 @@
         <div class="pi-vis-camera-stage" style="position:relative;border-radius:18px;overflow:hidden;border:1px solid rgba(96,165,250,0.35);background:#020617;">
           <div class="pi-vis-camera-mount" style="position:relative;width:100%;aspect-ratio:4/3;min-height:320px;"></div>
         </div>
-        <div class="pi-vis-note" style="margin-top:12px;">Run <code>ShowCameraBox()</code> in the browser console to open this view.</div>
+        <div class="pi-vis-note pi-vis-debug-meta" style="margin-top:12px;">Camera: waiting for stream...</div>
+        <div class="pi-vis-note" style="margin-top:8px;">Run <code>ShowCameraBox()</code> in the browser console to open this view.</div>
       </div>
     </div>
   `;
@@ -386,6 +387,34 @@
     };
   }
 
+  function getActiveVisTrack() {
+    if (!visVideoEl || !visVideoEl.srcObject || typeof visVideoEl.srcObject.getVideoTracks !== "function") return null;
+    const tracks = visVideoEl.srcObject.getVideoTracks();
+    return tracks && tracks.length ? tracks[0] : null;
+  }
+
+  function getVisCameraDiagnostics() {
+    const track = getActiveVisTrack();
+    const settings = track && typeof track.getSettings === "function" ? track.getSettings() : {};
+    return {
+      label: track && track.label ? String(track.label) : "Unknown camera",
+      width: Number(settings.width || (visVideoEl && visVideoEl.videoWidth) || 0),
+      height: Number(settings.height || (visVideoEl && visVideoEl.videoHeight) || 0),
+      fps: Number(settings.frameRate || 0),
+    };
+  }
+
+  function renderVisDebugCameraMeta() {
+    if (!visDebugPreviewEl || visDebugPreviewEl.hidden) return;
+    const metaEl = visDebugPreviewEl.querySelector(".pi-vis-debug-meta");
+    if (!metaEl) return;
+    const info = getVisCameraDiagnostics();
+    metaEl.textContent =
+      "Camera: " + String(info.label || "Unknown") +
+      " | Stream: " + String(info.width || 0) + "x" + String(info.height || 0) +
+      (info.fps ? (" @ " + Math.round(info.fps) + "fps") : "");
+  }
+
   function ensureVisPreviewMounted(container) {
     if (!visVideoEl || !visCanvasEl) return;
     const mount = container && container.querySelector ? container.querySelector(".pi-vis-camera-mount") : null;
@@ -422,6 +451,12 @@
     try {
       Promise.resolve(visVideoEl.play()).catch(function () {});
     } catch (e) {}
+    setTimeout(function () {
+      try {
+        Promise.resolve(visVideoEl.play()).catch(function () {});
+      } catch (e) {}
+      renderVisDebugCameraMeta();
+    }, 120);
   }
 
   function syncVisPreviewMount() {
@@ -445,6 +480,7 @@
     visDebugPreviewEl.hidden = false;
     visDebugPreviewEl.style.display = "flex";
     syncVisPreviewMount();
+    renderVisDebugCameraMeta();
     return ready;
   }
 
