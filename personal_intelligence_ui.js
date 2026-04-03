@@ -30,6 +30,7 @@
   const VIS_MATCH_STABLE_COUNT = 5;
   const VIS_FACE_LOST_MS = 700;
   const VIS_ENROLL_FRAME_DELAY_MS = 140;
+  const VIS_CAPTURE_MAX_WIDTH = 1920;
   const VIS_LIGHTING_MIN_LUMA = 0.22;
   const VIS_SCAN_INTERVAL_MS = 80;
   const VIS_SCAN_FRAME_COUNT = 16;
@@ -375,6 +376,16 @@
     return visProcessingCanvas;
   }
 
+  function getPreferredVisVideoConstraints(deviceId) {
+    return {
+      deviceId: deviceId ? { exact: deviceId } : undefined,
+      facingMode: deviceId ? undefined : "user",
+      width: { ideal: 3840, max: 3840 },
+      height: { ideal: 2160, max: 2160 },
+      frameRate: { ideal: 30, max: 60 },
+    };
+  }
+
   function ensureVisPreviewMounted(container) {
     if (!visVideoEl || !visCanvasEl) return;
     const mount = container && container.querySelector ? container.querySelector(".pi-vis-camera-mount") : null;
@@ -396,6 +407,9 @@
     visVideoEl.style.borderRadius = "18px";
     visVideoEl.style.background = "#020617";
     visVideoEl.style.transform = "scaleX(-1)";
+    visVideoEl.style.opacity = "1";
+    visVideoEl.style.visibility = "visible";
+    visVideoEl.style.zIndex = "1";
     visCanvasEl.style.display = "block";
     visCanvasEl.style.position = "absolute";
     visCanvasEl.style.inset = "0";
@@ -404,6 +418,10 @@
     visCanvasEl.style.pointerEvents = "none";
     visCanvasEl.style.borderRadius = "18px";
     visCanvasEl.style.transform = "scaleX(-1)";
+    visCanvasEl.style.zIndex = "2";
+    try {
+      Promise.resolve(visVideoEl.play()).catch(function () {});
+    } catch (e) {}
   }
 
   function syncVisPreviewMount() {
@@ -1124,12 +1142,12 @@
   function captureVisFrameDataUrl() {
     if (!visVideoEl || !visVideoEl.videoWidth || !visVideoEl.videoHeight) return "";
     const canvas = getVisProcessingCanvas();
-    canvas.width = Math.max(1, Math.min(640, visVideoEl.videoWidth));
+    canvas.width = Math.max(1, Math.min(VIS_CAPTURE_MAX_WIDTH, visVideoEl.videoWidth));
     canvas.height = Math.max(1, Math.round(canvas.width * (visVideoEl.videoHeight / visVideoEl.videoWidth)));
     const ctx = canvas.getContext("2d");
     if (!ctx) return "";
     ctx.drawImage(visVideoEl, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", 0.82);
+    return canvas.toDataURL("image/jpeg", 0.92);
   }
 
   async function processVisBackendFrame() {
@@ -3156,12 +3174,7 @@
       if (!visCameraInputs.length) {
         try {
           const bootstrap = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: "user",
-              width: { ideal: 640 },
-              height: { ideal: 480 },
-              frameRate: { ideal: 24, max: 30 },
-            },
+            video: getPreferredVisVideoConstraints(""),
             audio: false,
           });
           visVideoEl.srcObject = bootstrap;
@@ -3192,12 +3205,7 @@
 
       if (!visCameraInputs.length) {
         const fallback = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: "user",
-            width: { ideal: 640 },
-            height: { ideal: 480 },
-            frameRate: { ideal: 24, max: 30 },
-          },
+          video: getPreferredVisVideoConstraints(""),
           audio: false,
         });
         visVideoEl.srcObject = fallback;
@@ -3210,12 +3218,7 @@
       if (visCameraInputIndex < 0) visCameraInputIndex = 0;
       const targetDevice = visCameraInputs[visCameraInputIndex] || visCameraInputs[0];
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          deviceId: targetDevice && targetDevice.deviceId ? { exact: targetDevice.deviceId } : undefined,
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          frameRate: { ideal: 24, max: 30 },
-        },
+        video: getPreferredVisVideoConstraints(targetDevice && targetDevice.deviceId ? String(targetDevice.deviceId) : ""),
         audio: false,
       });
       const prevStream = visVideoEl.srcObject;
