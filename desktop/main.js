@@ -7,7 +7,7 @@ const { autoUpdater } = require("electron-updater");
 const { LiveEvolutionManager } = require("./live_evolution_manager");
 const { CloudRepoMirror } = require("./cloud_repo_mirror");
 
-const DEFAULT_START_URL = "https://tutorv4.netlify.app/";
+const DEFAULT_START_URL = "https://tutorv6.netlify.app/";
 
 let mainWindow = null;
 let updateNoticeShown = false;
