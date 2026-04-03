@@ -1,0 +1,8 @@
+[build]
+  command = "node build.mjs"
+  publish = "dist"
+  functions = "functions"
+  # Always build — source files live at the repo root, outside this base
+  # directory, so Netlify's default content-change detection cannot detect
+  # changes correctly and would skip builds that should run.
+  ignore = "exit 1"
