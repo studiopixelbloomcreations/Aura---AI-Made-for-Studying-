@@ -19,13 +19,13 @@
     "important_facts": {
       "hobbies": "gaming",
       "favorite_subjects": "ICT",
-      "preferred_language": "english",
-      "interests": "robotics",
-      "full_name": "thenuja premasiri",
+      "preferred_language": "English",
+      "interests": "Robotics",
+      "full_name": "Thenuja Premasiri",
       "learning_style": "step by step",
-      "preferred_name": "pixel bloom",
+      "preferred_name": "Studio Pixel",
       "preferred_tone": "energetic",
-      "timezone_or_city": "kurunegala",
+      "timezone_or_city": "Kurunegala",
       "goals": "improve grades"
     },
     "history": []
@@ -121,7 +121,7 @@
   "session_state": {
     "pending_response": null,
     "pending_messages": [],
-    "last_active_timestamp": "2026-04-03T17:43:51.632Z",
+    "last_active_timestamp": "2026-04-03T17:44:01.105Z",
     "paused": true,
     "assistant_state": "idle",
     "speech_state": {
