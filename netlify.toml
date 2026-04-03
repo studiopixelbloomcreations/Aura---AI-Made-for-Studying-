@@ -2,6 +2,7 @@
   base = "netlify"
   command = "node build.mjs"
   publish = "dist"
+  ignore = "false"
 
 [functions]
   directory = "functions"
