@@ -172,6 +172,9 @@
     lastEmbedding: null,
     lastDetectAt: 0,
     lastMultiFaceAt: 0,
+    lastFaceCount: 0,
+    lastLandmarkCount: 0,
+    lastPoseHint: "",
   };
   let visSetupState = {
     step: 1,
@@ -412,10 +415,14 @@
     const metaEl = visDebugPreviewEl.querySelector(".pi-vis-debug-meta");
     if (!metaEl) return;
     const info = getVisCameraDiagnostics();
+    const overlayText = "Overlay: " + String(visTrackingState.lastFaceCount || 0) + " face(s), " + String(visTrackingState.lastLandmarkCount || 0) + " landmarks" + (visTrackingState.lastPoseHint ? (", pose " + String(visTrackingState.lastPoseHint)) : "");
+    const backendText = visLastBackendError ? (" | Backend: " + String(visLastBackendError)) : "";
     metaEl.textContent =
       "Camera: " + String(info.label || "Unknown") +
       " | Stream: " + String(info.width || 0) + "x" + String(info.height || 0) +
-      (info.fps ? (" @ " + Math.round(info.fps) + "fps") : "");
+      (info.fps ? (" @ " + Math.round(info.fps) + "fps") : "") +
+      " | " + overlayText +
+      backendText;
   }
 
   function ensureVisPreviewMounted(container) {
@@ -1305,7 +1312,13 @@
     visCanvasEl.height = height;
     ctx.clearRect(0, 0, width, height);
     const rows = Array.isArray(faces) ? faces : [];
-    if (!rows.length) return;
+    visTrackingState.lastFaceCount = rows.length;
+    visTrackingState.lastLandmarkCount = 0;
+    visTrackingState.lastPoseHint = "";
+    if (!rows.length) {
+      renderVisDebugCameraMeta();
+      return;
+    }
     rows.forEach(function (face) {
       const box = getFaceBox(face);
       if (!box) return;
@@ -1322,6 +1335,7 @@
       ctx.fill();
       ctx.stroke();
       const label = String(face.pose_hint || "").trim();
+      if (isPrimary) visTrackingState.lastPoseHint = label || visTrackingState.lastPoseHint;
       if (label) {
         ctx.fillStyle = "rgba(2,6,23,0.85)";
         ctx.fillRect(x, Math.max(0, y - 24), 90, 20);
@@ -1330,6 +1344,7 @@
         ctx.fillText(label.toUpperCase(), x + 8, Math.max(14, y - 10));
       }
       const landmarks = getFaceLandmarks(face);
+      visTrackingState.lastLandmarkCount += landmarks.length;
       ctx.fillStyle = isPrimary ? "rgba(250,204,21,0.95)" : "rgba(248,250,252,0.8)";
       landmarks.forEach(function (point) {
         const px = scaleOverlayPoint(point.x, width);
@@ -1339,6 +1354,7 @@
         ctx.fill();
       });
     });
+    renderVisDebugCameraMeta();
   }
 
   function faceBoxScore(face, box, vw, vh) {
