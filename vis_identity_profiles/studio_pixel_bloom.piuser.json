@@ -1,58 +1,168 @@
 {
-  "file_name": "studio_pixel_bloom.piuser.json",
   "profile_version": 1,
-  "user_identity": {
-    "username": "studio_pixel_bloom",
-    "account_identifier": "studiopixelbloomcreations@gmail.com",
-    "system_user_id": "vis_mnj0fjex_3tsmb1kf",
-    "creation_timestamp": "2026-04-03T14:39:46.185Z"
-  },
-  "facial_signature": {
-    "scan_mode": "standard_rgb",
-    "frame_count": 16,
-    "landmark_vectors": [],
-    "feature_embedding": [],
-    "feature_vector": [],
-    "signature_model": "deepface",
-    "symmetry_metrics": {
-      "embedding_dimensions": 0,
-      "sample_count": 16
-    },
-    "geometry_map": {
-      "geometry_snapshots": [],
-      "extraction": "deepface backend registration"
-    },
-    "created_at": "2026-04-03T14:39:46.185Z"
-  },
   "personalization_profile": {
     "interests": [],
     "behavior_patterns": [],
+    "tone_preferences": "adaptive",
+    "frequently_discussed_topics": [],
     "conversation_habits": [],
     "preferred_interaction_style": "balanced",
-    "frequently_discussed_topics": [],
-    "tone_preferences": "adaptive"
+    "hobbies": [
+      "f"
+    ],
+    "timezone_or_city": "f",
+    "favorite_subjects": [
+      "f"
+    ]
   },
   "conversation_memory": {
     "history": [],
-    "important_facts": {}
-  },
-  "learned_preferences": {},
-  "ai_behavior_configuration": {
-    "preferred_conversation_tone": "adaptive",
-    "formality_level": "balanced",
-    "response_length_preference": "balanced",
-    "technical_explanation_depth": "adaptive",
-    "humor_professional_balance": "balanced"
-  },
-  "session_state": {
-    "paused": false,
-    "assistant_state": "idle",
-    "pending_messages": [],
-    "pending_response": null,
-    "last_active_timestamp": "2026-04-03T14:39:46.185Z"
+    "important_facts": {
+      "goals": "f",
+      "hobbies": "f",
+      "full_name": "f",
+      "interests": "f",
+      "learning_style": "f",
+      "preferred_name": "f",
+      "preferred_tone": "f",
+      "timezone_or_city": "f",
+      "favorite_subjects": "f",
+      "preferred_language": "f"
+    }
   },
   "face_registration": {
-    "provider": "deepface",
-    "registered_frames": 16
+    "registered_frames": 16,
+    "provider": "deepface"
+  },
+  "session_state": {
+    "pending_response": null,
+    "assistant_state": "listening",
+    "paused": false,
+    "pending_messages": [],
+    "last_active_timestamp": "2026-04-03T14:41:10.613Z",
+    "speech_state": {
+      "active": false,
+      "text": "",
+      "started_at_ms": 0,
+      "provider": ""
+    },
+    "user_instance": {
+      "profile_file": "studio_pixel_bloom.piuser.json",
+      "runtime_key": "vis_instance_studio_pixel_bloom.piuser.json_mnj0hc2z",
+      "loaded_at": "2026-04-03T14:41:09.995Z"
+    },
+    "last_emotion": "neutral"
+  },
+  "file_name": "studio_pixel_bloom.piuser.json",
+  "learned_preferences": {
+    "goals": "f",
+    "hobbies": "f",
+    "full_name": "f",
+    "interests": "f",
+    "learning_style": "f",
+    "preferred_name": "f",
+    "preferred_tone": "f",
+    "timezone_or_city": "f",
+    "favorite_subjects": "f",
+    "preferred_language": "f"
+  },
+  "user_identity": {
+    "system_user_id": "vis_mnj0fjex_3tsmb1kf",
+    "creation_timestamp": "2026-04-03T14:39:46.185Z",
+    "account_identifier": "studiopixelbloomcreations@gmail.com",
+    "username": "studio_pixel_bloom"
+  },
+  "facial_signature": {
+    "feature_embedding": [],
+    "frame_count": 16,
+    "symmetry_metrics": {
+      "sample_count": 16,
+      "embedding_dimensions": 0
+    },
+    "geometry_map": {
+      "extraction": "deepface backend registration",
+      "geometry_snapshots": []
+    },
+    "landmark_vectors": [],
+    "scan_mode": "standard_rgb",
+    "signature_model": "deepface",
+    "created_at": "2026-04-03T14:39:46.185Z",
+    "feature_vector": []
+  },
+  "ai_behavior_configuration": {
+    "formality_level": "balanced",
+    "preferred_conversation_tone": "adaptive",
+    "humor_professional_balance": "balanced",
+    "response_length_preference": "balanced",
+    "technical_explanation_depth": "adaptive",
+    "tone": "f",
+    "goals": [
+      "f"
+    ],
+    "response_style": "f"
+  },
+  "personal_intelligence_agent": {
+    "cloud_config": {
+      "memory": {
+        "facts": {
+          "goals": "f",
+          "hobbies": "f",
+          "full_name": "f",
+          "interests": "f",
+          "learning_style": "f",
+          "preferred_name": "f",
+          "preferred_tone": "f",
+          "timezone_or_city": "f",
+          "favorite_subjects": "f",
+          "preferred_language": "f"
+        },
+        "profile_file": "",
+        "personalization_answers": {
+          "goals": "f",
+          "hobbies": "f",
+          "full_name": "f",
+          "interests": "f",
+          "learning_style": "f",
+          "preferred_name": "f",
+          "preferred_tone": "f",
+          "timezone_or_city": "f",
+          "favorite_subjects": "f",
+          "preferred_language": "f"
+        }
+      },
+      "prompt": "User Profile:\n- Interests: f\n- Communication style: f\n- Preferences: f\n- Behavior patterns: f\n- Goals: f\nGenerate a structured user_config.json object.",
+      "user_id": "studio_pixel_bloom",
+      "interests": [
+        "f"
+      ],
+      "ai_behavior": {
+        "tone": "f",
+        "goals": [
+          "f"
+        ],
+        "response_style": "f"
+      },
+      "preferences": {
+        "hobbies": [
+          "f"
+        ],
+        "timezone_or_city": "f",
+        "favorite_subjects": [
+          "f"
+        ]
+      },
+      "unique_identifier": "studio_pixel_bloom_7095c0bbc1236b5ddbb5b1a9",
+      "personality_traits": [
+        "f"
+      ],
+      "communication_style": {
+        "tone": "f",
+        "learning_style": "f",
+        "preferred_name": "f",
+        "preferred_language": "f"
+      },
+      "source_profile_file": ""
+    },
+    "unique_identifier": "studio_pixel_bloom_7095c0bbc1236b5ddbb5b1a9"
   }
 }
