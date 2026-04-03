@@ -110,7 +110,7 @@ function createWindow() {
       /github\.com\/login/i.test(target) ||
       /auth/i.test(target) ||
       /puter\.com/i.test(target) ||
-      /tutorv4\.netlify\.app/i.test(target) ||
+      /tutorv1\.netlify\.app/i.test(target) ||
       /g9-tutor\.firebaseapp\.com/i.test(target);
 
     if (isHttp && isTrusted) {
