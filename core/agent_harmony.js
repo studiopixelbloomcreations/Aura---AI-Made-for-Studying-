@@ -6,6 +6,7 @@ const MODEL_PRIORITY = {
   creative: ["grok", "huggingface", "puter"],
   multi_question: ["openrouter", "deepseek", "grok", "puter"],
 };
+const { getProviderAvailability } = require("./model_api_registry");
 
 function buildCouncilPrompt(query, analysis) {
   return [
@@ -77,6 +78,7 @@ async function coordinateQuery(analysis, options = {}) {
 async function coordinateAgentHarmony(observatoryOutput, options = {}) {
   const analyses = observatoryOutput && Array.isArray(observatoryOutput.queries) ? observatoryOutput.queries : [];
   const query_plans = [];
+  const provider_availability = getProviderAvailability();
 
   for (const query of analyses) {
     const coordinated = await coordinateQuery(query, options);
@@ -101,6 +103,7 @@ async function coordinateAgentHarmony(observatoryOutput, options = {}) {
     model_used: primary.model_used,
     fallback_used: query_plans.some((row) => !!row.fallback_used),
     discussion_mode: query_plans.some((row) => !!row.requires_multi_models),
+    provider_availability,
     query_plans,
   };
 }

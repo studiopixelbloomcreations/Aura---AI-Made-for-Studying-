@@ -5,6 +5,7 @@ const { appendObservabilityEvent } = require("./personal_intelligence_evolution/
 const { enforceRateLimit } = require("./personal_intelligence_evolution/security_ops");
 const { analyzeInput } = require("../../core/observatory");
 const { coordinateAgentHarmony } = require("../../core/agent_harmony");
+const { getProviderAvailability } = require("../../core/model_api_registry");
 
 function json(statusCode, obj) {
   return {
@@ -347,6 +348,7 @@ exports.handler = async function handler(event) {
   const harmony = await coordinateAgentHarmony(observatory, {
     seedAnswer: answer,
   });
+  const modelApiAvailability = getProviderAvailability();
 
   let evolutionMeta = null;
   try {
@@ -440,6 +442,7 @@ exports.handler = async function handler(event) {
     runtime_mode: runtimeMode,
     observatory,
     agent_harmony: harmony,
+    model_api_availability: modelApiAvailability,
     cloud_evolution: cloudEvolution || undefined,
   });
 };

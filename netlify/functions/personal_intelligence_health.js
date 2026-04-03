@@ -1,6 +1,7 @@
 const { computeReadiness } = require("./personal_intelligence_evolution/production_readiness");
 const { CloudStateStore } = require("./personal_intelligence_evolution/cloud_state_store");
 const { enforceRateLimit } = require("./personal_intelligence_evolution/security_ops");
+const { getProviderAvailability } = require("../../core/model_api_registry");
 
 function json(statusCode, obj) {
   return {
@@ -28,10 +29,12 @@ exports.handler = async function handler(event) {
   const twin = await store.readDoc("digital_twin_state", { version: 0 });
   const traces = await store.readDoc("cognitive_traces", { traces: [] });
   const gov = await store.readDoc("governance_decisions", { decisions: [] });
+  const modelApiAvailability = getProviderAvailability();
 
   return json(200, {
     ok: true,
     production_readiness: readiness,
+    model_api_availability: modelApiAvailability,
     storage_mode: store.enabled ? "github" : "memory_fallback",
     queue_summary: {
       task_count: queue && queue.ok && queue.doc && Array.isArray(queue.doc.tasks) ? queue.doc.tasks.length : 0,
