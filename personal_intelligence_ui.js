@@ -293,8 +293,8 @@
         <div class="pi-vis-personalize-body"></div>
       </div>
     </div>
-    <div class="pi-vis-debug-backdrop" hidden>
-      <div class="pi-vis-debug-panel" role="dialog" aria-modal="false" aria-labelledby="piVisDebugTitle" style="width:min(760px,92vw);background:rgba(6,13,27,0.94);border:1px solid rgba(96,165,250,0.35);border-radius:22px;box-shadow:0 24px 80px rgba(2,6,23,0.55);padding:18px;">
+    <div class="pi-vis-debug-backdrop" hidden style="position:fixed;inset:0;z-index:10040;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(2,6,23,0.62);backdrop-filter:blur(10px);">
+      <div class="pi-vis-debug-panel" role="dialog" aria-modal="false" aria-labelledby="piVisDebugTitle" style="width:min(760px,92vw);max-height:min(88vh,920px);overflow:auto;background:rgba(6,13,27,0.96);border:1px solid rgba(96,165,250,0.35);border-radius:22px;box-shadow:0 24px 80px rgba(2,6,23,0.55);padding:18px;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;">
           <div>
             <div id="piVisDebugTitle" style="font-size:18px;font-weight:700;color:#e2e8f0;">Camera Box Debug</div>
