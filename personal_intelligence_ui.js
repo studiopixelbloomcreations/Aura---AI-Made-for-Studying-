@@ -36,7 +36,6 @@
   const VIS_TEST_MAX_TRIES = 45;
   const VIS_TEST_STABLE_COUNT = 1;
   const VIS_TEST_FRAME_DELAY_MS = 80;
-  const VIS_AGENT_CREATION_DELAY_MS = 150000;
   const VIS_SETUP_RETRIEVE_MAX_TRIES = 20;
   const VIS_SETUP_RETRIEVE_DELAY_MS = 900;
   const VIS_PROFILE_DOC_LIMIT = 100;
@@ -660,7 +659,7 @@
         '<div class="pi-vis-personalize-loading">' +
         '<div class="pi-vis-personalize-spinner"></div>' +
         '<div class="pi-vis-personalize-loading-title">Creating your Personal Intelligence...</div>' +
-        '<div class="pi-vis-personalize-loading-note">Building your unique agent, preparing baseline knowledge, and calibrating tone and memory. This can take 2 to 3 minutes.</div>' +
+        '<div class="pi-vis-personalize-loading-note">Building your unique agent, saving your profile, and waiting for your unique identifier to come back. This screen stays here until that finishes.</div>' +
         "</div>";
       return;
     }
@@ -797,7 +796,25 @@
       await saveVisProfileToCloud(profile);
     }
     await createVisProfileArtifactInRepo(profile);
-    await savePiUserConfig(profile, safeAnswers);
+    pushVisDebug("Waiting for Personal Intelligence unique identifier.");
+    const saveResult = await savePiUserConfig(profile, safeAnswers);
+    const savedConfig = saveResult && (saveResult.config || saveResult);
+    if (savedConfig) {
+      const mergedProfile = mergePiConfigIntoProfile(profile, savedConfig.user_config || savedConfig);
+      if (mergedProfile && mergedProfile !== profile) Object.assign(profile, mergedProfile);
+      const uniqueId = String(
+        (saveResult && saveResult.identity && (saveResult.identity.unique_identifier || saveResult.identity.fallback_id)) ||
+        savedConfig.unique_identifier ||
+        (savedConfig.user_config && savedConfig.user_config.unique_identifier) ||
+        (((profile.personal_intelligence_agent || {}).cloud_config || {}).unique_identifier) ||
+        ""
+      ).trim();
+      profile.personal_intelligence_agent = Object.assign({}, profile.personal_intelligence_agent || {}, {
+        cloud_config: savedConfig.user_config || savedConfig,
+        unique_identifier: uniqueId,
+      });
+      if (uniqueId) pushVisDebug("Personal Intelligence unique identifier ready: " + uniqueId);
+    }
     return true;
   }
 
@@ -820,20 +837,23 @@
     visPersonalizeState.loading = true;
     renderVisPersonalize();
     const profile = visPersonalizeState.profile || visActiveProfile;
-    setTimeout(function () {
-      createVisPersonalAgent(profile, answers).then(function () {
-        visPersonalizeState.loading = false;
-        closeVisPersonalize();
-        if (profile) {
-          switchToVisProfile(profile).then(function () {
-            // Force a quick rescan to confirm identity and resume.
-            visRecognitionCandidate = { profileFile: "", count: 0 };
-            visNoMatchCount = 0;
-            scheduleVisFrameLoop(400);
-          });
-        }
-      });
-    }, VIS_AGENT_CREATION_DELAY_MS);
+    createVisPersonalAgent(profile, answers).then(function () {
+      visPersonalizeState.loading = false;
+      closeVisPersonalize();
+      if (profile) {
+        switchToVisProfile(profile).then(function () {
+          // Force a quick rescan to confirm identity and resume.
+          visRecognitionCandidate = { profileFile: "", count: 0 };
+          visNoMatchCount = 0;
+          scheduleVisFrameLoop(400);
+        });
+      }
+    }).catch(function (error) {
+      visPersonalizeState.loading = false;
+      renderVisPersonalize();
+      pushVisDebug("Personal Intelligence creation failed: " + String((error && error.message) || error));
+      addLog("assistant", "Tutor: Personal Intelligence setup is not ready yet. Please try again.");
+    });
   }
 
   function clearVisFrameLoop() {
@@ -2239,7 +2259,7 @@
     const userId = String((profile.user_identity && profile.user_identity.username) || profile.file_name || "").trim();
     if (!userId) return null;
     try {
-      return await fetchJson("/personal-intelligence/config", {
+      return await fetchSiteJson("/personal-intelligence/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -2272,7 +2292,7 @@
     const userId = String((profile && profile.user_identity && profile.user_identity.username) || profile.file_name || "").trim();
     if (!userId) return profile;
     try {
-      const out = await fetchJson("/personal-intelligence/config?user_id=" + encodeURIComponent(userId), {
+      const out = await fetchSiteJson("/personal-intelligence/config?user_id=" + encodeURIComponent(userId), {
         method: "GET",
       });
       if (!out || !out.config) return profile;
@@ -3582,6 +3602,13 @@
 
   async function fetchJson(path, options) {
     const res = await (window.Api && window.Api.apiFetch ? window.Api.apiFetch(path, options) : fetch(path, options));
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data && (data.detail || data.error)) || "Request failed");
+    return data;
+  }
+
+  async function fetchSiteJson(path, options) {
+    const res = await fetch(path, options);
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error((data && (data.detail || data.error)) || "Request failed");
     return data;
