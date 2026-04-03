@@ -61,34 +61,6 @@
         });
       }
 
-      function drawFace(face) {
-        if (!face || !face.box) return;
-        const w = canvas.width;
-        const h = canvas.height;
-        const box = face.box;
-        const x = box.x * w;
-        const y = box.y * h;
-        const bw = box.width * w;
-        const bh = box.height * h;
-        ctx.strokeStyle = '#6ee7ff';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(x, y, bw, bh);
-        if (face.poseHint) {
-          ctx.fillStyle = 'rgba(2,6,23,0.82)';
-          ctx.fillRect(x, Math.max(0, y - 24), 96, 20);
-          ctx.fillStyle = '#e2e8f0';
-          ctx.font = '12px sans-serif';
-          ctx.fillText(String(face.poseHint).toUpperCase(), x + 8, Math.max(14, y - 10));
-        }
-        const points = Array.isArray(face.landmarks) ? face.landmarks : [];
-        ctx.fillStyle = '#ffd166';
-        for (const point of points) {
-          ctx.beginPath();
-          ctx.arc(point.x * w, point.y * h, 4, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-
       function averagePoint(points, name) {
         const list = Array.isArray(points) ? points : [];
         if (!list.length) return null;
@@ -162,9 +134,11 @@
 
       await loadScriptOnce(faceApiScriptUrl, 'visPreviewFaceApiScript');
       await Promise.all([
-        window.faceapi.nets.tinyFaceDetector.loadFromUri(faceApiModelUrl),
+        window.faceapi.nets.ssdMobilenetv1.loadFromUri(faceApiModelUrl),
         window.faceapi.nets.faceLandmark68Net.loadFromUri(faceApiModelUrl),
         window.faceapi.nets.faceExpressionNet.loadFromUri(faceApiModelUrl),
+        window.faceapi.nets.faceRecognitionNet.loadFromUri(faceApiModelUrl),
+        window.faceapi.nets.ageGenderNet.loadFromUri(faceApiModelUrl),
       ]);
 
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
@@ -183,36 +157,37 @@
           const detections = await window.faceapi
             .detectAllFaces(
               video,
-              new window.faceapi.TinyFaceDetectorOptions({
-                inputSize: 416,
-                scoreThreshold: 0.45,
+              new window.faceapi.SsdMobilenetv1Options({
+                minConfidence: 0.5,
               })
             )
             .withFaceLandmarks()
-            .withFaceExpressions();
+            .withFaceExpressions()
+            .withAgeAndGender()
+            .withFaceDescriptors();
+          const displaySize = { width: video.videoWidth, height: video.videoHeight };
+          window.faceapi.matchDimensions(canvas, displaySize);
+          const resizedResults = window.faceapi.resizeResults(detections, displaySize);
+          window.faceapi.draw.drawDetections(canvas, resizedResults);
+          window.faceapi.draw.drawFaceLandmarks(canvas, resizedResults);
+          window.faceapi.draw.drawFaceExpressions(canvas, resizedResults, 0.05);
           faceState.textContent = detections.length ? ('yes (' + String(detections.length) + ')') : 'no';
           if (detections.length) {
             const first = detections[0];
-            const box = first.detection.box;
-            const landmarks = toNormalizedLandmarks(first.landmarks, video.videoWidth, video.videoHeight);
-            const face = {
-              box: {
-                x: box.x / video.videoWidth,
-                y: box.y / video.videoHeight,
-                width: box.width / video.videoWidth,
-                height: box.height / video.videoHeight,
-              },
-              landmarks,
-              poseHint: estimatePoseHint({
-                x: box.x / video.videoWidth,
-                y: box.y / video.videoHeight,
-                width: box.width / video.videoWidth,
-                height: box.height / video.videoHeight,
-              }, landmarks),
-            };
             emotionState.textContent = String(topExpression(first.expressions || {}) || '-');
             confidenceState.textContent = Number(first.detection.score || 0).toFixed(2);
-            drawFace(face);
+            const box = resizedResults[0] && resizedResults[0].detection ? resizedResults[0].detection.box : null;
+            if (box) {
+              const lines = [
+                String(Math.round(Number(first.age || 0))) + ' years',
+                String(first.gender || '-') + ' (' + Number(first.genderProbability || 0).toFixed(2) + ')',
+                String(topExpression(first.expressions || {}) || '-')
+              ];
+              new window.faceapi.draw.DrawTextField(lines, { x: box.x, y: box.y + box.height + 10 }, {
+                anchorPosition: 'BOTTOM_LEFT',
+                backgroundColor: 'rgba(0, 0, 0, 0.55)'
+              }).draw(canvas);
+            }
           } else {
             emotionState.textContent = '-';
             confidenceState.textContent = '-';

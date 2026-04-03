@@ -1,12 +1,14 @@
 const USER_PROFILE_ENDPOINT = '/user-profile';
 const FACE_API_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
 const FACE_API_MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
-const FACE_API_INPUT_SIZE = 416;
-const FACE_API_SCORE_THRESHOLD = 0.45;
+const FACE_API_MIN_CONFIDENCE = 0.5;
 const FACE_API_MATCH_DISTANCE = 0.58;
 
 let faceApiReadyPromise = null;
 let livenessSamples = [];
+let faceMatcherCache = null;
+let faceMatcherSignature = '';
+let faceMatcherLabelMap = {};
 
 function ensureHooks() {
   return window.PI_VIS_HOOKS || {};
@@ -52,10 +54,11 @@ async function ensureFaceApiReady() {
     await loadScriptOnce(FACE_API_SCRIPT_URL, 'visFaceApiScript');
     if (!window.faceapi) throw new Error('face-api.js unavailable');
     await Promise.all([
-      window.faceapi.nets.tinyFaceDetector.loadFromUri(FACE_API_MODEL_URL),
+      window.faceapi.nets.ssdMobilenetv1.loadFromUri(FACE_API_MODEL_URL),
       window.faceapi.nets.faceLandmark68Net.loadFromUri(FACE_API_MODEL_URL),
       window.faceapi.nets.faceRecognitionNet.loadFromUri(FACE_API_MODEL_URL),
       window.faceapi.nets.faceExpressionNet.loadFromUri(FACE_API_MODEL_URL),
+      window.faceapi.nets.ageGenderNet.loadFromUri(FACE_API_MODEL_URL),
     ]);
     return true;
   })().catch((error) => {
@@ -213,28 +216,55 @@ function getFaceIndex() {
   return Array.isArray(window.__PI_VIS_FACE_INDEX__) ? window.__PI_VIS_FACE_INDEX__ : [];
 }
 
+function getFaceMatcher() {
+  if (!window.faceapi) return null;
+  const index = getFaceIndex().filter((row) => !!(row && Array.isArray(row.vector) && row.vector.length && String(row.vector_model || '').toLowerCase() === 'faceapi'));
+  const signature = index.map((row) => [
+    String(row.profileFile || ''),
+    String(row.username || ''),
+    String(row.vector_model || ''),
+    String(Array.isArray(row.vector) ? row.vector.length : 0),
+    String(Number(row.vector && row.vector.length ? row.vector[0] : 0).toFixed(6)),
+  ].join(':')).join('|');
+  if (signature && signature === faceMatcherSignature && faceMatcherCache) return faceMatcherCache;
+  faceMatcherCache = null;
+  faceMatcherSignature = signature;
+  faceMatcherLabelMap = {};
+  if (!index.length) return null;
+  const grouped = {};
+  index.forEach((row) => {
+    const label = String(row.profileFile || row.username || '').trim();
+    if (!label) return;
+    if (!grouped[label]) grouped[label] = { descriptors: [], row };
+    grouped[label].descriptors.push(new Float32Array(row.vector));
+  });
+  const labels = Object.keys(grouped).filter((label) => grouped[label] && grouped[label].descriptors.length);
+  if (!labels.length) return null;
+  const labeledDescriptors = labels.map((label) => {
+    faceMatcherLabelMap[label] = grouped[label].row;
+    return new window.faceapi.LabeledFaceDescriptors(label, grouped[label].descriptors);
+  });
+  faceMatcherCache = new window.faceapi.FaceMatcher(labeledDescriptors, FACE_API_MATCH_DISTANCE);
+  return faceMatcherCache;
+}
+
 function findDescriptorMatch(descriptor) {
   const input = Array.isArray(descriptor) ? descriptor : [];
-  const index = getFaceIndex();
-  if (!input.length || !index.length) return null;
-  let best = null;
-  for (let i = 0; i < index.length; i += 1) {
-    const row = index[i];
-    if (!row || !Array.isArray(row.vector) || !row.vector.length) continue;
-    const model = String(row.vector_model || '').toLowerCase();
-    if (model && model !== 'faceapi') continue;
-    const distance = descriptorDistance(input, row.vector);
-    if (!best || distance < best.distance) {
-      best = {
-        user_id: row.username || row.user_id || row.profileFile || null,
-        confidence: Math.max(0, Math.round((1 - Math.min(1, distance)) * 100)),
-        similarity: Math.max(0, Math.round((1 - Math.min(1, distance)) * 100)),
-        distance,
-      };
-    }
-  }
-  if (!best || best.distance > FACE_API_MATCH_DISTANCE) return null;
-  return best;
+  if (!input.length) return null;
+  const matcher = getFaceMatcher();
+  if (!matcher) return null;
+  const best = matcher.findBestMatch(new Float32Array(input));
+  const label = String(best && best.label || '');
+  if (!label || label === 'unknown') return null;
+  const row = faceMatcherLabelMap[label] || null;
+  if (!row) return null;
+  const distance = Number(best && best.distance || 1);
+  return {
+    user_id: row.username || row.user_id || row.profileFile || null,
+    confidence: Math.max(0, Math.round((1 - Math.min(1, distance)) * 100)),
+    similarity: Math.max(0, Math.round((1 - Math.min(1, distance)) * 100)),
+    distance,
+  };
 }
 
 async function imageElementFromDataUrl(image) {
@@ -265,13 +295,13 @@ export async function processFaceFrame(image) {
   const detections = await faceapi
     .detectAllFaces(
       img,
-      new faceapi.TinyFaceDetectorOptions({
-        inputSize: FACE_API_INPUT_SIZE,
-        scoreThreshold: FACE_API_SCORE_THRESHOLD,
+      new faceapi.SsdMobilenetv1Options({
+        minConfidence: FACE_API_MIN_CONFIDENCE,
       })
     )
     .withFaceLandmarks()
     .withFaceExpressions()
+    .withAgeAndGender()
     .withFaceDescriptors();
   const vw = Number(img.naturalWidth || img.width || 0);
   const vh = Number(img.naturalHeight || img.height || 0);
@@ -291,6 +321,9 @@ export async function processFaceFrame(image) {
       pose_hint: normalizedBox ? estimatePoseHint(normalizedBox, landmarks) : '',
       descriptor: Array.from((item && item.descriptor) || []),
       expressions: item && item.expressions ? item.expressions : {},
+      age: Number(item && item.age || 0),
+      gender: String(item && item.gender || ''),
+      genderProbability: Number(item && item.genderProbability || 0),
     };
   }).filter((face) => !!(face && face.box && face.box.width > 0 && face.box.height > 0));
 
@@ -358,4 +391,3 @@ export async function registerFaceFrames(userId, images, profileData = {}) {
     registered_faces: 0,
   };
 }
-
