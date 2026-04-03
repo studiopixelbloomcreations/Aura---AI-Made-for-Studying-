@@ -30,9 +30,9 @@
   const VIS_MATCH_STABLE_COUNT = 5;
   const VIS_FACE_LOST_MS = 700;
   const VIS_ENROLL_FRAME_DELAY_MS = 140;
-  const VIS_CAPTURE_MAX_WIDTH = 1920;
+  const VIS_CAPTURE_MAX_WIDTH = 960;
   const VIS_LIGHTING_MIN_LUMA = 0.22;
-  const VIS_SCAN_INTERVAL_MS = 80;
+  const VIS_SCAN_INTERVAL_MS = 180;
   const VIS_SCAN_FRAME_COUNT = 16;
   const VIS_RECOGNITION_HOLD_MS = 2500;
   const VIS_ENROLL_GUIDANCE_BUCKETS = ["center", "left", "right", "up", "down", "close"];
@@ -1186,7 +1186,7 @@
     const ctx = canvas.getContext("2d");
     if (!ctx) return "";
     ctx.drawImage(visVideoEl, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", 0.92);
+    return canvas.toDataURL("image/jpeg", 0.82);
   }
 
   async function processVisBackendFrame() {
