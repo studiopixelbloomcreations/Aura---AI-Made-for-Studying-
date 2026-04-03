@@ -33,6 +33,9 @@
   const VIS_LIGHTING_MIN_LUMA = 0.22;
   const VIS_SCAN_INTERVAL_MS = 80;
   const VIS_SCAN_FRAME_COUNT = 16;
+  const VIS_RECOGNITION_HOLD_MS = 2500;
+  const VIS_ENROLL_GUIDANCE_BUCKETS = ["center", "left", "right", "up", "down", "close"];
+  const VIS_ENROLL_CAPTURE_DELAY_MS = 220;
   const VIS_TEST_MAX_TRIES = 45;
   const VIS_TEST_STABLE_COUNT = 1;
   const VIS_TEST_FRAME_DELAY_MS = 80;
@@ -133,6 +136,7 @@
   let visUseLegacySetupFallback = false;
   let visDebugLogs = [];
   let visPendingEnrollmentPayload = null;
+  let visLastRecognitionAt = 0;
   let visTestEl = null;
   let visPersonalizeEl = null;
   let visVerificationBusy = false;
@@ -170,6 +174,8 @@
     retrievalReady: false,
     retrievalMessage: "",
     pendingProfile: null,
+    enrollmentCoverage: {},
+    enrollmentInstruction: "",
   };
   let visPersonalizeOpen = false;
   let visPersonalizeState = {
@@ -2547,10 +2553,21 @@
       const bar = body.querySelector(".pi-vis-progress-bar");
       if (bar) bar.style.width = ready ? "100%" : "72%";
     } else {
+      const coverage = visSetupState.enrollmentCoverage && typeof visSetupState.enrollmentCoverage === "object"
+        ? visSetupState.enrollmentCoverage
+        : {};
+      const completed = VIS_ENROLL_GUIDANCE_BUCKETS.filter(function (bucket) { return !!coverage[bucket]; });
+      const pct = Math.round((completed.length / VIS_ENROLL_GUIDANCE_BUCKETS.length) * 100);
+      const instruction = String(visSetupState.enrollmentInstruction || "Look straight at the camera to start.");
       body.innerHTML =
         '<p>Scanning in progress...</p>' +
         '<div class="pi-vis-progress"><div class="pi-vis-progress-bar"></div></div>' +
-        '<div class="pi-vis-note">Keep your face in frame and slightly change angle for higher accuracy.</div>';
+        '<div class="pi-vis-note">' + instruction.replace(/[<>&]/g, function (ch) {
+          return ch === "<" ? "&lt;" : (ch === ">" ? "&gt;" : "&amp;");
+        }) + '</div>' +
+        '<div class="pi-vis-note">Coverage: ' + completed.join(", ") + (completed.length ? "." : " none yet.") + '</div>';
+      const bar = body.querySelector(".pi-vis-progress-bar");
+      if (bar) bar.style.width = pct + "%";
     }
 
     const usernameInput = body.querySelector('[data-vis="username"]');
@@ -2643,6 +2660,7 @@
       profile.face_registration = {
         provider: "deepface",
         registered_frames: payload.frameCount || 0,
+        coverage: Array.isArray(payload.coverage) ? payload.coverage.slice(0) : [],
       };
       visSetupState.step = 6;
       visSetupState.retrievalReady = false;
@@ -2730,6 +2748,8 @@
     if (visScanning) return;
     visScanning = true;
     visSetupState.step = 4;
+    visSetupState.enrollmentCoverage = {};
+    visSetupState.enrollmentInstruction = "Look straight at the camera.";
     try { renderVisSetup(); } catch (e) { pushVisDebug("scan step render failed: " + String((e && e.message) || e)); }
     pushVisDebug("Face scan started (deepface backend).");
     if (!visVideoEl || !visVideoEl.srcObject || !visVideoEl.videoWidth || !visVideoEl.videoHeight) {
@@ -2743,22 +2763,61 @@
       }
     }
     const frames = [];
-    const scanStart = Date.now();
-    for (let i = 0; i < VIS_SCAN_FRAME_COUNT; i += 1) {
-      await new Promise(function (resolve) { setTimeout(resolve, VIS_ENROLL_FRAME_DELAY_MS); });
+    const capturedByBucket = {};
+    let idleLoops = 0;
+    while (Object.keys(capturedByBucket).length < VIS_ENROLL_GUIDANCE_BUCKETS.length || frames.length < VIS_SCAN_FRAME_COUNT) {
+      await new Promise(function (resolve) { setTimeout(resolve, VIS_ENROLL_CAPTURE_DELAY_MS); });
       const frame = captureVisFrameDataUrl();
-      if (frame) frames.push(frame);
-      if ((Date.now() - scanStart) > 12000) {
-        visScanning = false;
-        visSetupState.step = 3;
+      if (!frame) {
+        idleLoops += 1;
+        visSetupState.enrollmentInstruction = "Camera frame unavailable. Keep the camera on your face.";
         try { renderVisSetup(); } catch (e) {}
-        pushVisDebug("Face scan timed out. Please retry.");
-        addLog("assistant", "Tutor: Setup scan timed out. Please try again.");
-        return;
+        continue;
       }
-      const bar = visSetupEl ? visSetupEl.querySelector(".pi-vis-progress-bar") : null;
-      if (bar) bar.style.width = Math.min(100, Math.round(((i + 1) / VIS_SCAN_FRAME_COUNT) * 100)) + "%";
+      let detect = null;
+      try {
+        detect = await postVisJson(getVisEndpoint("__VIS_DETECT_FACE_URL", "/detect-face"), { image: frame });
+      } catch (e) {
+        detect = null;
+      }
+      if (!detect || !detect.face_detected || !Array.isArray(detect.faces) || !detect.faces.length) {
+        idleLoops += 1;
+        visSetupState.enrollmentInstruction = "No face detected. Look straight at the camera.";
+        try { renderVisSetup(); } catch (e) {}
+        continue;
+      }
+      idleLoops = 0;
+      const primaryFace = selectPrimaryFace(detect.faces);
+      const box = getFaceBox(primaryFace);
+      const bucket = classifyEnrollmentBucket(box);
+      if (!bucket) {
+        visSetupState.enrollmentInstruction = "Move closer and keep your full face centered.";
+        try { renderVisSetup(); } catch (e) {}
+        continue;
+      }
+      if (!capturedByBucket[bucket]) {
+        capturedByBucket[bucket] = frame;
+        pushVisDebug("Captured enrollment view: " + bucket);
+      }
+      const nextBucket = nextEnrollmentBucket(capturedByBucket);
+      visSetupState.enrollmentCoverage = Object.assign({}, capturedByBucket);
+      visSetupState.enrollmentInstruction = enrollmentInstructionForBucket(nextBucket);
+      try { renderVisSetup(); } catch (e) {}
+      if (frames.length < VIS_SCAN_FRAME_COUNT) {
+        frames.push(frame);
+      }
+      if (bucket === "center" && frames.length < VIS_SCAN_FRAME_COUNT) {
+        frames.push(frame);
+      }
+      if (idleLoops > 150) {
+        break;
+      }
     }
+    VIS_ENROLL_GUIDANCE_BUCKETS.forEach(function (bucket) {
+      if (capturedByBucket[bucket] && frames.length < (VIS_SCAN_FRAME_COUNT + VIS_ENROLL_GUIDANCE_BUCKETS.length)) {
+        frames.push(capturedByBucket[bucket]);
+      }
+    });
     visScanning = false;
     if (!frames.length) {
       visSetupState.step = 3;
@@ -2772,6 +2831,7 @@
       frames: frames.slice(0),
       frameCount: frames.length,
       signatureModel: "deepface",
+      coverage: Object.keys(capturedByBucket),
     };
     visSetupState.step = 5;
     renderVisSetup();
@@ -2820,6 +2880,7 @@
       setVisScanStatus("Recognizing user", { label: "Scanning", offline: true });
       return;
     }
+    visLastRecognitionAt = Date.now();
     dbg("recognized user = true");
     dbg("recognized users username = " + String(userId || "unknown"));
     const activeUser = visActiveProfile && visActiveProfile.user_identity && visActiveProfile.user_identity.username
@@ -2866,6 +2927,10 @@
       if (!visIndexLoaded) await loadVisProfilesFromCloud();
       const result = await processVisBackendFrame();
       if (!result || !result.faceDetected) {
+        if (visLastRecognitionAt && (Date.now() - visLastRecognitionAt) < VIS_RECOGNITION_HOLD_MS && visActiveProfile) {
+          setVisScanStatus("Recognized user: " + String(visLastKnownUserLabel || "User"), { label: "Scanning", offline: false });
+          return;
+        }
         visFacePresent = false;
         visRecognizingSince = 0;
         visRecognitionCandidate = { profileFile: "", count: 0 };
@@ -2875,6 +2940,10 @@
         return;
       }
       if (!result.liveness_passed) {
+        if (visLastRecognitionAt && (Date.now() - visLastRecognitionAt) < VIS_RECOGNITION_HOLD_MS && visActiveProfile) {
+          setVisScanStatus("Recognized user: " + String(visLastKnownUserLabel || "User"), { label: "Scanning", offline: false });
+          return;
+        }
         visFacePresent = false;
         visRecognizingSince = 0;
         visRecognitionCandidate = { profileFile: "", count: 0 };
@@ -3102,6 +3171,45 @@
     }
     setVisOfflineState(true, "Scanning for face...");
     scheduleVisFrameLoop(300);
+  }
+
+  function classifyEnrollmentBucket(box) {
+    if (!box) return "";
+    const width = Number(box.width || 0);
+    const height = Number(box.height || 0);
+    const x = Number(box.x || 0);
+    const y = Number(box.y || 0);
+    if (width <= 0 || height <= 0) return "";
+    const cx = x + (width / 2);
+    const cy = y + (height / 2);
+    const area = width * height;
+    if (area >= 0.2) return "close";
+    if (cx < 0.38) return "left";
+    if (cx > 0.62) return "right";
+    if (cy < 0.38) return "up";
+    if (cy > 0.62) return "down";
+    return "center";
+  }
+
+  function nextEnrollmentBucket(coverage) {
+    const state = coverage && typeof coverage === "object" ? coverage : {};
+    for (let i = 0; i < VIS_ENROLL_GUIDANCE_BUCKETS.length; i += 1) {
+      const bucket = VIS_ENROLL_GUIDANCE_BUCKETS[i];
+      if (!state[bucket]) return bucket;
+    }
+    return "";
+  }
+
+  function enrollmentInstructionForBucket(bucket) {
+    switch (String(bucket || "")) {
+      case "left": return "Turn slightly to your left until the left side is scanned.";
+      case "right": return "Turn slightly to your right until the right side is scanned.";
+      case "up": return "Tilt your face upward until the upper face is scanned.";
+      case "down": return "Tilt your face downward until the lower face is scanned.";
+      case "close": return "Move a little closer so the scan captures more facial detail.";
+      case "center": return "Look straight at the camera for the center scan.";
+      default: return "Scan complete. Preparing your biometric identity signature.";
+    }
   }
 
   function clearIdleTimer() {
