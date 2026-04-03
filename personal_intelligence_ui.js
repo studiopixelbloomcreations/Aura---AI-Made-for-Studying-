@@ -46,6 +46,12 @@
   const VIS_PROFILE_DOC_LIMIT = 100;
   const VIS_FACE_PROCESS_ENDPOINT = "/process-face";
   const VIS_FACE_REGISTER_ENDPOINT = "/register-user";
+  const VIS_ACTIVE_FACE_ENGINE = "faceapi";
+  const VIS_FACE_API_SCRIPT_URL = "https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js";
+  const VIS_FACE_API_MODEL_URL = "https://justadudewhohacks.github.io/face-api.js/models";
+  const VIS_FACE_API_INPUT_SIZE = 416;
+  const VIS_FACE_API_SCORE_THRESHOLD = 0.45;
+  const VIS_FACE_API_MATCH_DISTANCE = 0.58;
   function isOffline() {
     return window.__OFFLINE_MODE__ === true || navigator.onLine === false;
   }
@@ -162,6 +168,9 @@
   let visBackendRequestBusy = false;
   let visBackendBackoffUntil = 0;
   let visLastBackendError = "";
+  let visFaceApiLoadPromise = null;
+  let visFaceApiReady = false;
+  let visLivenessSamples = [];
   let visLastFaceSeenAt = 0;
   let visLastEmotion = "neutral";
   let visLightingLow = false;
@@ -1188,6 +1197,183 @@
     return data;
   }
 
+  function loadExternalScriptOnce(src, id) {
+    const existing = id ? document.getElementById(id) : null;
+    if (existing) {
+      if (existing.getAttribute("data-loaded") === "true") return Promise.resolve(true);
+      return new Promise(function (resolve, reject) {
+        existing.addEventListener("load", function () { resolve(true); }, { once: true });
+        existing.addEventListener("error", function () { reject(new Error("SCRIPT_LOAD_FAILED")); }, { once: true });
+      });
+    }
+    return new Promise(function (resolve, reject) {
+      const script = document.createElement("script");
+      if (id) script.id = id;
+      script.src = src;
+      script.async = true;
+      script.defer = true;
+      script.onload = function () {
+        script.setAttribute("data-loaded", "true");
+        resolve(true);
+      };
+      script.onerror = function () {
+        reject(new Error("SCRIPT_LOAD_FAILED"));
+      };
+      document.head.appendChild(script);
+    });
+  }
+
+  async function ensureVisFaceApiReady() {
+    if (VIS_ACTIVE_FACE_ENGINE !== "faceapi") return false;
+    if (visFaceApiReady && window.faceapi) return true;
+    if (visFaceApiLoadPromise) return visFaceApiLoadPromise;
+    visFaceApiLoadPromise = (async function () {
+      await loadExternalScriptOnce(VIS_FACE_API_SCRIPT_URL, "piFaceApiScript");
+      if (!window.faceapi) throw new Error("face-api.js unavailable");
+      await Promise.all([
+        window.faceapi.nets.tinyFaceDetector.loadFromUri(VIS_FACE_API_MODEL_URL),
+        window.faceapi.nets.faceLandmark68Net.loadFromUri(VIS_FACE_API_MODEL_URL),
+        window.faceapi.nets.faceRecognitionNet.loadFromUri(VIS_FACE_API_MODEL_URL),
+        window.faceapi.nets.faceExpressionNet.loadFromUri(VIS_FACE_API_MODEL_URL),
+      ]);
+      visFaceApiReady = true;
+      visLastBackendError = "";
+      pushVisDebug("face-api.js ready");
+      return true;
+    })().catch(function (error) {
+      visFaceApiReady = false;
+      visFaceApiLoadPromise = null;
+      visLastBackendError = String((error && error.message) || error || "face-api load failed");
+      pushVisDebug("face-api.js load failed: " + visLastBackendError);
+      return false;
+    });
+    return visFaceApiLoadPromise;
+  }
+
+  function averagePoint(points, name) {
+    const list = Array.isArray(points) ? points : [];
+    if (!list.length) return null;
+    let sx = 0;
+    let sy = 0;
+    for (let i = 0; i < list.length; i += 1) {
+      sx += Number(list[i].x || 0);
+      sy += Number(list[i].y || 0);
+    }
+    return {
+      name: String(name || "point"),
+      x: sx / list.length,
+      y: sy / list.length,
+    };
+  }
+
+  function toNormalizedFaceApiLandmarks(landmarks, vw, vh) {
+    if (!landmarks || !vw || !vh) return [];
+    const out = [];
+    const positions = Array.isArray(landmarks.positions) ? landmarks.positions : [];
+    for (let i = 0; i < positions.length; i += 1) {
+      const pt = positions[i];
+      out.push({
+        name: "p" + i,
+        x: Number(pt.x || 0) / vw,
+        y: Number(pt.y || 0) / vh,
+      });
+    }
+    const leftEye = averagePoint(typeof landmarks.getLeftEye === "function" ? landmarks.getLeftEye() : [], "left_eye");
+    const rightEye = averagePoint(typeof landmarks.getRightEye === "function" ? landmarks.getRightEye() : [], "right_eye");
+    const nosePts = typeof landmarks.getNose === "function" ? landmarks.getNose() : [];
+    const nose = averagePoint(nosePts.slice(Math.max(0, nosePts.length - 3)), "nose");
+    const mouth = typeof landmarks.getMouth === "function" ? landmarks.getMouth() : [];
+    const mouthLeft = mouth.length ? { name: "mouth_left", x: Number(mouth[0].x || 0) / vw, y: Number(mouth[0].y || 0) / vh } : null;
+    const mouthRight = mouth.length ? { name: "mouth_right", x: Number(mouth[6] && mouth[6].x || 0) / vw, y: Number(mouth[6] && mouth[6].y || 0) / vh } : null;
+    [leftEye, rightEye, nose].forEach(function (pt) {
+      if (pt) {
+        pt.x = Number(pt.x || 0) / vw;
+        pt.y = Number(pt.y || 0) / vh;
+        out.push(pt);
+      }
+    });
+    if (mouthLeft) out.push(mouthLeft);
+    if (mouthRight) out.push(mouthRight);
+    return out;
+  }
+
+  function faceApiExpressionsToEmotion(expressions) {
+    if (!expressions || typeof expressions !== "object") return "neutral";
+    let bestLabel = "neutral";
+    let bestScore = -1;
+    Object.keys(expressions).forEach(function (key) {
+      const score = Number(expressions[key]);
+      if (Number.isFinite(score) && score > bestScore) {
+        bestScore = score;
+        bestLabel = key;
+      }
+    });
+    return String(bestLabel || "neutral").toLowerCase();
+  }
+
+  function faceApiSignatureForLiveness(face) {
+    const landmarks = getFaceLandmarks(face);
+    const nose = landmarks.find(function (pt) { return String(pt && pt.name || "") === "nose"; }) || landmarks[0] || null;
+    const box = getFaceBox(face);
+    if (!nose || !box) return "";
+    return [
+      Math.round(Number(nose.x || 0) * 1000),
+      Math.round(Number(nose.y || 0) * 1000),
+      Math.round(Number(box.x || 0) * 1000),
+      Math.round(Number(box.y || 0) * 1000),
+      Math.round(Number(box.width || 0) * 1000),
+      Math.round(Number(box.height || 0) * 1000),
+    ].join(":");
+  }
+
+  function updateFaceApiLiveness(face) {
+    const signature = faceApiSignatureForLiveness(face);
+    if (!signature) {
+      visLivenessSamples = [];
+      return false;
+    }
+    visLivenessSamples.push(signature);
+    if (visLivenessSamples.length > 6) visLivenessSamples = visLivenessSamples.slice(-6);
+    const unique = new Set(visLivenessSamples);
+    return visLivenessSamples.length >= 3 && unique.size >= 2;
+  }
+
+  function euclideanDistance(a, b) {
+    const x = Array.isArray(a) ? a : [];
+    const y = Array.isArray(b) ? b : [];
+    const n = Math.min(x.length, y.length);
+    if (!n) return Infinity;
+    let sum = 0;
+    for (let i = 0; i < n; i += 1) {
+      const d = Number(x[i] || 0) - Number(y[i] || 0);
+      sum += d * d;
+    }
+    return Math.sqrt(sum);
+  }
+
+  function findVisFaceApiMatch(descriptor) {
+    const input = Array.isArray(descriptor) ? descriptor : [];
+    if (!input.length || !visRecognitionIndex.length) return null;
+    let best = null;
+    for (let i = 0; i < visRecognitionIndex.length; i += 1) {
+      const row = visRecognitionIndex[i];
+      if (!row || !Array.isArray(row.vector) || !row.vector.length) continue;
+      const model = String(row.vector_model || "").toLowerCase();
+      if (model && model !== "faceapi") continue;
+      const distance = euclideanDistance(input, row.vector);
+      if (!best || distance < best.distance) {
+        best = {
+          profileFile: row.profileFile,
+          username: row.username,
+          profile: row.profile || null,
+          distance: distance,
+        };
+      }
+    }
+    if (!best || best.distance > VIS_FACE_API_MATCH_DISTANCE) return null;
+    return best;
+  }
+
   function isVisBackendBusyError(error) {
     const message = String((error && error.message) || error || "").toLowerCase();
     return (
@@ -1208,7 +1394,79 @@
     return canvas.toDataURL("image/jpeg", 0.82);
   }
 
+  async function processVisFaceApiFrame() {
+    const ready = await ensureVisFaceApiReady();
+    if (!ready || !window.faceapi || !visVideoEl) {
+      throw new Error(visLastBackendError || "face-api unavailable");
+    }
+    const faceapi = window.faceapi;
+    const detections = await faceapi
+      .detectAllFaces(
+        visVideoEl,
+        new faceapi.TinyFaceDetectorOptions({
+          inputSize: VIS_FACE_API_INPUT_SIZE,
+          scoreThreshold: VIS_FACE_API_SCORE_THRESHOLD,
+        })
+      )
+      .withFaceLandmarks()
+      .withFaceExpressions()
+      .withFaceDescriptors();
+    const vw = Number(visVideoEl.videoWidth || 0);
+    const vh = Number(visVideoEl.videoHeight || 0);
+    const faces = (Array.isArray(detections) ? detections : []).map(function (item) {
+      const box = item && item.detection && item.detection.box ? item.detection.box : null;
+      const landmarks = toNormalizedFaceApiLandmarks(item && item.landmarks, vw, vh);
+      const faceBox = box ? {
+        x: Number(box.x || 0) / Math.max(1, vw),
+        y: Number(box.y || 0) / Math.max(1, vh),
+        width: Number(box.width || 0) / Math.max(1, vw),
+        height: Number(box.height || 0) / Math.max(1, vh),
+      } : null;
+      return {
+        confidence: Number(item && item.detection && item.detection.score || 0),
+        box: faceBox,
+        landmarks: landmarks,
+        pose_hint: faceBox ? estimatePoseHint(faceBox, landmarks) : "",
+        descriptor: Array.isArray(item && item.descriptor) ? item.descriptor.slice(0) : Array.from((item && item.descriptor) || []),
+        emotion: faceApiExpressionsToEmotion(item && item.expressions),
+        expressions: item && item.expressions ? item.expressions : {},
+      };
+    }).filter(function (face) {
+      return !!(face && face.box && face.box.width > 0 && face.box.height > 0);
+    });
+    if (!faces.length) {
+      visLivenessSamples = [];
+      return {
+        faceDetected: false,
+        faceCount: 0,
+        faces: [],
+        user_id: null,
+        similarity: 0,
+        confidence: 0,
+        liveness_passed: false,
+        emotion: "neutral",
+      };
+    }
+    const primaryFace = selectPrimaryFace(faces);
+    const liveness = updateFaceApiLiveness(primaryFace);
+    const match = findVisFaceApiMatch(primaryFace && primaryFace.descriptor);
+    return {
+      faceDetected: true,
+      faceCount: faces.length,
+      faces: faces,
+      user_id: match && match.username ? String(match.username) : null,
+      similarity: match ? Math.max(0, Math.round((1 - Math.min(1, match.distance)) * 100)) : 0,
+      confidence: Number(primaryFace && primaryFace.confidence || 0),
+      liveness_passed: liveness,
+      emotion: primaryFace && primaryFace.expressions ? primaryFace.expressions : (primaryFace && primaryFace.emotion ? primaryFace.emotion : "neutral"),
+      descriptor: primaryFace && Array.isArray(primaryFace.descriptor) ? primaryFace.descriptor.slice(0) : [],
+    };
+  }
+
   async function processVisBackendFrame() {
+    if (VIS_ACTIVE_FACE_ENGINE === "faceapi") {
+      return await processVisFaceApiFrame();
+    }
     if (visBackendRequestBusy) return null;
     const image = captureVisFrameDataUrl();
     if (!image) return null;
@@ -1495,6 +1753,38 @@
     const w = Math.max(1, Math.round((maxX - minX) * vw));
     const h = Math.max(1, Math.round((maxY - minY) * vh));
     return { x, y, width: w, height: h };
+  }
+
+  function estimatePoseHint(box, landmarks) {
+    const lookup = {};
+    const list = Array.isArray(landmarks) ? landmarks : [];
+    for (let i = 0; i < list.length; i += 1) {
+      const pt = list[i];
+      const name = String(pt && pt.name || "");
+      if (name && !(name in lookup)) lookup[name] = pt;
+    }
+    const leftEye = lookup.left_eye;
+    const rightEye = lookup.right_eye;
+    const nose = lookup.nose;
+    if (leftEye && rightEye && nose) {
+      const eyeMidX = (Number(leftEye.x || 0) + Number(rightEye.x || 0)) / 2;
+      const noseDx = Number(nose.x || 0) - eyeMidX;
+      if (noseDx <= -0.03) return "left";
+      if (noseDx >= 0.03) return "right";
+    }
+    const x = Number(box && box.x || 0);
+    const y = Number(box && box.y || 0);
+    const w = Number(box && box.width || 0);
+    const h = Number(box && box.height || 0);
+    const cx = x + (w / 2);
+    const cy = y + (h / 2);
+    const area = w * h;
+    if (area >= 0.2) return "close";
+    if (cx < 0.38) return "left";
+    if (cx > 0.62) return "right";
+    if (cy < 0.38) return "up";
+    if (cy > 0.62) return "down";
+    return "center";
   }
 
   function estimateFrameLuma() {
@@ -2887,26 +3177,29 @@
     try {
       const identityHints = getSignedInIdentityHints();
       const requested = sanitizeVisUsername(visSetupState.username) || sanitizeVisUsername(identityHints.username) || "user";
-      const signatureModel = "deepface";
+      const signatureModel = String((payload && payload.signatureModel) || VIS_ACTIVE_FACE_ENGINE || "faceapi");
+      const descriptorVectors = Array.isArray(payload && payload.descriptors) ? payload.descriptors.filter(Array.isArray) : [];
+      const averagedDescriptor = averageVectors(descriptorVectors);
+      if (signatureModel === "faceapi" && !averagedDescriptor.length) throw new Error("face-api descriptor capture failed");
       const profile = getDefaultVisProfile(requested, identityHints.account_identifier, {
         scan_mode: visSetupState.infrared ? "infrared_assisted" : "standard_rgb",
         frame_count: payload.frameCount || 0,
-        landmark_vectors: [],
-        feature_embedding: [],
-        feature_vector: [],
+        landmark_vectors: Array.isArray(payload && payload.landmarkVectors) ? payload.landmarkVectors.slice(0) : [],
+        feature_embedding: averagedDescriptor.slice(0),
+        feature_vector: averagedDescriptor.slice(0),
         signature_model: signatureModel,
         symmetry_metrics: {
-          embedding_dimensions: 0,
+          embedding_dimensions: averagedDescriptor.length,
           sample_count: payload.frameCount || 0,
         },
         geometry_map: {
-          geometry_snapshots: [],
-          extraction: "deepface backend registration",
+          geometry_snapshots: Array.isArray(payload && payload.geometrySnapshots) ? payload.geometrySnapshots.slice(0) : [],
+          extraction: "face-api.js browser registration",
         },
         created_at: nowIso(),
       });
       profile.face_registration = {
-        provider: "deepface",
+        provider: "face-api.js",
         registered_frames: payload.frameCount || 0,
         coverage: Array.isArray(payload.coverage) ? payload.coverage.slice(0) : [],
       };
@@ -2916,13 +3209,6 @@
       visSetupState.pendingProfile = null;
       renderVisSetup();
       pushVisDebug("Creating identity file and waiting for retrieval.");
-      await postVisJson(getVisEndpoint("__VIS_FACE_REGISTER_URL", VIS_FACE_REGISTER_ENDPOINT), {
-        username: requested,
-        images: payload.frames.slice(0),
-        personalization_profile: profile.personalization_profile || {},
-        ai_config: profile.ai_config || {},
-        memory: profile.memory || {},
-      });
       await saveVisProfileToCloud(profile);
       await createVisProfileArtifactInRepo(profile);
       const retrievedProfile = await waitForRetrievedVisProfile(profile);
@@ -2933,11 +3219,12 @@
         existingIndex.username = String((retrievedProfile.user_identity && retrievedProfile.user_identity.username) || existingIndex.username || "");
         existingIndex.profile = retrievedProfile;
         existingIndex.vector_model = signatureModel;
+        existingIndex.vector = averagedDescriptor.slice(0);
       } else {
         visRecognitionIndex.push({
           profileFile: retrievedProfile.file_name,
           username: retrievedProfile.user_identity.username,
-          vector: [],
+          vector: averagedDescriptor.slice(0),
           profile: retrievedProfile,
           vector_model: signatureModel,
         });
@@ -2999,7 +3286,7 @@
     visSetupState.enrollmentCoverage = {};
     visSetupState.enrollmentInstruction = "Look straight at the camera.";
     try { renderVisSetup(); } catch (e) { pushVisDebug("scan step render failed: " + String((e && e.message) || e)); }
-    pushVisDebug("Face scan started (deepface backend).");
+    pushVisDebug("Face scan started (face-api.js browser runtime).");
     if (!visVideoEl || !visVideoEl.srcObject || !visVideoEl.videoWidth || !visVideoEl.videoHeight) {
       const cameraReady = await ensureVisCameraReady();
       if (!cameraReady) {
@@ -3011,6 +3298,9 @@
       }
     }
     const frames = [];
+    const descriptors = [];
+    const landmarkVectors = [];
+    const geometrySnapshots = [];
     const capturedByBucket = {};
     let idleLoops = 0;
     while (Object.keys(capturedByBucket).length < VIS_ENROLL_GUIDANCE_BUCKETS.length || frames.length < VIS_SCAN_FRAME_COUNT) {
@@ -3024,11 +3314,11 @@
       }
       let detect = null;
       try {
-        detect = await postVisJson(getVisEndpoint("__VIS_DETECT_FACE_URL", "/detect-face"), { image: frame });
+        detect = await processVisFaceApiFrame();
       } catch (e) {
         detect = null;
       }
-      if (!detect || !detect.face_detected || !Array.isArray(detect.faces) || !detect.faces.length) {
+      if (!detect || !detect.faceDetected || !Array.isArray(detect.faces) || !detect.faces.length) {
         renderVisTrackingOverlay([], null);
         idleLoops += 1;
         visSetupState.enrollmentInstruction = "No face detected. Look straight at the camera.";
@@ -3056,6 +3346,17 @@
       if (frames.length < VIS_SCAN_FRAME_COUNT) {
         frames.push(frame);
       }
+      const faceDescriptor = primaryFace && Array.isArray(primaryFace.descriptor) ? primaryFace.descriptor.slice(0) : [];
+      if (faceDescriptor.length) descriptors.push(faceDescriptor);
+      const faceLandmarks = getFaceLandmarks(primaryFace);
+      if (faceLandmarks.length) landmarkVectors.push(faceLandmarks);
+      if (box) {
+        geometrySnapshots.push({
+          box: Object.assign({}, box),
+          pose_hint: String(primaryFace.pose_hint || bucket || "center"),
+          captured_at: nowIso(),
+        });
+      }
       if (bucket === "center" && frames.length < VIS_SCAN_FRAME_COUNT) {
         frames.push(frame);
       }
@@ -3076,12 +3377,15 @@
       addLog("assistant", "Tutor: Setup scan failed. Keep face in frame and retry.");
       return;
     }
-    pushVisDebug("Scan completed with backend registration frames: " + String(frames.length));
+    pushVisDebug("Scan completed with face-api.js registration frames: " + String(frames.length));
     visPendingEnrollmentPayload = {
       frames: frames.slice(0),
       frameCount: frames.length,
-      signatureModel: "deepface",
+      signatureModel: "faceapi",
       coverage: Object.keys(capturedByBucket),
+      descriptors: descriptors.slice(0),
+      landmarkVectors: landmarkVectors.slice(0),
+      geometrySnapshots: geometrySnapshots.slice(0),
     };
     visSetupState.step = 5;
     renderVisSetup();
@@ -3178,7 +3482,7 @@
         }
       }
       if (!visIndexLoaded) await loadVisProfilesFromCloud();
-      if (visBackendBackoffUntil > Date.now()) {
+      if (VIS_ACTIVE_FACE_ENGINE !== "faceapi" && visBackendBackoffUntil > Date.now()) {
         setVisScanStatus("VIS backend busy - retrying", { label: "Offline", offline: true });
         return;
       }
@@ -3234,6 +3538,10 @@
         visBackendBackoffUntil = Date.now() + VIS_BACKEND_BUSY_RETRY_MS;
         visFacePresent = false;
         setVisScanStatus("VIS backend busy - retrying", { label: "Offline", offline: true });
+      } else if (VIS_ACTIVE_FACE_ENGINE === "faceapi") {
+        visLastBackendError = String((e && e.message) || e || "face-api unavailable");
+        visFacePresent = false;
+        setVisScanStatus("Face Runtime Unavailable", { label: "Offline", offline: true });
       }
       dbg("VIS frame processing failed", e && e.message);
     } finally {
@@ -3363,6 +3671,9 @@
     closeVisTestStage();
     visAllowTestingStage = false;
     visPendingEnrollmentPayload = null;
+    if (VIS_ACTIVE_FACE_ENGINE === "faceapi") {
+      ensureVisFaceApiReady().catch(function () {});
+    }
     await loadVisProfilesFromCloud();
     window.PI_VIS_HOOKS = {
       isManagedFlowActive: function () {
