@@ -34,7 +34,6 @@
   const VIS_LIGHTING_MIN_LUMA = 0.22;
   const VIS_SCAN_INTERVAL_MS = 180;
   const VIS_BACKEND_BUSY_RETRY_MS = 30000;
-  const VIS_SCAN_FRAME_COUNT = 16;
   const VIS_RECOGNITION_HOLD_MS = 2500;
   const VIS_ENROLL_GUIDANCE_BUCKETS = ["center", "left", "right", "up", "down", "close"];
   const VIS_ENROLL_CAPTURE_DELAY_MS = 220;
@@ -51,7 +50,10 @@
   const VIS_FACE_API_MODEL_URL = "https://justadudewhohacks.github.io/face-api.js/models";
   const VIS_FACE_API_MIN_CONFIDENCE = 0.5;
   const VIS_FACE_API_MATCH_DISTANCE = 0.58;
-  const VIS_ENROLL_UNLOCK_CONFIDENCE = 0.5;
+  const VIS_ENROLL_MIN_CONFIDENCE = 0.5;
+  const VIS_ENROLL_MIN_STABLE_SAMPLES = 8;
+  const VIS_ENROLL_STABILITY_WINDOW = 6;
+  const VIS_ENROLL_MAX_AVG_DISTANCE = 0.24;
   function isOffline() {
     return window.__OFFLINE_MODE__ === true || navigator.onLine === false;
   }
@@ -206,6 +208,7 @@
     enrollmentInstruction: "",
     enrollmentCaptured: 0,
     enrollmentConfidence: 0,
+    enrollmentStable: false,
   };
   let visPersonalizeOpen = false;
   let visPersonalizeState = {
@@ -2153,6 +2156,21 @@
     return out;
   }
 
+  function enrollmentDescriptorStable(vectors) {
+    const src = Array.isArray(vectors) ? vectors.filter(Array.isArray) : [];
+    if (src.length < VIS_ENROLL_MIN_STABLE_SAMPLES) return false;
+    const recent = src.slice(-VIS_ENROLL_STABILITY_WINDOW);
+    if (recent.length < Math.min(VIS_ENROLL_STABILITY_WINDOW, VIS_ENROLL_MIN_STABLE_SAMPLES)) return false;
+    const avg = averageVectors(recent);
+    if (!avg.length) return false;
+    let totalDistance = 0;
+    for (let i = 0; i < recent.length; i += 1) {
+      totalDistance += euclideanDistance(recent[i], avg);
+    }
+    const meanDistance = totalDistance / Math.max(1, recent.length);
+    return meanDistance <= VIS_ENROLL_MAX_AVG_DISTANCE;
+  }
+
   function addLog(role, text) {
     const row = document.createElement("div");
     row.className = "pi-log-row " + (role === "user" ? "user" : "assistant");
@@ -3224,6 +3242,7 @@
       enrollmentInstruction: "",
       enrollmentCaptured: 0,
       enrollmentConfidence: 0,
+      enrollmentStable: false,
     });
     setAssistantStateForVisOffline("Setup required - enroll visual identity");
     panel.classList.add("pi-vis-setup-open");
@@ -3290,7 +3309,7 @@
       if (bar) bar.style.width = ready ? "100%" : "72%";
     } else {
       const captured = Math.max(0, Number(visSetupState.enrollmentCaptured || 0));
-      const pct = Math.round((captured / Math.max(1, VIS_SCAN_FRAME_COUNT)) * 100);
+      const pct = visSetupState.enrollmentStable ? 100 : Math.min(94, Math.round(Math.min(captured, VIS_ENROLL_MIN_STABLE_SAMPLES) / Math.max(1, VIS_ENROLL_MIN_STABLE_SAMPLES) * 100));
       const instruction = String(visSetupState.enrollmentInstruction || "Keep your face inside the frame while face-api.js scans.");
       body.innerHTML =
         '<p>Scanning in progress...</p>' +
@@ -3301,8 +3320,9 @@
         '<div class="pi-vis-note">' + instruction.replace(/[<>&]/g, function (ch) {
           return ch === "<" ? "&lt;" : (ch === ">" ? "&gt;" : "&amp;");
         }) + '</div>' +
-        '<div class="pi-vis-note">Native samples captured: ' + String(captured) + " / " + String(VIS_SCAN_FRAME_COUNT) + ".</div>" +
-        '<div class="pi-vis-note">Live confidence: ' + Number(visSetupState.enrollmentConfidence || 0).toFixed(2) + ' / ' + VIS_ENROLL_UNLOCK_CONFIDENCE.toFixed(2) + '.</div>';
+        '<div class="pi-vis-note">Native samples captured: ' + String(captured) + '.</div>' +
+        '<div class="pi-vis-note">Live confidence: ' + Number(visSetupState.enrollmentConfidence || 0).toFixed(2) + ' / ' + VIS_ENROLL_MIN_CONFIDENCE.toFixed(2) + '.</div>' +
+        '<div class="pi-vis-note">Registration stability: ' + (visSetupState.enrollmentStable ? 'stable - ready to continue.' : 'measuring until your face signature is consistent.') + '</div>';
       const bar = body.querySelector(".pi-vis-progress-bar");
       if (bar) bar.style.width = pct + "%";
     }
@@ -3486,6 +3506,7 @@
     visSetupState.enrollmentCoverage = {};
     visSetupState.enrollmentCaptured = 0;
     visSetupState.enrollmentConfidence = 0;
+    visSetupState.enrollmentStable = false;
     visSetupState.enrollmentInstruction = "Keep your face inside the frame while face-api.js scans.";
     try { renderVisSetup(); } catch (e) { pushVisDebug("scan step render failed: " + String((e && e.message) || e)); }
     pushVisDebug("Face scan started (face-api.js browser runtime).");
@@ -3503,8 +3524,9 @@
     const descriptors = [];
     const landmarkVectors = [];
     const geometrySnapshots = [];
+    const confidenceSamples = [];
     let idleLoops = 0;
-    while (descriptors.length < VIS_SCAN_FRAME_COUNT) {
+    while (true) {
       await new Promise(function (resolve) { setTimeout(resolve, VIS_ENROLL_CAPTURE_DELAY_MS); });
       const frame = captureVisFrameDataUrl();
       if (!frame) {
@@ -3533,7 +3555,8 @@
         continue;
       }
       const primaryFace = selectPrimaryFace(detect.faces);
-      visSetupState.enrollmentConfidence = Number(primaryFace && primaryFace.confidence || 0);
+      const liveConfidence = Number(primaryFace && primaryFace.confidence || 0);
+      visSetupState.enrollmentConfidence = liveConfidence;
       renderVisTrackingOverlay(detect.faces, primaryFace);
       const faceDescriptor = primaryFace && Array.isArray(primaryFace.descriptor) ? primaryFace.descriptor.slice(0) : [];
       if (!faceDescriptor.length) {
@@ -3542,7 +3565,9 @@
         continue;
       }
       descriptors.push(faceDescriptor);
-      if (frames.length < VIS_SCAN_FRAME_COUNT) frames.push(frame);
+      frames.push(frame);
+      confidenceSamples.push(liveConfidence);
+      if (confidenceSamples.length > VIS_ENROLL_STABILITY_WINDOW) confidenceSamples.shift();
       const faceLandmarks = getFaceLandmarks(primaryFace);
       if (faceLandmarks.length) landmarkVectors.push(faceLandmarks);
       const box = getFaceBox(primaryFace);
@@ -3555,10 +3580,17 @@
         });
       }
       visSetupState.enrollmentCaptured = descriptors.length;
-      visSetupState.enrollmentInstruction = "Capturing native face-api.js samples: " + String(descriptors.length) + " / " + String(VIS_SCAN_FRAME_COUNT) + ".";
+      const stableDescriptors = enrollmentDescriptorStable(descriptors);
+      const avgConfidence = confidenceSamples.length
+        ? (confidenceSamples.reduce(function (sum, n) { return sum + Number(n || 0); }, 0) / confidenceSamples.length)
+        : 0;
+      visSetupState.enrollmentStable = !!(stableDescriptors && avgConfidence >= VIS_ENROLL_MIN_CONFIDENCE);
+      visSetupState.enrollmentInstruction = visSetupState.enrollmentStable
+        ? "Face registration is stable. Continue when ready."
+        : "Capturing until your face signature becomes stable. Hold steady and keep your face centered.";
       try { renderVisSetup(); } catch (e) {}
-      if (Number(primaryFace && primaryFace.confidence || 0) >= VIS_ENROLL_UNLOCK_CONFIDENCE && descriptors.length) {
-        pushVisDebug("Enrollment unlocked at confidence " + Number(primaryFace && primaryFace.confidence || 0).toFixed(2));
+      if (visSetupState.enrollmentStable) {
+        pushVisDebug("Enrollment stabilized after " + String(descriptors.length) + " samples at avg confidence " + avgConfidence.toFixed(2));
         break;
       }
       if (idleLoops > 150) {
