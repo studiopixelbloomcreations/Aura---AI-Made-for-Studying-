@@ -158,6 +158,8 @@
   let visCameraInputIndex = -1;
   let visLastCameraSwitchAt = 0;
   const VIS_CAMERA_SWITCH_COOLDOWN_MS = 3000;
+  let visCurrentCameraScanStartedAt = 0;
+  const VIS_CAMERA_SCAN_PER_INPUT_MS = 3000;
   let visLastCameraReadyAttemptAt = 0;
   const VIS_CAMERA_READY_RETRY_MS = 2000;
   let visScanLoopTimer = null;
@@ -435,6 +437,14 @@
       (info.fps ? (" @ " + Math.round(info.fps) + "fps") : "") +
       " | " + overlayText +
       backendText;
+  }
+
+  function getCurrentVisCameraLabel() {
+    const cam = Array.isArray(visCameraInputs) && visCameraInputIndex >= 0
+      ? visCameraInputs[visCameraInputIndex]
+      : null;
+    if (cam && cam.label) return String(cam.label).trim();
+    return "camera " + String(Math.max(1, visCameraInputIndex + 1));
   }
 
   function ensureVisPreviewMounted(container) {
@@ -3526,6 +3536,11 @@
         visRecognizingSince = 0;
         visRecognitionCandidate = { profileFile: "", count: 0 };
         visNoMatchCount = 0;
+        const scanAge = visCurrentCameraScanStartedAt ? (Date.now() - visCurrentCameraScanStartedAt) : 0;
+        if (scanAge < VIS_CAMERA_SCAN_PER_INPUT_MS) {
+          setVisScanStatus("Searching " + getCurrentVisCameraLabel(), { label: "Scanning", offline: true });
+          return;
+        }
         await advanceVisCameraInput();
         pauseForVisOffline("No Face Detected");
         return;
@@ -3648,6 +3663,7 @@
       await waitForVideoReady(visVideoEl, 2500);
       window.__visVideoTarget = visVideoEl;
       visLastCameraSwitchAt = Date.now();
+      visCurrentCameraScanStartedAt = visLastCameraSwitchAt;
       dbg("VIS camera ready", visVideoEl.videoWidth + "x" + visVideoEl.videoHeight);
       return !!(visVideoEl.videoWidth && visVideoEl.videoHeight);
     } catch (e) {
@@ -3667,6 +3683,7 @@
   async function advanceVisCameraInput() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
     if (Date.now() - visLastCameraSwitchAt < VIS_CAMERA_SWITCH_COOLDOWN_MS) return false;
+    if (Date.now() - visCurrentCameraScanStartedAt < VIS_CAMERA_SCAN_PER_INPUT_MS) return false;
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const nextInputs = devices.filter(function (device) {
