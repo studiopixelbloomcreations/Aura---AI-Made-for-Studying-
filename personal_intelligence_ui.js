@@ -138,6 +138,7 @@
   let visVerificationBusy = false;
   let visVerificationProfile = null;
   let visAllowTestingStage = false;
+  let visRecognizingSince = 0;
   let visCameraInputs = [];
   let visCameraInputIndex = -1;
   let visLastCameraSwitchAt = 0;
@@ -2779,6 +2780,7 @@
 
   async function handleVisRecognitionVector(result) {
     if (!result || !result.faceDetected) {
+      visRecognizingSince = 0;
       setVisScanStatus("No Face Detected", { label: "Offline", offline: true });
       return;
     }
@@ -2787,8 +2789,15 @@
     if (!userId) {
       visNoMatchCount += 1;
       if (visNoMatchCount >= VIS_MATCH_STABLE_COUNT) {
+        if (!visRecognizingSince) visRecognizingSince = Date.now();
         if (visExpectedProfileFile) {
-          setVisScanStatus("Recognizing user", { label: "Scanning", offline: true });
+          if (Date.now() - visRecognizingSince < 1800) {
+            setVisScanStatus("Recognizing user", { label: "Scanning", offline: true });
+          } else {
+            visExpectedProfileFile = "";
+            setVisScanStatus("User Not Registered", { label: "Scanning", offline: true });
+            if (!visSetupOpen && !visPersonalizeOpen) openVisSetup();
+          }
         } else {
           if (!visUnknownFaceSince) visUnknownFaceSince = Date.now();
           if (Date.now() - visUnknownFaceSince > 2500) {
@@ -2800,6 +2809,7 @@
       return;
     }
     visUnknownFaceSince = 0;
+    visRecognizingSince = 0;
     visNoMatchCount = 0;
     if (visRecognitionCandidate.profileFile === userId) {
       visRecognitionCandidate.count += 1;
@@ -2826,6 +2836,9 @@
       if (profile) {
         setVisScanStatus("Recognized user: " + userId, { label: "Scanning", offline: false });
         await switchToVisProfile(profile);
+      } else {
+        setVisScanStatus("User Not Registered", { label: "Scanning", offline: true });
+        if (!visSetupOpen && !visPersonalizeOpen) openVisSetup();
       }
     } else {
       setVisScanStatus("Recognized user: " + userId, { label: "Scanning", offline: false });
@@ -2854,6 +2867,7 @@
       const result = await processVisBackendFrame();
       if (!result || !result.faceDetected) {
         visFacePresent = false;
+        visRecognizingSince = 0;
         visRecognitionCandidate = { profileFile: "", count: 0 };
         visNoMatchCount = 0;
         await advanceVisCameraInput();
@@ -2862,6 +2876,7 @@
       }
       if (!result.liveness_passed) {
         visFacePresent = false;
+        visRecognizingSince = 0;
         visRecognitionCandidate = { profileFile: "", count: 0 };
         visNoMatchCount = 0;
         setVisScanStatus("No Live Face Detected", { label: "Offline", offline: true });
