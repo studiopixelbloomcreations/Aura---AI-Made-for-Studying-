@@ -138,6 +138,10 @@
   let visVerificationBusy = false;
   let visVerificationProfile = null;
   let visAllowTestingStage = false;
+  let visCameraInputs = [];
+  let visCameraInputIndex = -1;
+  let visLastCameraSwitchAt = 0;
+  const VIS_CAMERA_SWITCH_COOLDOWN_MS = 3000;
   let visScanLoopTimer = null;
   let visProfileSaveTimer = null;
   let visExpectedProfileFile = "";
@@ -2813,6 +2817,7 @@
         visFacePresent = false;
         visRecognitionCandidate = { profileFile: "", count: 0 };
         visNoMatchCount = 0;
+        await advanceVisCameraInput();
         pauseForVisOffline("No Face Detected");
         return;
       }
@@ -2849,37 +2854,114 @@
   }
 
   async function ensureVisCameraReady() {
-    if (window.__visVideoTarget && window.__visVideoTarget.srcObject) {
-      const target = window.__visVideoTarget;
-      if (visVideoEl && visVideoEl !== target) {
-        visVideoEl.srcObject = target.srcObject;
-      } else {
-        visVideoEl = target;
-      }
-      try { await visVideoEl.play(); } catch (e) {}
-      await waitForVideoReady(visVideoEl, 2500);
-      return !!(visVideoEl && visVideoEl.videoWidth && visVideoEl.videoHeight);
-    }
     if (!visVideoEl) return false;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
     try {
+      if (!visCameraInputs.length) {
+        try {
+          const bootstrap = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: "user",
+              width: { ideal: 640 },
+              height: { ideal: 480 },
+              frameRate: { ideal: 24, max: 30 },
+            },
+            audio: false,
+          });
+          visVideoEl.srcObject = bootstrap;
+          await visVideoEl.play();
+          await waitForVideoReady(visVideoEl, 2500);
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          visCameraInputs = devices.filter(function (device) {
+            return device && device.kind === "videoinput";
+          });
+          if (!visCameraInputs.length) {
+            window.__visVideoTarget = visVideoEl;
+            return !!(visVideoEl.videoWidth && visVideoEl.videoHeight);
+          }
+          const bootstrapTrack = bootstrap.getVideoTracks()[0];
+          const currentId = bootstrapTrack && typeof bootstrapTrack.getSettings === "function"
+            ? String(bootstrapTrack.getSettings().deviceId || "")
+            : "";
+          if (currentId) {
+            const foundIndex = visCameraInputs.findIndex(function (device) {
+              return String(device.deviceId || "") === currentId;
+            });
+            visCameraInputIndex = foundIndex >= 0 ? foundIndex : 0;
+          } else if (visCameraInputIndex < 0) {
+            visCameraInputIndex = 0;
+          }
+        } catch (bootstrapError) {}
+      }
+
+      if (!visCameraInputs.length) {
+        const fallback = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: "user",
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            frameRate: { ideal: 24, max: 30 },
+          },
+          audio: false,
+        });
+        visVideoEl.srcObject = fallback;
+        await visVideoEl.play();
+        await waitForVideoReady(visVideoEl, 2500);
+        window.__visVideoTarget = visVideoEl;
+        return !!(visVideoEl.videoWidth && visVideoEl.videoHeight);
+      }
+
+      if (visCameraInputIndex < 0) visCameraInputIndex = 0;
+      const targetDevice = visCameraInputs[visCameraInputIndex] || visCameraInputs[0];
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: "user",
+          deviceId: targetDevice && targetDevice.deviceId ? { exact: targetDevice.deviceId } : undefined,
           width: { ideal: 640 },
           height: { ideal: 480 },
           frameRate: { ideal: 24, max: 30 },
         },
         audio: false,
       });
+      const prevStream = visVideoEl.srcObject;
+      if (prevStream && prevStream !== stream && typeof prevStream.getTracks === "function") {
+        prevStream.getTracks().forEach(function (track) {
+          try { track.stop(); } catch (e) {}
+        });
+      }
       visVideoEl.srcObject = stream;
       await visVideoEl.play();
       await waitForVideoReady(visVideoEl, 2500);
       window.__visVideoTarget = visVideoEl;
+      visLastCameraSwitchAt = Date.now();
       return !!(visVideoEl.videoWidth && visVideoEl.videoHeight);
     } catch (e) {
       dbg("VIS webcam init failed", e && e.message);
       setAssistantStateForVisOffline("Offline - camera denied");
+      return false;
+    }
+  }
+
+  async function advanceVisCameraInput() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
+    if (Date.now() - visLastCameraSwitchAt < VIS_CAMERA_SWITCH_COOLDOWN_MS) return false;
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const nextInputs = devices.filter(function (device) {
+        return device && device.kind === "videoinput";
+      });
+      if (!nextInputs.length) return false;
+      visCameraInputs = nextInputs;
+      if (visCameraInputs.length < 2) return false;
+      visCameraInputIndex = (visCameraInputIndex + 1) % visCameraInputs.length;
+      const switched = await ensureVisCameraReady();
+      if (switched) {
+        const cam = visCameraInputs[visCameraInputIndex];
+        const label = cam && cam.label ? String(cam.label).trim() : ("camera " + String(visCameraInputIndex + 1));
+        dbg("VIS switched camera input to", label);
+      }
+      return switched;
+    } catch (e) {
+      dbg("VIS camera advance failed", e && e.message);
       return false;
     }
   }
