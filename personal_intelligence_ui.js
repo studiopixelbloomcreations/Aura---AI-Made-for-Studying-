@@ -3310,7 +3310,7 @@
     } else {
       const captured = Math.max(0, Number(visSetupState.enrollmentCaptured || 0));
       const pct = visSetupState.enrollmentStable ? 100 : Math.min(94, Math.round(Math.min(captured, VIS_ENROLL_MIN_STABLE_SAMPLES) / Math.max(1, VIS_ENROLL_MIN_STABLE_SAMPLES) * 100));
-      const instruction = String(visSetupState.enrollmentInstruction || "Keep your face inside the frame while face-api.js scans.");
+      const instruction = String(visSetupState.enrollmentInstruction || "Registering face... keep your face inside the frame while the system learns your facial signature.");
       body.innerHTML =
         '<p>Scanning in progress...</p>' +
         '<div class="pi-vis-camera-stage" style="margin:12px 0 14px;position:relative;border-radius:18px;overflow:hidden;border:1px solid rgba(96,165,250,0.35);background:#020617;">' +
@@ -3507,7 +3507,7 @@
     visSetupState.enrollmentCaptured = 0;
     visSetupState.enrollmentConfidence = 0;
     visSetupState.enrollmentStable = false;
-    visSetupState.enrollmentInstruction = "Keep your face inside the frame while face-api.js scans.";
+    visSetupState.enrollmentInstruction = "Registering face... keep your face inside the frame while the system learns your facial signature.";
     try { renderVisSetup(); } catch (e) { pushVisDebug("scan step render failed: " + String((e && e.message) || e)); }
     pushVisDebug("Face scan started (face-api.js browser runtime).");
     if (!visVideoEl || !visVideoEl.srcObject || !visVideoEl.videoWidth || !visVideoEl.videoHeight) {
@@ -3544,13 +3544,13 @@
       if (!detect || !detect.faceDetected || !Array.isArray(detect.faces) || !detect.faces.length) {
         renderVisTrackingOverlay([], null);
         idleLoops += 1;
-        visSetupState.enrollmentInstruction = "No face detected. Keep your full face inside the frame.";
+        visSetupState.enrollmentInstruction = "No face detected. Bring your full face back into the frame so registration can continue.";
         try { renderVisSetup(); } catch (e) {}
         continue;
       }
       idleLoops = 0;
       if (Number(detect.faceCount || 0) > 1) {
-        visSetupState.enrollmentInstruction = "Only one face can be enrolled at a time. Keep one face in frame.";
+        visSetupState.enrollmentInstruction = "Only one face can be registered at a time. Keep a single face in frame.";
         try { renderVisSetup(); } catch (e) {}
         continue;
       }
@@ -3560,7 +3560,7 @@
       renderVisTrackingOverlay(detect.faces, primaryFace);
       const faceDescriptor = primaryFace && Array.isArray(primaryFace.descriptor) ? primaryFace.descriptor.slice(0) : [];
       if (!faceDescriptor.length) {
-        visSetupState.enrollmentInstruction = "Descriptor capture not ready yet. Hold still for a moment.";
+        visSetupState.enrollmentInstruction = "Registering face... hold still while the system reads more facial details.";
         try { renderVisSetup(); } catch (e) {}
         continue;
       }
@@ -3586,8 +3586,8 @@
         : 0;
       visSetupState.enrollmentStable = !!(stableDescriptors && avgConfidence >= VIS_ENROLL_MIN_CONFIDENCE);
       visSetupState.enrollmentInstruction = visSetupState.enrollmentStable
-        ? "Face registration is stable. Continue when ready."
-        : "Capturing until your face signature becomes stable. Hold steady and keep your face centered.";
+        ? "Registration stable. Your face signature is ready. Continue when ready."
+        : "Registering face... still learning your facial signature. Hold steady and keep your face centered.";
       try { renderVisSetup(); } catch (e) {}
       if (visSetupState.enrollmentStable) {
         pushVisDebug("Enrollment stabilized after " + String(descriptors.length) + " samples at avg confidence " + avgConfidence.toFixed(2));
