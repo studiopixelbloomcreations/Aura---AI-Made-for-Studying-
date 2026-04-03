@@ -80,6 +80,53 @@ class DeepFaceService:
             raise last_error
         return []
 
+    def _extract_landmarks(self, face: Dict[str, object], iw: int, ih: int) -> List[Dict[str, float]]:
+        area = face.get("facial_area") or {}
+        landmarks: List[Dict[str, float]] = []
+        for key in ("left_eye", "right_eye", "nose", "mouth_left", "mouth_right"):
+            point = area.get(key)
+            if not point:
+                point = face.get(key) if isinstance(face, dict) else None
+            if isinstance(point, (list, tuple)) and len(point) >= 2:
+                landmarks.append({
+                    "name": key,
+                    "x": float(point[0]) / max(1.0, iw),
+                    "y": float(point[1]) / max(1.0, ih),
+                })
+        return landmarks
+
+    def _estimate_pose_hint(self, box: Dict[str, float], landmarks: List[Dict[str, float]]) -> str:
+        if landmarks:
+            lookup = {str(p.get("name", "")): p for p in landmarks}
+            left_eye = lookup.get("left_eye")
+            right_eye = lookup.get("right_eye")
+            nose = lookup.get("nose")
+            if left_eye and right_eye and nose:
+                eye_mid_x = (float(left_eye["x"]) + float(right_eye["x"])) / 2.0
+                nose_dx = float(nose["x"]) - eye_mid_x
+                if nose_dx <= -0.03:
+                    return "left"
+                if nose_dx >= 0.03:
+                    return "right"
+        x = float(box.get("x", 0.0))
+        y = float(box.get("y", 0.0))
+        w = float(box.get("width", 0.0))
+        h = float(box.get("height", 0.0))
+        cx = x + (w / 2.0)
+        cy = y + (h / 2.0)
+        area = w * h
+        if area >= 0.20:
+            return "close"
+        if cx < 0.38:
+            return "left"
+        if cx > 0.62:
+            return "right"
+        if cy < 0.38:
+            return "up"
+        if cy > 0.62:
+            return "down"
+        return "center"
+
     def detect_face(self, image_b64: str) -> Tuple[bool, int, List[Dict[str, object]]]:
         self._ensure_available()
         image = self._decode(image_b64, resize=False)
@@ -92,24 +139,18 @@ class DeepFaceService:
             y = float(area.get("y", 0) or 0)
             w = float(area.get("w", area.get("width", 0)) or 0)
             h = float(area.get("h", area.get("height", 0)) or 0)
-            landmarks = []
-            for key in ("left_eye", "right_eye", "nose", "mouth_left", "mouth_right"):
-                point = area.get(key)
-                if isinstance(point, (list, tuple)) and len(point) >= 2:
-                    landmarks.append({
-                        "name": key,
-                        "x": float(point[0]) / max(1.0, iw),
-                        "y": float(point[1]) / max(1.0, ih),
-                    })
+            box = {
+                "x": x / max(1.0, iw),
+                "y": y / max(1.0, ih),
+                "width": w / max(1.0, iw),
+                "height": h / max(1.0, ih),
+            }
+            landmarks = self._extract_landmarks(face, iw, ih)
             face_rows.append({
                 "confidence": float(face.get("confidence", 0) or 0),
-                "box": {
-                    "x": x / max(1.0, iw),
-                    "y": y / max(1.0, ih),
-                    "width": w / max(1.0, iw),
-                    "height": h / max(1.0, ih),
-                },
+                "box": box,
                 "landmarks": landmarks,
+                "pose_hint": self._estimate_pose_hint(box, landmarks),
             })
         return bool(valid_faces), len(valid_faces), face_rows
 

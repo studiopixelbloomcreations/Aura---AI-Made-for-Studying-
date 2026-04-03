@@ -90,6 +90,7 @@
   let typingRowEl = null;
   let visVideoEl = null;
   let visCanvasEl = null;
+  let visProcessingCanvas = null;
   let visSetupEl = null;
   let visDetector = null;
   let visDetectorUnsupported = false;
@@ -348,6 +349,42 @@
         return ch === "<" ? "&lt;" : (ch === ">" ? "&gt;" : "&amp;");
       }) + "</div>";
     }).join("");
+  }
+
+  function getVisProcessingCanvas() {
+    if (!visProcessingCanvas) visProcessingCanvas = document.createElement("canvas");
+    return visProcessingCanvas;
+  }
+
+  function ensureVisPreviewMounted(container) {
+    if (!visVideoEl || !visCanvasEl) return;
+    const mount = container && container.querySelector ? container.querySelector(".pi-vis-camera-mount") : null;
+    if (!mount) {
+      if (visVideoEl.parentNode !== panel) panel.appendChild(visVideoEl);
+      if (visCanvasEl.parentNode !== panel) panel.appendChild(visCanvasEl);
+      visVideoEl.style.display = "none";
+      visCanvasEl.style.display = "none";
+      return;
+    }
+    if (visVideoEl.parentNode !== mount) mount.appendChild(visVideoEl);
+    if (visCanvasEl.parentNode !== mount) mount.appendChild(visCanvasEl);
+    visVideoEl.style.display = "block";
+    visVideoEl.style.position = "absolute";
+    visVideoEl.style.inset = "0";
+    visVideoEl.style.width = "100%";
+    visVideoEl.style.height = "100%";
+    visVideoEl.style.objectFit = "cover";
+    visVideoEl.style.borderRadius = "18px";
+    visVideoEl.style.background = "#020617";
+    visVideoEl.style.transform = "scaleX(-1)";
+    visCanvasEl.style.display = "block";
+    visCanvasEl.style.position = "absolute";
+    visCanvasEl.style.inset = "0";
+    visCanvasEl.style.width = "100%";
+    visCanvasEl.style.height = "100%";
+    visCanvasEl.style.pointerEvents = "none";
+    visCanvasEl.style.borderRadius = "18px";
+    visCanvasEl.style.transform = "scaleX(-1)";
   }
 
   function shouldAutoEnableLegacySetupFromPlaceholder() {
@@ -1034,7 +1071,7 @@
 
   function captureVisFrameDataUrl() {
     if (!visVideoEl || !visVideoEl.videoWidth || !visVideoEl.videoHeight) return "";
-    const canvas = visCanvasEl || document.createElement("canvas");
+    const canvas = getVisProcessingCanvas();
     canvas.width = Math.max(1, Math.min(640, visVideoEl.videoWidth));
     canvas.height = Math.max(1, Math.round(canvas.width * (visVideoEl.videoHeight / visVideoEl.videoWidth)));
     const ctx = canvas.getContext("2d");
@@ -1112,6 +1149,66 @@
       return { x: x, y: y, width: width, height: height };
     }
     return null;
+  }
+
+  function getFaceLandmarks(face) {
+    if (!face) return [];
+    const list = Array.isArray(face.landmarks) ? face.landmarks : (Array.isArray(face.keypoints) ? face.keypoints : []);
+    return list.filter(function (point) {
+      return point && typeof point === "object";
+    });
+  }
+
+  function scaleOverlayPoint(value, size) {
+    const n = Number(value || 0);
+    if (!Number.isFinite(n)) return 0;
+    return n <= 1 ? n * size : n;
+  }
+
+  function renderVisTrackingOverlay(faces, primaryFace) {
+    if (!visCanvasEl || !visVideoEl) return;
+    const width = Number(visVideoEl.videoWidth || 0);
+    const height = Number(visVideoEl.videoHeight || 0);
+    const ctx = visCanvasEl.getContext("2d");
+    if (!ctx || !width || !height) return;
+    visCanvasEl.width = width;
+    visCanvasEl.height = height;
+    ctx.clearRect(0, 0, width, height);
+    const rows = Array.isArray(faces) ? faces : [];
+    if (!rows.length) return;
+    rows.forEach(function (face) {
+      const box = getFaceBox(face);
+      if (!box) return;
+      const x = scaleOverlayPoint(box.x, width);
+      const y = scaleOverlayPoint(box.y, height);
+      const w = scaleOverlayPoint(box.width, width);
+      const h = scaleOverlayPoint(box.height, height);
+      const isPrimary = face === primaryFace;
+      ctx.lineWidth = isPrimary ? 3 : 2;
+      ctx.strokeStyle = isPrimary ? "rgba(34,197,94,0.95)" : "rgba(125,211,252,0.7)";
+      ctx.fillStyle = isPrimary ? "rgba(34,197,94,0.12)" : "rgba(125,211,252,0.08)";
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, 14);
+      ctx.fill();
+      ctx.stroke();
+      const label = String(face.pose_hint || "").trim();
+      if (label) {
+        ctx.fillStyle = "rgba(2,6,23,0.85)";
+        ctx.fillRect(x, Math.max(0, y - 24), 90, 20);
+        ctx.fillStyle = "#e2e8f0";
+        ctx.font = "12px sans-serif";
+        ctx.fillText(label.toUpperCase(), x + 8, Math.max(14, y - 10));
+      }
+      const landmarks = getFaceLandmarks(face);
+      ctx.fillStyle = isPrimary ? "rgba(250,204,21,0.95)" : "rgba(248,250,252,0.8)";
+      landmarks.forEach(function (point) {
+        const px = scaleOverlayPoint(point.x, width);
+        const py = scaleOverlayPoint(point.y, height);
+        ctx.beginPath();
+        ctx.arc(px, py, isPrimary ? 4 : 3, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    });
   }
 
   function faceBoxScore(face, box, vw, vh) {
@@ -1256,7 +1353,7 @@
 
   function estimateFrameLuma() {
     if (!visVideoEl) return 1;
-    const canvas = visCanvasEl || document.createElement("canvas");
+    const canvas = getVisProcessingCanvas();
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return 1;
     const w = 32;
@@ -1329,7 +1426,7 @@
   function getVisFrameSource() {
     if (!visVideoEl) return null;
     if (!visVideoEl.videoWidth || !visVideoEl.videoHeight) return null;
-    const canvas = visCanvasEl || document.createElement("canvas");
+    const canvas = getVisProcessingCanvas();
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return null;
     canvas.width = visVideoEl.videoWidth;
@@ -1371,7 +1468,7 @@
 
   function getFaceCropCanvas(sourceCanvas, box) {
     if (!sourceCanvas || !box) return null;
-    const canvas = visCanvasEl || document.createElement("canvas");
+    const canvas = getVisProcessingCanvas();
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return null;
     const w = sourceCanvas.width || sourceCanvas.videoWidth || 0;
@@ -2398,7 +2495,7 @@
   }
 
   function extractVisFaceVector(face) {
-    if (!visVideoEl || !visCanvasEl || !face || !face.boundingBox) return [];
+    if (!visVideoEl || !face || !face.boundingBox) return [];
     const box = face.boundingBox;
     const vw = Number(visVideoEl.videoWidth || 0);
     const vh = Number(visVideoEl.videoHeight || 0);
@@ -2407,9 +2504,10 @@
     const sy = Math.max(0, Math.floor(box.y));
     const sw = Math.max(8, Math.floor(box.width));
     const sh = Math.max(8, Math.floor(box.height));
-    visCanvasEl.width = 48;
-    visCanvasEl.height = 48;
-    const ctx = visCanvasEl.getContext("2d", { willReadFrequently: true });
+    const canvas = getVisProcessingCanvas();
+    canvas.width = 48;
+    canvas.height = 48;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return [];
     try {
       ctx.drawImage(visVideoEl, sx, sy, sw, sh, 0, 0, 48, 48);
@@ -2561,6 +2659,9 @@
       const instruction = String(visSetupState.enrollmentInstruction || "Look straight at the camera to start.");
       body.innerHTML =
         '<p>Scanning in progress...</p>' +
+        '<div class="pi-vis-camera-stage" style="margin:12px 0 14px;position:relative;border-radius:18px;overflow:hidden;border:1px solid rgba(96,165,250,0.35);background:#020617;">' +
+          '<div class="pi-vis-camera-mount" style="position:relative;width:100%;aspect-ratio:4/3;min-height:240px;"></div>' +
+        '</div>' +
         '<div class="pi-vis-progress"><div class="pi-vis-progress-bar"></div></div>' +
         '<div class="pi-vis-note">' + instruction.replace(/[<>&]/g, function (ch) {
           return ch === "<" ? "&lt;" : (ch === ">" ? "&gt;" : "&amp;");
@@ -2569,6 +2670,7 @@
       const bar = body.querySelector(".pi-vis-progress-bar");
       if (bar) bar.style.width = pct + "%";
     }
+    ensureVisPreviewMounted(visSetupState.step === 4 ? body : null);
 
     const usernameInput = body.querySelector('[data-vis="username"]');
     if (usernameInput) {
@@ -2781,6 +2883,7 @@
         detect = null;
       }
       if (!detect || !detect.face_detected || !Array.isArray(detect.faces) || !detect.faces.length) {
+        renderVisTrackingOverlay([], null);
         idleLoops += 1;
         visSetupState.enrollmentInstruction = "No face detected. Look straight at the camera.";
         try { renderVisSetup(); } catch (e) {}
@@ -2788,8 +2891,9 @@
       }
       idleLoops = 0;
       const primaryFace = selectPrimaryFace(detect.faces);
+      renderVisTrackingOverlay(detect.faces, primaryFace);
       const box = getFaceBox(primaryFace);
-      const bucket = classifyEnrollmentBucket(box);
+      const bucket = classifyEnrollmentBucket(primaryFace, box);
       if (!bucket) {
         visSetupState.enrollmentInstruction = "Move closer and keep your full face centered.";
         try { renderVisSetup(); } catch (e) {}
@@ -2841,9 +2945,12 @@
   async function handleVisRecognitionVector(result) {
     if (!result || !result.faceDetected) {
       visRecognizingSince = 0;
+      renderVisTrackingOverlay([], null);
       setVisScanStatus("No Face Detected", { label: "Offline", offline: true });
       return;
     }
+    const primaryFace = selectPrimaryFace(result.faces || []);
+    renderVisTrackingOverlay(result.faces || [], primaryFace);
     setVisScanStatus("Face Detected", { label: "Scanning", offline: true });
     const userId = String(result.user_id || "");
     if (!userId) {
@@ -3173,7 +3280,9 @@
     scheduleVisFrameLoop(300);
   }
 
-  function classifyEnrollmentBucket(box) {
+  function classifyEnrollmentBucket(face, box) {
+    const poseHint = face && face.pose_hint ? String(face.pose_hint).toLowerCase() : "";
+    if (poseHint && VIS_ENROLL_GUIDANCE_BUCKETS.indexOf(poseHint) >= 0) return poseHint;
     if (!box) return "";
     const width = Number(box.width || 0);
     const height = Number(box.height || 0);
