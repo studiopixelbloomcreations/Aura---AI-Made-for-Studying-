@@ -26,7 +26,7 @@
   const HISTORY_MODEL_WINDOW = 120;
   const HISTORY_BACKEND_WINDOW = 120;
   const VIS_PROFILE_EXTENSION = ".piuser.json";
-  const VIS_RECOGNITION_THRESHOLD = 85;
+  const VIS_RECOGNITION_THRESHOLD = 0.5;
   const VIS_MATCH_STABLE_COUNT = 5;
   const VIS_FACE_LOST_MS = 700;
   const VIS_ENROLL_FRAME_DELAY_MS = 140;
@@ -1109,8 +1109,8 @@
       if (score > bestScore) bestScore = score;
       if (statusEl) {
         statusEl.textContent =
-          "Testing recognition... confidence " + score.toFixed(1) +
-          " / best " + bestScore.toFixed(1);
+          "Testing recognition... confidence " + score.toFixed(2) +
+          " / best " + bestScore.toFixed(2);
       }
       const passedThreshold =
         result &&
@@ -1120,7 +1120,7 @@
         const uname = String((profile.user_identity && profile.user_identity.username) || "user");
         if (statusEl) {
           statusEl.textContent =
-            "Verification complete at " + bestScore.toFixed(1) +
+            "Verification complete at " + bestScore.toFixed(2) +
             " confidence for " + uname + ". Press Continue to start personalization.";
         }
         if (retryBtn) retryBtn.hidden = true;
@@ -1132,7 +1132,7 @@
     }
     if (statusEl) {
       statusEl.textContent =
-        "Verification timeout. Best confidence " + bestScore.toFixed(1) +
+        "Verification timeout. Best confidence " + bestScore.toFixed(2) +
         ". Keep face centered, improve lighting, and press Retry.";
     }
     if (retryBtn) retryBtn.hidden = false;
