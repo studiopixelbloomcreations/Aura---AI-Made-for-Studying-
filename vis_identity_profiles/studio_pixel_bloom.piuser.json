@@ -33,92 +33,30 @@
   "profile_version": 1,
   "learned_preferences": {
     "preferred_tone": "energetic",
-    "timezone_or_city": "kurunegala",
+    "timezone_or_city": "Kurunegala",
     "goals": "improve grades",
     "hobbies": "gaming",
     "favorite_subjects": "ICT",
-    "full_name": "thenuja premasiri",
+    "full_name": "Thenuja Premasiri",
     "learning_style": "step by step",
-    "preferred_name": "pixel bloom",
-    "preferred_language": "english",
-    "interests": "robotics"
+    "preferred_name": "Studio Pixel",
+    "preferred_language": "English",
+    "interests": "Robotics"
   },
   "personal_intelligence_agent": {
+    "status": "ready",
+    "created_at": "2026-04-03T17:44:00.488Z",
     "personalization_answers": {
-      "goals": "improve grades",
-      "timezone_or_city": "kurunegala",
-      "preferred_tone": "energetic",
-      "interests": "robotics",
-      "preferred_language": "english",
-      "learning_style": "step by step",
-      "preferred_name": "pixel bloom",
-      "full_name": "thenuja premasiri",
+      "preferred_name": "Studio Pixel",
+      "full_name": "Thenuja Premasiri",
+      "interests": "Robotics",
       "favorite_subjects": "ICT",
-      "hobbies": "gaming"
-    },
-    "created_at": "2026-04-03T14:42:31.417Z",
-    "unique_identifier": "studio_pixel_bloom_a8d41f5260d9c12f449f6a42",
-    "cloud_config": {
-      "memory": {
-        "facts": {
-          "goals": "improve grades",
-          "hobbies": "gaming",
-          "full_name": "thenuja premasiri",
-          "interests": "robotics",
-          "learning_style": "step by step",
-          "preferred_name": "pixel bloom",
-          "preferred_tone": "energetic",
-          "timezone_or_city": "kurunegala",
-          "favorite_subjects": "ICT",
-          "preferred_language": "english"
-        },
-        "profile_file": "studio_pixel_bloom.piuser.json",
-        "personalization_answers": {
-          "goals": "improve grades",
-          "hobbies": "gaming",
-          "full_name": "thenuja premasiri",
-          "interests": "robotics",
-          "learning_style": "step by step",
-          "preferred_name": "pixel bloom",
-          "preferred_tone": "energetic",
-          "timezone_or_city": "kurunegala",
-          "favorite_subjects": "ICT",
-          "preferred_language": "english"
-        }
-      },
-      "prompt": "User Profile:\n- Interests: robotics\n- Communication style: energetic\n- Preferences: ICT\n- Behavior patterns: step by step\n- Goals: improve grades\nGenerate a structured user_config.json object.",
-      "user_id": "studio_pixel_bloom",
-      "interests": [
-        "robotics"
-      ],
-      "ai_behavior": {
-        "tone": "energetic",
-        "goals": [
-          "improve grades"
-        ],
-        "response_style": "step by step"
-      },
-      "preferences": {
-        "hobbies": [
-          "gaming"
-        ],
-        "timezone_or_city": "kurunegala",
-        "favorite_subjects": [
-          "ICT"
-        ]
-      },
-      "unique_identifier": "studio_pixel_bloom_a8d41f5260d9c12f449f6a42",
-      "personality_traits": [
-        "energetic",
-        "structured"
-      ],
-      "communication_style": {
-        "tone": "energetic",
-        "learning_style": "step by step",
-        "preferred_name": "pixel bloom",
-        "preferred_language": "english"
-      },
-      "source_profile_file": "studio_pixel_bloom.piuser.json"
+      "goals": "improve grades",
+      "learning_style": "step by step",
+      "preferred_tone": "energetic",
+      "hobbies": "gaming",
+      "timezone_or_city": "Kurunegala",
+      "preferred_language": "English"
     },
     "personalization_questions": [
       "preferred_name",
@@ -131,8 +69,7 @@
       "hobbies",
       "timezone_or_city",
       "preferred_language"
-    ],
-    "status": "ready"
+    ]
   },
   "facial_signature": {
     "signature_model": "deepface",
@@ -170,7 +107,7 @@
     ],
     "preferred_interaction_style": "energetic",
     "interests": [
-      "robotics"
+      "Robotics"
     ],
     "frequently_discussed_topics": [
       "ICT"
