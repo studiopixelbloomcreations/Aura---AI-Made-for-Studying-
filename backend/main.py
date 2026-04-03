@@ -6,6 +6,7 @@ from .models import (
     AnalyzeEmotionResponse,
     DetectFaceResponse,
     ImagePayload,
+    ProcessFaceResponse,
     RecognizeUserResponse,
     RegisterUserPayload,
     UserProfileResponse,
@@ -67,6 +68,37 @@ async def analyze_emotion(payload: ImagePayload) -> AnalyzeEmotionResponse:
     try:
         emotion = face_service.analyze_emotion(payload.image)
         return AnalyzeEmotionResponse(emotion=emotion)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.post("/process-face", response_model=ProcessFaceResponse)
+async def process_face(payload: ImagePayload, request: Request) -> ProcessFaceResponse:
+    try:
+        detected, count, faces = face_service.detect_face(payload.image)
+        if not detected:
+            return ProcessFaceResponse(
+                face_detected=False,
+                face_count=count,
+                faces=faces,
+                user_id=None,
+                similarity=0.0,
+                confidence=0.0,
+                liveness_passed=False,
+                emotion="neutral",
+            )
+        user_id, similarity, confidence, liveness = face_service.recognize_user(payload.image, client_key(request))
+        emotion = face_service.analyze_emotion(payload.image)
+        return ProcessFaceResponse(
+            face_detected=True,
+            face_count=count,
+            faces=faces,
+            user_id=user_id,
+            similarity=similarity,
+            confidence=confidence,
+            liveness_passed=liveness,
+            emotion=emotion,
+        )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 

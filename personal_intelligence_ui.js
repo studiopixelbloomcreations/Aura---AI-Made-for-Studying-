@@ -39,7 +39,7 @@
   const VIS_SETUP_RETRIEVE_MAX_TRIES = 20;
   const VIS_SETUP_RETRIEVE_DELAY_MS = 900;
   const VIS_PROFILE_DOC_LIMIT = 100;
-  const VIS_FACE_PROCESS_ENDPOINT = "/recognize-user";
+  const VIS_FACE_PROCESS_ENDPOINT = "/process-face";
   const VIS_FACE_REGISTER_ENDPOINT = "/register-user";
   function isOffline() {
     return window.__OFFLINE_MODE__ === true || navigator.onLine === false;
@@ -1036,7 +1036,17 @@
     if (!image) return null;
     visBackendRequestBusy = true;
     try {
-      return await postVisJson(getVisEndpoint("__VIS_FACE_PROCESS_URL", VIS_FACE_PROCESS_ENDPOINT), { image: image });
+      const result = await postVisJson(getVisEndpoint("__VIS_FACE_PROCESS_URL", VIS_FACE_PROCESS_ENDPOINT), { image: image });
+      return {
+        faceDetected: !!(result && result.face_detected),
+        faceCount: Number((result && result.face_count) || 0),
+        faces: Array.isArray(result && result.faces) ? result.faces : [],
+        user_id: result && result.user_id ? String(result.user_id) : null,
+        similarity: Number((result && result.similarity) || 0),
+        confidence: Number((result && result.confidence) || 0),
+        liveness_passed: !!(result && result.liveness_passed),
+        emotion: result && result.emotion ? result.emotion : "neutral",
+      };
     } finally {
       visBackendRequestBusy = false;
     }
@@ -2759,6 +2769,13 @@
         pauseForVisOffline("Offline - no face");
         return;
       }
+      if (!result.liveness_passed) {
+        visFacePresent = false;
+        visRecognitionCandidate = { profileFile: "", count: 0 };
+        visNoMatchCount = 0;
+        setAssistantStateForVisOffline("Scanning for a live face...");
+        return;
+      }
       visLastFaceSeenAt = Date.now();
       visFacePresent = true;
       const emotion = topEmotionLabel(result.emotion || {});
@@ -2825,6 +2842,7 @@
   }
 
   async function initVisualIntelligenceSystem() {
+    window.__PI_MANAGED_VIS_ACTIVE__ = true;
     closeVisTestStage();
     visAllowTestingStage = false;
     visPendingEnrollmentPayload = null;

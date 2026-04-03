@@ -20,6 +20,10 @@ let setupInProgress = false;
 let unknownSince = 0;
 let registrationRetryBlockedUntil = 0;
 
+function shouldYieldToManagedPiVis() {
+  return !!window.__PI_MANAGED_VIS_ACTIVE__;
+}
+
 const presence = createPresenceEngine();
 const confidence = createConfidenceEngine();
 
@@ -214,6 +218,10 @@ async function runRegistrationFlow(video, seedResult) {
 async function runLoop() {
   const metrics = ensureMetrics();
   try {
+    if (shouldYieldToManagedPiVis()) {
+      scheduleNextLoop();
+      return;
+    }
     if (!videoRef) {
       scheduleNextLoop();
       return;
@@ -284,6 +292,7 @@ async function runLoop() {
 
 export async function startVIS() {
   if (window.__VIS_STARTED__) return;
+  if (shouldYieldToManagedPiVis()) return;
   window.__VIS_STARTED__ = true;
   ensureMetrics();
   recordEvent('vis_start');
