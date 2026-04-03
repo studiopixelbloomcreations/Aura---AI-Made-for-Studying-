@@ -142,6 +142,8 @@
   let visCameraInputIndex = -1;
   let visLastCameraSwitchAt = 0;
   const VIS_CAMERA_SWITCH_COOLDOWN_MS = 3000;
+  let visLastCameraReadyAttemptAt = 0;
+  const VIS_CAMERA_READY_RETRY_MS = 2000;
   let visScanLoopTimer = null;
   let visProfileSaveTimer = null;
   let visExpectedProfileFile = "";
@@ -2811,6 +2813,18 @@
     if (visDetectBusy || !visVideoEl || visSetupOpen || visScanning || visVerificationBusy) return;
     visDetectBusy = true;
     try {
+      if (!visVideoEl.srcObject || !visVideoEl.videoWidth || !visVideoEl.videoHeight) {
+        const now = Date.now();
+        if ((now - visLastCameraReadyAttemptAt) >= VIS_CAMERA_READY_RETRY_MS) {
+          visLastCameraReadyAttemptAt = now;
+          setVisScanStatus("Requesting camera access", { label: "Scanning", offline: true });
+          const cameraReady = await ensureVisCameraReady();
+          if (!cameraReady) return;
+        } else {
+          setVisScanStatus("Requesting camera access", { label: "Scanning", offline: true });
+          return;
+        }
+      }
       if (!visIndexLoaded) await loadVisProfilesFromCloud();
       const result = await processVisBackendFrame();
       if (!result || !result.faceDetected) {
@@ -2856,7 +2870,13 @@
   async function ensureVisCameraReady() {
     if (!visVideoEl) return false;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
+    if (visVideoEl.srcObject && visVideoEl.videoWidth && visVideoEl.videoHeight) {
+      window.__visVideoTarget = visVideoEl;
+      return true;
+    }
     try {
+      setVisScanStatus("Requesting camera access", { label: "Scanning", offline: true });
+      dbg("VIS requesting camera access");
       if (!visCameraInputs.length) {
         try {
           const bootstrap = await navigator.mediaDevices.getUserMedia({
@@ -2933,9 +2953,17 @@
       await waitForVideoReady(visVideoEl, 2500);
       window.__visVideoTarget = visVideoEl;
       visLastCameraSwitchAt = Date.now();
+      dbg("VIS camera ready", visVideoEl.videoWidth + "x" + visVideoEl.videoHeight);
       return !!(visVideoEl.videoWidth && visVideoEl.videoHeight);
     } catch (e) {
       dbg("VIS webcam init failed", e && e.message);
+      const name = String((e && e.name) || "").toLowerCase();
+      const message = String((e && e.message) || "").toLowerCase();
+      if (name.includes("notallowed") || message.includes("denied") || message.includes("permission")) {
+        setVisScanStatus("Camera Access Denied", { label: "Offline", offline: true });
+      } else {
+        setVisScanStatus("Camera Unavailable", { label: "Offline", offline: true });
+      }
       setAssistantStateForVisOffline("Offline - camera denied");
       return false;
     }
@@ -3026,6 +3054,12 @@
         return { suppress_setup_ms: this.getSetupSuppressMs() };
       },
     };
+    setVisScanStatus("Requesting camera access", { label: "Scanning", offline: true });
+    try {
+      await ensureVisCameraReady();
+    } catch (e) {
+      dbg("VIS initial camera bootstrap failed", e && e.message);
+    }
     setVisOfflineState(true, "Scanning for face...");
     scheduleVisFrameLoop(300);
   }
