@@ -47,7 +47,7 @@
     "assistant_state": "idle",
     "paused": true,
     "pending_messages": [],
-    "last_active_timestamp": "2026-04-03T14:42:32.043Z",
+    "last_active_timestamp": "2026-04-03T14:42:36.086Z",
     "speech_state": {
       "active": false,
       "text": "",
@@ -56,8 +56,8 @@
     },
     "user_instance": {
       "profile_file": "studio_pixel_bloom.piuser.json",
-      "runtime_key": "vis_instance_studio_pixel_bloom.piuser.json_mnj0hc2z",
-      "loaded_at": "2026-04-03T14:41:09.995Z"
+      "runtime_key": "vis_instance_studio_pixel_bloom.piuser.json_mnj0j60z",
+      "loaded_at": "2026-04-03T14:42:35.459Z"
     },
     "last_emotion": "neutral"
   },
