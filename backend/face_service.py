@@ -48,18 +48,42 @@ class DeepFaceService:
         if DeepFace is None:
             raise RuntimeError(f"DeepFace is not available: {DEEPFACE_IMPORT_ERROR}")
 
-    def _decode(self, image_b64: str) -> np.ndarray:
-        return resize_for_deepface(decode_base64_image(image_b64))
+    def _decode(self, image_b64: str, resize: bool = False) -> np.ndarray:
+        image = decode_base64_image(image_b64)
+        return resize_for_deepface(image) if resize else image
+
+    def _extract_faces_with_fallback(self, image: np.ndarray):
+        backends = []
+        for name in (
+            self.detector_backend,
+            "opencv",
+            "retinaface",
+            "mtcnn",
+        ):
+            if name and name not in backends:
+                backends.append(name)
+        last_error = None
+        for backend in backends:
+            try:
+                faces = DeepFace.extract_faces(
+                    img_path=image,
+                    detector_backend=backend,
+                    enforce_detection=False,
+                )
+                valid_faces = [face for face in faces if face.get("confidence", 0) >= 0]
+                if valid_faces:
+                    return valid_faces
+            except Exception as exc:
+                last_error = exc
+                continue
+        if last_error:
+            raise last_error
+        return []
 
     def detect_face(self, image_b64: str) -> Tuple[bool, int, List[Dict[str, object]]]:
         self._ensure_available()
-        image = self._decode(image_b64)
-        faces = DeepFace.extract_faces(
-            img_path=image,
-            detector_backend=self.detector_backend,
-            enforce_detection=False,
-        )
-        valid_faces = [face for face in faces if face.get("confidence", 0) >= 0]
+        image = self._decode(image_b64, resize=False)
+        valid_faces = self._extract_faces_with_fallback(image)
         ih, iw = image.shape[:2]
         face_rows: List[Dict[str, object]] = []
         for face in valid_faces:
@@ -91,7 +115,7 @@ class DeepFaceService:
 
     def analyze_emotion(self, image_b64: str) -> str:
         self._ensure_available()
-        image = self._decode(image_b64)
+        image = self._decode(image_b64, resize=False)
         result = DeepFace.analyze(
             img_path=image,
             actions=["emotion"],
@@ -122,7 +146,7 @@ class DeepFaceService:
 
     def recognize_user(self, image_b64: str, client_key: str) -> Tuple[Optional[str], float, float, bool]:
         self._ensure_available()
-        image = self._decode(image_b64)
+        image = self._decode(image_b64, resize=False)
         liveness = self._liveness_passed(client_key, image)
         if not liveness:
             return None, 0.0, 0.0, False
@@ -169,7 +193,7 @@ class DeepFaceService:
 
     def register_user(self, username: str, images_b64: List[str]) -> str:
         self._ensure_available()
-        images = [self._decode(image) for image in images_b64 if image]
+        images = [self._decode(image, resize=False) for image in images_b64 if image]
         if len(images) < 3:
             raise ValueError("At least 3 frames are required for registration")
         if movement_score(images[: min(len(images), 5)]) <= 1.0:

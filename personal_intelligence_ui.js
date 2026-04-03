@@ -1036,17 +1036,45 @@
     if (!image) return null;
     visBackendRequestBusy = true;
     try {
-      const result = await postVisJson(getVisEndpoint("__VIS_FACE_PROCESS_URL", VIS_FACE_PROCESS_ENDPOINT), { image: image });
-      return {
-        faceDetected: !!(result && result.face_detected),
-        faceCount: Number((result && result.face_count) || 0),
-        faces: Array.isArray(result && result.faces) ? result.faces : [],
-        user_id: result && result.user_id ? String(result.user_id) : null,
-        similarity: Number((result && result.similarity) || 0),
-        confidence: Number((result && result.confidence) || 0),
-        liveness_passed: !!(result && result.liveness_passed),
-        emotion: result && result.emotion ? result.emotion : "neutral",
-      };
+      try {
+        const result = await postVisJson(getVisEndpoint("__VIS_FACE_PROCESS_URL", VIS_FACE_PROCESS_ENDPOINT), { image: image });
+        return {
+          faceDetected: !!(result && result.face_detected),
+          faceCount: Number((result && result.face_count) || 0),
+          faces: Array.isArray(result && result.faces) ? result.faces : [],
+          user_id: result && result.user_id ? String(result.user_id) : null,
+          similarity: Number((result && result.similarity) || 0),
+          confidence: Number((result && result.confidence) || 0),
+          liveness_passed: !!(result && result.liveness_passed),
+          emotion: result && result.emotion ? result.emotion : "neutral",
+        };
+      } catch (error) {
+        const detect = await postVisJson(getVisEndpoint("__VIS_DETECT_FACE_URL", "/detect-face"), { image: image });
+        if (!detect || !detect.face_detected) {
+          return {
+            faceDetected: false,
+            faceCount: Number((detect && detect.face_count) || 0),
+            faces: Array.isArray(detect && detect.faces) ? detect.faces : [],
+            user_id: null,
+            similarity: 0,
+            confidence: 0,
+            liveness_passed: false,
+            emotion: "neutral",
+          };
+        }
+        const recognize = await postVisJson(getVisEndpoint("__VIS_RECOGNIZE_USER_URL", "/recognize-user"), { image: image });
+        const emotion = await postVisJson(getVisEndpoint("__VIS_ANALYZE_EMOTION_URL", "/analyze-emotion"), { image: image });
+        return {
+          faceDetected: true,
+          faceCount: Number((detect && detect.face_count) || 1),
+          faces: Array.isArray(detect && detect.faces) ? detect.faces : [],
+          user_id: recognize && recognize.user_id ? String(recognize.user_id) : null,
+          similarity: Number((recognize && recognize.similarity) || 0),
+          confidence: Number((recognize && recognize.confidence) || 0),
+          liveness_passed: !!(recognize && recognize.liveness_passed),
+          emotion: emotion && emotion.emotion ? emotion.emotion : "neutral",
+        };
+      }
     } finally {
       visBackendRequestBusy = false;
     }
@@ -2846,7 +2874,7 @@
     closeVisTestStage();
     visAllowTestingStage = false;
     visPendingEnrollmentPayload = null;
-    await loadVisProfilesFromCloud();
+    const loadedProfiles = await loadVisProfilesFromCloud();
     window.PI_VIS_HOOKS = {
       isManagedFlowActive: function () {
         return !!(
@@ -2897,6 +2925,10 @@
       },
     };
     setVisOfflineState(true, "Scanning for face...");
+    if (Array.isArray(loadedProfiles) && loadedProfiles.length === 0 && !visSetupOpen) {
+      openVisSetup();
+      setAssistantStateForVisOffline("Offline - no visual identity on record");
+    }
     scheduleVisFrameLoop(300);
   }
 
