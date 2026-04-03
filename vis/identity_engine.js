@@ -58,7 +58,6 @@ async function ensureFaceApiReady() {
       window.faceapi.nets.faceLandmark68Net.loadFromUri(FACE_API_MODEL_URL),
       window.faceapi.nets.faceRecognitionNet.loadFromUri(FACE_API_MODEL_URL),
       window.faceapi.nets.faceExpressionNet.loadFromUri(FACE_API_MODEL_URL),
-      window.faceapi.nets.ageGenderNet.loadFromUri(FACE_API_MODEL_URL),
     ]);
     return true;
   })().catch((error) => {
@@ -301,7 +300,6 @@ export async function processFaceFrame(image) {
     )
     .withFaceLandmarks()
     .withFaceExpressions()
-    .withAgeAndGender()
     .withFaceDescriptors();
   const vw = Number(img.naturalWidth || img.width || 0);
   const vh = Number(img.naturalHeight || img.height || 0);
@@ -321,9 +319,6 @@ export async function processFaceFrame(image) {
       pose_hint: normalizedBox ? estimatePoseHint(normalizedBox, landmarks) : '',
       descriptor: Array.from((item && item.descriptor) || []),
       expressions: item && item.expressions ? item.expressions : {},
-      age: Number(item && item.age || 0),
-      gender: String(item && item.gender || ''),
-      genderProbability: Number(item && item.genderProbability || 0),
     };
   }).filter((face) => !!(face && face.box && face.box.width > 0 && face.box.height > 0));
 

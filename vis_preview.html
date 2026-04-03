@@ -138,7 +138,6 @@
         window.faceapi.nets.faceLandmark68Net.loadFromUri(faceApiModelUrl),
         window.faceapi.nets.faceExpressionNet.loadFromUri(faceApiModelUrl),
         window.faceapi.nets.faceRecognitionNet.loadFromUri(faceApiModelUrl),
-        window.faceapi.nets.ageGenderNet.loadFromUri(faceApiModelUrl),
       ]);
 
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
@@ -163,7 +162,6 @@
             )
             .withFaceLandmarks()
             .withFaceExpressions()
-            .withAgeAndGender()
             .withFaceDescriptors();
           const displaySize = { width: video.videoWidth, height: video.videoHeight };
           window.faceapi.matchDimensions(canvas, displaySize);
@@ -179,8 +177,6 @@
             const box = resizedResults[0] && resizedResults[0].detection ? resizedResults[0].detection.box : null;
             if (box) {
               const lines = [
-                String(Math.round(Number(first.age || 0))) + ' years',
-                String(first.gender || '-') + ' (' + Number(first.genderProbability || 0).toFixed(2) + ')',
                 String(topExpression(first.expressions || {}) || '-')
               ];
               new window.faceapi.draw.DrawTextField(lines, { x: box.x, y: box.y + box.height + 10 }, {

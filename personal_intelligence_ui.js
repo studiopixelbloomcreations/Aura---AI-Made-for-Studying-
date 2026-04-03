@@ -1257,7 +1257,6 @@
         window.faceapi.nets.faceLandmark68Net.loadFromUri(VIS_FACE_API_MODEL_URL),
         window.faceapi.nets.faceRecognitionNet.loadFromUri(VIS_FACE_API_MODEL_URL),
         window.faceapi.nets.faceExpressionNet.loadFromUri(VIS_FACE_API_MODEL_URL),
-        window.faceapi.nets.ageGenderNet.loadFromUri(VIS_FACE_API_MODEL_URL),
       ]);
       visFaceApiReady = true;
       visFaceApiExpressionReady = true;
@@ -1490,7 +1489,6 @@
       )
       .withFaceLandmarks()
       .withFaceExpressions()
-      .withAgeAndGender()
       .withFaceDescriptors();
     visLastFaceApiDetections = Array.isArray(detections) ? detections.slice(0) : [];
     const vw = Number(visVideoEl.videoWidth || 0);
@@ -1512,9 +1510,6 @@
         descriptor: Array.isArray(item && item.descriptor) ? item.descriptor.slice(0) : Array.from((item && item.descriptor) || []),
         emotion: faceApiExpressionsToEmotion(item && item.expressions),
         expressions: item && item.expressions ? item.expressions : {},
-        age: Number(item && item.age || 0),
-        gender: String(item && item.gender || ""),
-        genderProbability: Number(item && item.genderProbability || 0),
       };
     }).filter(function (face) {
       return !!(face && face.box && face.box.width > 0 && face.box.height > 0);
@@ -1745,11 +1740,6 @@
         const lines = [];
         const userLabel = face && face === primaryFace && visLastKnownUserLabel ? String(visLastKnownUserLabel) : "";
         if (userLabel) lines.push(userLabel);
-        if (face && Number(face.age || 0) > 0) lines.push(String(Math.round(Number(face.age || 0))) + " years");
-        if (face && face.gender) {
-          const gp = Number(face.genderProbability || 0);
-          lines.push(String(face.gender) + (gp ? (" (" + gp.toFixed(2) + ")") : ""));
-        }
         if (face && face.emotion) lines.push(String(face.emotion));
         if (!lines.length) return;
         new faceapi.draw.DrawTextField(lines, { x: box.x, y: box.y + box.height + 10 }, {
@@ -3544,8 +3534,6 @@
         geometrySnapshots.push({
           box: Object.assign({}, box),
           pose_hint: String(primaryFace.pose_hint || "center"),
-          age: Number(primaryFace.age || 0),
-          gender: String(primaryFace.gender || ""),
           emotion: String(primaryFace.emotion || "neutral"),
           captured_at: nowIso(),
         });
