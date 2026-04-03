@@ -2874,7 +2874,7 @@
     closeVisTestStage();
     visAllowTestingStage = false;
     visPendingEnrollmentPayload = null;
-    const loadedProfiles = await loadVisProfilesFromCloud();
+    await loadVisProfilesFromCloud();
     window.PI_VIS_HOOKS = {
       isManagedFlowActive: function () {
         return !!(
@@ -2925,10 +2925,6 @@
       },
     };
     setVisOfflineState(true, "Scanning for face...");
-    if (Array.isArray(loadedProfiles) && loadedProfiles.length === 0 && !visSetupOpen) {
-      openVisSetup();
-      setAssistantStateForVisOffline("Offline - no visual identity on record");
-    }
     scheduleVisFrameLoop(300);
   }
 
