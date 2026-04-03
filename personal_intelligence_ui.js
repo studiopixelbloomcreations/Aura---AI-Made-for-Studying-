@@ -293,7 +293,7 @@
         <div class="pi-vis-personalize-body"></div>
       </div>
     </div>
-    <div class="pi-vis-debug-backdrop" hidden style="position:fixed;inset:0;z-index:10040;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(2,6,23,0.62);backdrop-filter:blur(10px);">
+    <div class="pi-vis-debug-backdrop" hidden style="position:fixed;inset:0;z-index:10040;align-items:center;justify-content:center;padding:24px;background:rgba(2,6,23,0.62);backdrop-filter:blur(10px);">
       <div class="pi-vis-debug-panel" role="dialog" aria-modal="false" aria-labelledby="piVisDebugTitle" style="width:min(760px,92vw);max-height:min(88vh,920px);overflow:auto;background:rgba(6,13,27,0.96);border:1px solid rgba(96,165,250,0.35);border-radius:22px;box-shadow:0 24px 80px rgba(2,6,23,0.55);padding:18px;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;">
           <div>
@@ -331,6 +331,7 @@
   visPersonalizeEl = panel.querySelector(".pi-vis-personalize-backdrop");
   visDebugPreviewEl = panel.querySelector(".pi-vis-debug-backdrop");
   if (visTestEl) visTestEl.hidden = true;
+  if (visDebugPreviewEl) visDebugPreviewEl.style.display = "none";
   const textInputEl = panel.querySelector(".pi-text-input");
   const textSendBtn = panel.querySelector(".pi-input-send");
   const textMicBtn = panel.querySelector(".pi-input-mic");
@@ -424,13 +425,17 @@
     const ready = await ensureVisCameraReady();
     visDebugPreviewOpen = true;
     visDebugPreviewEl.hidden = false;
+    visDebugPreviewEl.style.display = "flex";
     syncVisPreviewMount();
     return ready;
   }
 
   function closeVisDebugPreview() {
     visDebugPreviewOpen = false;
-    if (visDebugPreviewEl) visDebugPreviewEl.hidden = true;
+    if (visDebugPreviewEl) {
+      visDebugPreviewEl.hidden = true;
+      visDebugPreviewEl.style.display = "none";
+    }
     syncVisPreviewMount();
   }
 
