@@ -1058,7 +1058,7 @@
     }
     pushVisDebug("Waiting for Personal Intelligence unique identifier.");
     const saveResult = await savePiUserConfig(profile, safeAnswers);
-    const savedConfig = saveResult && (saveResult.config || saveResult);
+    const savedConfig = saveResult && (saveResult.profile || saveResult.config || saveResult);
     if (savedConfig) {
       const mergedProfile = mergePiConfigIntoProfile(profile, savedConfig.user_config || savedConfig);
       if (mergedProfile && mergedProfile !== profile) Object.assign(profile, mergedProfile);
@@ -1074,8 +1074,27 @@
         unique_identifier: uniqueId,
       });
       if (uniqueId) pushVisDebug("Personal Intelligence unique identifier ready: " + uniqueId);
+      const verification = await verifyPiProfileAssociation(profile, uniqueId);
+      profile.personal_intelligence_agent = Object.assign({}, profile.personal_intelligence_agent || {}, {
+        profile_verified: !!verification.ok,
+        profile_verified_at: verification.verified_at || nowIso(),
+        personalization_prompt: String(
+          (savedConfig.ai_config && savedConfig.ai_config.personalization_prompt) ||
+          (savedConfig.user_config && savedConfig.user_config.ai_config && savedConfig.user_config.ai_config.personalization_prompt) ||
+          ""
+        ).trim(),
+      });
+      await warmHarmonyPersonalization(profile, safeAnswers);
+      if (!verification.ok) {
+        throw new Error(verification.error || "PI_PROFILE_NOT_VERIFIED");
+      }
+      return {
+        ok: true,
+        unique_identifier: uniqueId,
+        verification: verification,
+      };
     }
-    return true;
+    throw new Error("PI_CONFIG_SAVE_FAILED");
   }
 
   function ensureVisPersonalAgent(profile, reason) {
@@ -1096,13 +1115,20 @@
     visPersonalizeState.loading = true;
     renderVisPersonalize();
     const profile = visPersonalizeState.profile || visActiveProfile;
-    createVisPersonalAgent(profile, answers).then(function () {
+    createVisPersonalAgent(profile, answers).then(function (result) {
       visPersonalizeState.loading = false;
       closeVisPersonalize();
       if (profile) {
         switchToVisProfile(profile).then(function () {
           visRecognitionCandidate = { profileFile: "", count: 0 };
           visNoMatchCount = 0;
+          const preferredName = String(
+            (answers && (answers.preferred_name || answers.full_name)) ||
+            (profile && profile.user_identity && profile.user_identity.username) ||
+            visLastKnownUserLabel ||
+            "there"
+          ).trim();
+          showVisPersonalWelcomeCard(preferredName, result && result.unique_identifier);
         });
       }
     }).catch(function (error) {
@@ -1240,7 +1266,15 @@
     style.textContent =
       ".pi-vis-welcome{position:fixed;top:86px;right:22px;z-index:9999;background:rgba(9,18,36,0.9);color:#e9f2ff;padding:12px 18px;border-radius:12px;border:1px solid rgba(120,180,255,0.35);box-shadow:0 14px 40px rgba(2,8,23,0.45);font-size:14px;letter-spacing:.2px;opacity:0;transform:translateY(-8px);transition:opacity 2s ease,transform 0.4s ease;}"+
       ".pi-vis-welcome.pi-show{opacity:1;transform:translateY(0);}"+
-      ".pi-vis-welcome.pi-fade{opacity:0;}";
+      ".pi-vis-welcome.pi-fade{opacity:0;}"+
+      ".pi-vis-personal-welcome-backdrop{position:fixed;inset:0;z-index:10040;background:rgba(3,10,22,0.48);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;}"+
+      ".pi-vis-personal-welcome{width:min(480px,calc(100vw - 32px));background:linear-gradient(180deg,rgba(13,24,48,0.97),rgba(18,38,72,0.96));border:1px solid rgba(132,197,255,0.32);border-radius:24px;box-shadow:0 28px 80px rgba(2,8,23,0.5);padding:28px 24px;color:#e9f2ff;text-align:center;}"+
+      ".pi-vis-personal-welcome-kicker{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:rgba(191,219,254,0.9);margin-bottom:12px;}"+
+      ".pi-vis-personal-welcome-title{font-size:30px;line-height:1.15;font-weight:800;margin:0 0 10px;}"+
+      ".pi-vis-personal-welcome-subtitle{font-size:15px;line-height:1.6;color:rgba(226,232,240,0.92);margin:0 0 18px;}"+
+      ".pi-vis-personal-welcome-meta{font-size:13px;line-height:1.5;color:rgba(147,197,253,0.95);margin-bottom:20px;}"+
+      ".pi-vis-personal-welcome-button{border:0;border-radius:999px;padding:12px 22px;background:linear-gradient(90deg,#60a5fa,#818cf8);color:#08111f;font-size:14px;font-weight:800;cursor:pointer;}"+
+      ".pi-vis-personal-welcome-timer{margin-top:12px;font-size:12px;color:rgba(191,219,254,0.72);}";
     document.head.appendChild(style);
   }
 
@@ -1258,6 +1292,31 @@
     setTimeout(function () {
       if (toast && toast.parentNode) toast.parentNode.removeChild(toast);
     }, 5000);
+  }
+
+  function showVisPersonalWelcomeCard(name, uniqueId) {
+    ensureVisWelcomeStyles();
+    const existing = document.querySelector(".pi-vis-personal-welcome-backdrop");
+    if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+    const label = String(name || visLastKnownUserLabel || "there").trim() || "there";
+    const backdrop = document.createElement("div");
+    backdrop.className = "pi-vis-personal-welcome-backdrop";
+    backdrop.innerHTML =
+      '<div class="pi-vis-personal-welcome" role="dialog" aria-modal="true" aria-label="Personal Intelligence ready">' +
+        '<div class="pi-vis-personal-welcome-kicker">Personal Intelligence Ready</div>' +
+        '<h2 class="pi-vis-personal-welcome-title">Hi ' + escapeHtml(label) + '</h2>' +
+        '<p class="pi-vis-personal-welcome-subtitle">This is your own personal assistant by Tutor. Your personalized agent is ready to help you.</p>' +
+        '<div class="pi-vis-personal-welcome-meta">Unique ID: ' + escapeHtml(String(uniqueId || "linked to your account")) + '</div>' +
+        '<button type="button" class="pi-vis-personal-welcome-button">Continue</button>' +
+        '<div class="pi-vis-personal-welcome-timer">This message closes automatically in 20 seconds.</div>' +
+      '</div>';
+    const close = function () {
+      if (backdrop && backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+    };
+    const button = backdrop.querySelector(".pi-vis-personal-welcome-button");
+    if (button) button.addEventListener("click", close);
+    document.body.appendChild(backdrop);
+    setTimeout(close, 20000);
   }
 
   function getVisEndpoint(globalKey, fallback) {
@@ -3109,6 +3168,103 @@
     } catch (e) {
       dbg("PI config save failed", e && e.message);
       return null;
+    }
+  }
+
+  async function verifyPiProfileAssociation(profile, uniqueId) {
+    const trimmedUniqueId = String(uniqueId || "").trim();
+    const authIdentity = getAuthIdentity();
+    const currentUserId = String((authIdentity && authIdentity.user_id) || (profile && profile.user_identity && profile.user_identity.username) || "").trim();
+    const currentAccount = String((authIdentity && authIdentity.email) || "").trim().toLowerCase();
+    const out = {
+      ok: false,
+      unique_identifier: trimmedUniqueId,
+      verified_at: nowIso(),
+      cloud_profile_found: false,
+      account_match: false,
+      firestore_file_found: false,
+      file_name: String((profile && profile.file_name) || "").trim(),
+      error: "",
+    };
+    if (!profile || !currentUserId || !trimmedUniqueId) {
+      out.error = "missing_identity_verification_data";
+      return out;
+    }
+    try {
+      const cloud = await fetchSiteJson("/personal-intelligence/config?unique_id=" + encodeURIComponent(trimmedUniqueId), {
+        method: "GET",
+      });
+      const savedProfile = cloud && cloud.profile ? cloud.profile : null;
+      const savedUserId = String((savedProfile && savedProfile.user_id) || "").trim();
+      const personalizationData = savedProfile && savedProfile.personalization_data && typeof savedProfile.personalization_data === "object"
+        ? savedProfile.personalization_data
+        : {};
+      const identitySnapshot = personalizationData.identity_snapshot && typeof personalizationData.identity_snapshot === "object"
+        ? personalizationData.identity_snapshot
+        : {};
+      const savedEmail = String(identitySnapshot.email || "").trim().toLowerCase();
+      out.cloud_profile_found = !!savedProfile;
+      out.account_match = savedUserId === currentUserId || (!!currentAccount && savedEmail === currentAccount);
+      if (!out.cloud_profile_found || !out.account_match) {
+        out.error = !out.cloud_profile_found ? "unique_id_not_found" : "unique_id_account_mismatch";
+        return out;
+      }
+    } catch (e) {
+      out.error = "profile_lookup_failed";
+      return out;
+    }
+    try {
+      const db = getFirestoreDb();
+      const au = getFirebaseAuthedUser();
+      const uid = au && au.uid ? String(au.uid) : getCurrentUid();
+      if (!db || !uid || !out.file_name) {
+        out.error = "firestore_unavailable";
+        return out;
+      }
+      const snap = await db.collection("users")
+        .doc(uid)
+        .collection("pi_vis_identity_profiles")
+        .doc(out.file_name)
+        .get();
+      const data = snap && snap.exists && snap.data ? snap.data() : null;
+      const auth = data && data.auth_identity && typeof data.auth_identity === "object" ? data.auth_identity : {};
+      out.firestore_file_found = !!data;
+      const fileMatches = !!data && (
+        String(auth.user_id || "").trim() === currentUserId ||
+        String(auth.email || "").trim().toLowerCase() === currentAccount
+      );
+      out.ok = out.cloud_profile_found && out.account_match && out.firestore_file_found && fileMatches;
+      if (!out.ok) out.error = out.firestore_file_found ? "firestore_account_mismatch" : "firestore_profile_missing";
+      return out;
+    } catch (e) {
+      out.error = "firestore_profile_lookup_failed";
+      return out;
+    }
+  }
+
+  async function warmHarmonyPersonalization(profile, answers) {
+    try {
+      const response = await fetchJson("/personal-intelligence/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: "Personalization completed. Confirm this user's unique agent is ready in one short sentence only.",
+          email: EMAIL,
+          language: localStorage.getItem("g9_language") || "English",
+          subject: localStorage.getItem("g9_subject") || "General",
+          title: "Personal Intelligence",
+          history: [],
+          known_facts: Object.assign({}, knownFacts, answers || {}),
+          mode: "personalized_activation",
+          memory_context: buildLongTermMemoryContext(),
+          system_prompt: buildTutorSystemPrompt("personalized_activation", localStorage.getItem("g9_language") || "English", localStorage.getItem("g9_subject") || "General", knownFacts),
+          user_id: String((profile && profile.user_identity && profile.user_identity.username) || "").trim(),
+        }),
+      });
+      return !!(response && !response.harmony_failed);
+    } catch (e) {
+      pushVisDebug("Harmony personalization warmup failed: " + String((e && e.message) || e));
+      return false;
     }
   }
 
@@ -5274,24 +5430,20 @@
           system_prompt: buildTutorSystemPrompt(detectSupportMode(t), localStorage.getItem("g9_language") || "English", localStorage.getItem("g9_subject") || "General", knownFacts),
         }),
       });
-      let answer = data && data.answer ? String(data.answer) : "I did not get that. Please try again.";
+      let answer = data && data.answer ? String(data.answer) : "";
       if (data && data.harmony_failed) {
-        const errorMsg = "Harmony unavailable. Switching to Puter fallback.";
-        addLog("assistant", "Tutor: " + errorMsg);
-        try {
-          await ensurePuterReady(false);
-          const model = getPIModel();
-          const recent = getRecentHistory(HISTORY_MODEL_WINDOW);
-          const memoryContext = buildLongTermMemoryContext();
-          const chatMessages = [
-            { role: "system", content: buildTutorSystemPrompt(mode, language, subject, knownFacts) + "\nConversation mode: " + mode + (memoryContext ? ("\n\nLong-term memory context:\n" + memoryContext) : "") },
-          ].concat(recent).concat([{ role: "user", content: t }]);
-          const puterResp = await window.puter.ai.chat(chatMessages, { model: model });
-          const puterAnswer = extractPuterText(puterResp);
-          if (puterAnswer) answer = puterAnswer;
-        } catch (fallbackErr) {
-          addLog("assistant", "Tutor: Puter fallback failed: " + String((fallbackErr && fallbackErr.message) || fallbackErr || "unknown error"));
-        }
+        hideTypingIndicator();
+        addLog("assistant", "Tutor: Harmony error: " + String((data && data.ai_error) || "Harmony is unavailable right now."));
+        setAssistantState("idle", "Idle");
+        renderEvolutionStatus(data);
+        return;
+      }
+      if (!answer) {
+        hideTypingIndicator();
+        addLog("assistant", "Tutor: Harmony returned no response.");
+        setAssistantState("idle", "Idle");
+        renderEvolutionStatus(data);
+        return;
       }
       const speakText = buildSpeakText(answer);
       if (!visCanOperateAI()) {

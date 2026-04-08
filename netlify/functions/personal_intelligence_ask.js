@@ -239,17 +239,6 @@ function detectAction(message, history, knownFacts) {
   return null;
 }
 
-function fallbackReply(message) {
-  const low = String(message || "").toLowerCase();
-  if (["hi", "hello", "hey tutor", "how are you"].some((x) => low.includes(x))) {
-    return "Hey, I am Tutor. I am here with you. We can chat, plan your day, or handle tasks like directions and music.";
-  }
-  if (low.includes("homework") || low.includes("study") || low.includes("exam")) {
-    return "Absolutely. Tell me the subject and exact question, and I will teach it step by step.";
-  }
-  return "I am here and listening. Tell me what you want to do, and I will help you right away.";
-}
-
 function buildSpeakText(text) {
   const cleaned = String(text || "")
     .replace(/\*\*(.*?)\*\*/g, "$1")
@@ -378,10 +367,9 @@ exports.handler = async function handler(event) {
   const actionUpdates = {};
   if (action && action.home_address) actionUpdates.home_address = String(action.home_address);
   const mergedKnownFacts = mergeKnownFacts(combinedKnownFacts, actionUpdates);
-  const llm = action || cloudEvolveOnly ? null : await puterChatReplyFromPayload(message, payload);
   const seedAnswer = cloudEvolveOnly
     ? String(((payload && payload.puter_reply && payload.puter_reply.answer) || "Cloud evolution sync accepted.")).trim()
-    : (action && action.message ? String(action.message) : String((llm && llm.answer) || "").trim());
+    : (action && action.message ? String(action.message) : "");
   const harmony = await coordinateAgentHarmony(observatory, {
     seedAnswer,
     adapters: action || cloudEvolveOnly ? {} : buildHarmonyAdapters(),
@@ -389,14 +377,14 @@ exports.handler = async function handler(event) {
   });
   const answer = cloudEvolveOnly || action
     ? seedAnswer
-    : String(harmony.final_answer || seedAnswer || fallbackReply(message)).trim();
+    : String(harmony.final_answer || seedAnswer || "").trim();
   const speakText = cloudEvolveOnly
     ? buildSpeakText(answer)
-    : (action && action.message ? buildSpeakText(action.message) : buildSpeakText(answer || String(llm && llm.speak_text || "")));
+    : (action && action.message ? buildSpeakText(action.message) : buildSpeakText(answer));
   const aiProvider = cloudEvolveOnly ? "puter_client" : (action ? "local_action" : `agent_harmony:${String(harmony.model_used || "fallback")}`);
   const aiOk = cloudEvolveOnly ? true : (action ? true : !!String(answer || "").trim());
-  const aiError = cloudEvolveOnly ? "" : (action ? "" : String((llm && llm.error) || ""));
-  const harmonyFailed = !action && !cloudEvolveOnly && !queryPlansHaveNonPuterSuccess(harmony);
+  const aiError = cloudEvolveOnly ? "" : (action ? "" : deriveHarmonyError(harmony, answer));
+  const harmonyFailed = !action && !cloudEvolveOnly && !queryPlansHaveHarmonySuccess(harmony);
   const latencyMs = Math.max(0, Date.now() - startedAt);
   const runtimeMode = "cloud_only";
   const modelApiAvailability = getProviderAvailability();
@@ -514,10 +502,25 @@ exports.handler = async function handler(event) {
   });
 };
 
-function queryPlansHaveNonPuterSuccess(harmony) {
+function queryPlansHaveHarmonySuccess(harmony) {
   const plans = harmony && Array.isArray(harmony.query_plans) ? harmony.query_plans : [];
   return plans.some((plan) => {
     const attempts = plan && Array.isArray(plan.attempts) ? plan.attempts : [];
-    return attempts.some((attempt) => attempt && attempt.ok && String(attempt.model || "").toLowerCase() !== "puter");
+    return attempts.some((attempt) => attempt && attempt.ok);
   });
+}
+
+function deriveHarmonyError(harmony, answer) {
+  if (String(answer || "").trim()) return "";
+  const plans = harmony && Array.isArray(harmony.query_plans) ? harmony.query_plans : [];
+  const errors = [];
+  plans.forEach((plan) => {
+    const attempts = plan && Array.isArray(plan.attempts) ? plan.attempts : [];
+    attempts.forEach((attempt) => {
+      const error = String((attempt && attempt.error) || "").trim();
+      if (!error) return;
+      errors.push(`${String((attempt && attempt.model) || "unknown")}: ${error}`);
+    });
+  });
+  return errors.join(" | ") || "harmony_unavailable";
 }

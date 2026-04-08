@@ -1,11 +1,11 @@
 const { getProviderAvailability } = require("./model_api_registry");
 
 const MODEL_PRIORITY = {
-  casual: ["grok", "puter"],
-  deep_research: ["deepseek", "openrouter", "puter"],
-  tutorial: ["mistral", "openrouter", "puter"],
-  coding: ["openrouter", "deepseek", "puter"],
-  creative: ["grok", "huggingface", "puter"],
+  casual: ["grok"],
+  deep_research: ["deepseek", "openrouter"],
+  tutorial: ["mistral", "openrouter"],
+  coding: ["openrouter", "deepseek"],
+  creative: ["grok", "huggingface"],
 };
 
 function buildCouncilPrompt(query, analysis, personalizationPrompt = "") {
@@ -21,7 +21,7 @@ function buildCouncilPrompt(query, analysis, personalizationPrompt = "") {
 }
 
 function preferredModelsFor(analysis = {}) {
-  return MODEL_PRIORITY[String(analysis.type || "casual")] || ["puter"];
+  return MODEL_PRIORITY[String(analysis.type || "casual")] || ["grok"];
 }
 
 async function tryAdapter(modelName, context, adapters) {
@@ -105,7 +105,7 @@ async function coordinateQuery(analysis, options = {}) {
   const winning = successes[0];
   return {
     answer: winning ? winning.answer : String(options.seedAnswer || "").trim(),
-    model_used: winning ? winning.model : (preferred[0] || "puter"),
+    model_used: winning ? winning.model : (preferred[0] || "unavailable"),
     fallback_used: !winning || winning.model !== preferred[0],
     attempts,
   };
@@ -132,7 +132,7 @@ async function coordinateAgentHarmony(observatoryOutput, options = {}) {
 
   const primary = query_plans[0] || {
     answer: String(options.seedAnswer || "").trim(),
-    model_used: "puter",
+    model_used: "unavailable",
     fallback_used: false,
   };
 
