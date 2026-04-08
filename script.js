@@ -847,12 +847,10 @@
     const identity = getPiAuthIdentity();
     const profile = await ensurePiProfile(identity);
     const personalizationPrompt = getPiPersonalizationPrompt(profile);
-    await ensurePuterReady(true);
     const selectedMode = getPiModelMode();
     const effectiveMode = selectedMode === 'pi_dynamic' ? detectPiDynamicMode(text) : selectedMode;
     setPiActiveModeLabel(effectiveMode);
-    const piModel = getPiModel();
-    let puterAnswer = '';
+    const piModel = '';
 
     emitHarmonyDebug({
       status: 'Processing...',
@@ -864,34 +862,18 @@
       harmony: {
         model_used: 'Selecting...',
         fallback_used: false
+      },
+      agent: {
+        user_id: identity.user_id,
+        unique_id: profile && profile.unique_id ? profile.unique_id : '',
+        profile_verified: !!(profile && profile.unique_id)
       }
     });
-
-    if(effectiveMode === 'agent_swarm'){
-      puterAnswer = await runAgentSwarmSummary([{ role: 'system', content: personalizationPrompt }].concat(history), text);
-    } else if(effectiveMode === 'all_in_one'){
-      const researchPrompt = [{ role: 'system', content: getPiPromptByMode('research') + ' Current subject: ' + state.subject + '. Respond in ' + state.language + '.\n\n' + personalizationPrompt }].concat(history).concat([{ role: 'user', content: text }]);
-      const deepPrompt = [{ role: 'system', content: getPiPromptByMode('deep_research') + ' Current subject: ' + state.subject + '. Respond in ' + state.language + '.\n\n' + personalizationPrompt }].concat(history).concat([{ role: 'user', content: text }]);
-      const researchAnswer = await runPuterChatWithModel(researchPrompt, piModel);
-      const deepAnswer = await runPuterChatWithModel(deepPrompt, piModel);
-      const allInOnePrompt = [
-        { role: 'system', content: getPiPromptByMode('all_in_one') + '\n\n' + personalizationPrompt },
-        { role: 'user', content: 'User request:\n' + text + '\n\nResearch output:\n' + String(researchAnswer || 'none') + '\n\nDeep research output:\n' + String(deepAnswer || 'none') }
-      ];
-      puterAnswer = await runPuterChatWithModel(allInOnePrompt, piModel);
-    } else {
-      const piPrompt = getPiPromptByMode(effectiveMode) + ' Current subject: ' + state.subject + '. Respond in ' + state.language + '.\n\n' + personalizationPrompt;
-      const puterResp = await window.puter.ai.chat([{ role: 'system', content: piPrompt }].concat(history).concat([{ role: 'user', content: text }]), { model: piModel });
-      puterAnswer = extractPuterText(puterResp);
-    }
-
-    if(!puterAnswer){
-      throw new Error('Personal Intelligence model returned an empty response.');
-    }
 
     const reqBody = {
       message: text,
       user_id: identity.user_id,
+      unique_id: profile && profile.unique_id ? profile.unique_id : '',
       email: identity.email,
       name: identity.name,
       avatar: identity.avatar,
@@ -902,11 +884,7 @@
       history: history,
       known_facts: getPiKnownFacts(),
       profile: profile,
-      puter_reply: {
-        answer: puterAnswer,
-        model: piModel
-      },
-      puter_model: piModel,
+      personalization_prompt: personalizationPrompt,
       pi_processing_mode: effectiveMode,
       pi_requested_mode: selectedMode,
       runtime_mode: 'cloud_only'
@@ -918,8 +896,11 @@
     if(!res.ok){
       throw new Error('Personal Intelligence request failed (HTTP ' + res.status + '): ' + getBackendErrorMessage(data));
     }
-    const answerRaw = data && data.answer ? String(data.answer) : puterAnswer;
-    const answer = answerRaw ? stripAwardPointsLine(answerRaw) : 'Personal Intelligence returned an empty response.';
+    const answerRaw = data && data.answer ? String(data.answer) : '';
+    if(!answerRaw){
+      throw new Error('Harmony returned an empty response.');
+    }
+    const answer = stripAwardPointsLine(answerRaw);
     emitHarmonyDebug({
       status: 'Complete',
       observatory: data && data.observatory ? data.observatory : {
@@ -928,17 +909,23 @@
         queries: [{ text: text }]
       },
       harmony: data && data.agent_harmony ? data.agent_harmony : {
-        model_used: piModel,
+        model_used: data && data.ai_provider ? String(data.ai_provider).replace(/^agent_harmony:/, '') : '-',
         fallback_used: false
       },
-      user_profile: data && data.user_profile ? data.user_profile : profile
+      user_profile: data && data.user_profile ? data.user_profile : profile,
+      agent: {
+        user_id: identity.user_id,
+        unique_id: profile && profile.unique_id ? profile.unique_id : '',
+        profile_verified: !!(profile && profile.unique_id)
+      },
+      ai_provider: data && data.ai_provider ? data.ai_provider : ''
     });
     return {
       answer,
       data,
       profile,
       effectiveMode,
-      piModel
+      piModel: data && data.agent_harmony && data.agent_harmony.model_used ? data.agent_harmony.model_used : ''
     };
   }
 

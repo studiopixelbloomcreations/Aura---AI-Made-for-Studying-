@@ -107,10 +107,6 @@ function buildHarmonyAdapters() {
     mistral: async (context) => postChatCompletion(configs.mistral, context),
     huggingface: async (context) => postChatCompletion(configs.huggingface, context),
     deepseek: async (context) => postChatCompletion(configs.deepseek, context),
-    puter: async (context) => ({
-      answer: String((context && context.seed_answer) || "").trim(),
-      error: context && context.seed_answer ? "" : "puter_server_fallback",
-    }),
   };
 }
 

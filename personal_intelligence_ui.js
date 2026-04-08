@@ -3209,6 +3209,8 @@
       profile_file: String((p && p.file_name) || "").trim(),
       personalization_prompt: personalizationPrompt,
       status: String(agent.status || "").trim() || "pending",
+      profile_verified: !!agent.profile_verified,
+      profile_verified_at: String(agent.profile_verified_at || "").trim(),
     };
     try {
       window.__PI_AGENT_CONTEXT__ = Object.assign({}, visAgentContext);
@@ -3240,6 +3242,9 @@
         (cloudConfig.ai_config && cloudConfig.ai_config.personalization_prompt) ||
         ""
       ).trim(),
+      profile_verified: typeof base.profile_verified === "boolean" ? base.profile_verified : !!agent.profile_verified,
+      profile_verified_at: String(base.profile_verified_at || agent.profile_verified_at || "").trim(),
+      status: String(base.status || agent.status || "").trim() || "pending",
     };
   }
 
@@ -5703,7 +5708,6 @@
         agent: agentContext,
       });
       dbg("AI provider:", data && data.ai_provider ? data.ai_provider : "agent_harmony", "ok:", true);
-      triggerAutoEvolutionLocalAndCloud(t, answer);
       await playTutorTTS(speakText);
     } catch (e) {
       hideTypingIndicator();
