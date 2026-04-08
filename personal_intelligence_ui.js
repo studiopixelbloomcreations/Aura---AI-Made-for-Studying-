@@ -5515,40 +5515,39 @@
       stopSpeakerAnalyser();
       connectSpeakerAnalyserForAudioElement(tutorAudio);
       await withTimeout(new Promise(function (resolve, reject) {
-        let ended = false;
-        const cleanup = function () {
+        let settled = false;
+        const cleanupStartHandlers = function () {
           tutorAudio.onplay = null;
-          tutorAudio.onended = null;
           tutorAudio.onerror = null;
         };
         tutorAudio.onplay = function () {
+          if (settled) return;
+          settled = true;
+          cleanupStartHandlers();
           visSpeechState.active = true;
           visSpeechState.started_at_ms = Date.now();
           setAssistantState("speaking", "Speaking");
+          resolve(true);
         };
         tutorAudio.onended = function () {
-          if (ended) return;
-          ended = true;
-          cleanup();
           visSpeechState = { active: false, text: "", started_at_ms: 0, provider: "" };
           setAssistantState("listening", "Listening");
           armIdleTimer();
           try { if (tutorAudio && tutorAudio.__revoke) URL.revokeObjectURL(url); } catch (e) {}
-          resolve(true);
         };
         tutorAudio.onerror = function () {
-          if (ended) return;
-          ended = true;
-          cleanup();
+          if (settled) return;
+          settled = true;
+          cleanupStartHandlers();
           reject(new Error("AUDIO_ELEMENT_ERROR"));
         };
         tutorAudio.play().catch(function (playErr) {
-          if (ended) return;
-          ended = true;
-          cleanup();
+          if (settled) return;
+          settled = true;
+          cleanupStartHandlers();
           reject(playErr);
         });
-      }), Math.max(TTS_TIMEOUT_MS, 15000), "AUDIO_PLAYBACK_TIMEOUT");
+      }), Math.max(TTS_TIMEOUT_MS, 8000), "AUDIO_PLAYBACK_TIMEOUT");
       return { ok: true, provider: "puter_tts" };
     } catch (e) {
       dbg("Puter TTS failed, fallback to browser TTS", e && e.message);
