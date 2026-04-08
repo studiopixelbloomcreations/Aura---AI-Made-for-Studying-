@@ -119,7 +119,12 @@
       },
       personalization_profile: Object.assign({}, personalization),
       ai_behavior_configuration: Object.assign({}, aiConfig),
-      learned_preferences: Object.assign({}, personalization && personalization.memory && personalization.memory.known_facts || {}),
+      learned_preferences: Object.assign({}, personalization && personalization.memory && personalization.memory.known_facts || {}, {
+        name: preferredName || fullName || "",
+        preferred_name: preferredName || "",
+        full_name: fullName || "",
+        formal_name: fullName || "",
+      }),
       conversation_memory: {
         history: [],
         important_facts: Object.assign({}, personalization && personalization.memory && personalization.memory.known_facts || {}),
@@ -136,6 +141,10 @@
           goals: Array.isArray(personalization.goals) ? personalization.goals.slice(0, 12) : [],
           tone: String((aiConfig && aiConfig.tone) || "").trim(),
           communication_style: String((aiConfig && aiConfig.communication_style) || "").trim(),
+          response_identity_rules: {
+            casual_name: preferredName || fullName || "",
+            formal_name: fullName || preferredName || "",
+          },
         }),
       },
       session_state: Object.assign({}, source.session_state || {}, {
@@ -180,6 +189,30 @@
       p.file_name ||
       "Unknown"
     ).trim() || "Unknown";
+  }
+
+  function buildTailoredAgentSnapshot(profile, answers) {
+    const p = profile && typeof profile === "object" ? profile : {};
+    const sourceAnswers = answers && typeof answers === "object"
+      ? answers
+      : ((p.personal_intelligence_agent && p.personal_intelligence_agent.personalization_answers) || {});
+    return {
+      unique_id: String((p.personal_intelligence_agent && p.personal_intelligence_agent.unique_identifier) || "").trim(),
+      preferred_name: String(sourceAnswers.preferred_name || "").trim(),
+      full_name: String(sourceAnswers.full_name || "").trim(),
+      interests: parseCsvList(sourceAnswers.interests),
+      goals: parseCsvList(sourceAnswers.goals),
+      favorite_subjects: parseCsvList(sourceAnswers.favorite_subjects),
+      learning_style: String(sourceAnswers.learning_style || "").trim(),
+      preferred_tone: String(sourceAnswers.preferred_tone || "").trim(),
+      hobbies: parseCsvList(sourceAnswers.hobbies),
+      timezone_or_city: String(sourceAnswers.timezone_or_city || "").trim(),
+      preferred_language: String(sourceAnswers.preferred_language || "").trim(),
+      response_identity_rules: {
+        casual_name: String(sourceAnswers.preferred_name || sourceAnswers.full_name || "").trim(),
+        formal_name: String(sourceAnswers.full_name || sourceAnswers.preferred_name || "").trim(),
+      },
+    };
   }
   let enabled = false;
   let recognition = null;
@@ -1124,16 +1157,7 @@
     profile.ai_behavior_configuration = Object.assign({}, profile.ai_behavior_configuration || {}, visBehaviorConfig || {});
     profile.learned_preferences = Object.assign({}, profile.learned_preferences || {}, knownFacts || {});
     profile.personal_intelligence_agent = Object.assign({}, profile.personal_intelligence_agent || {}, {
-      tailored_agent: {
-        unique_id: String((profile.personal_intelligence_agent && profile.personal_intelligence_agent.unique_identifier) || "").trim(),
-        preferred_name: String(safeAnswers.preferred_name || "").trim(),
-        full_name: String(safeAnswers.full_name || "").trim(),
-        interests: parseCsvList(safeAnswers.interests),
-        goals: parseCsvList(safeAnswers.goals),
-        learning_style: String(safeAnswers.learning_style || "").trim(),
-        preferred_tone: String(safeAnswers.preferred_tone || "").trim(),
-        hobbies: parseCsvList(safeAnswers.hobbies),
-      },
+      tailored_agent: buildTailoredAgentSnapshot(profile, safeAnswers),
     });
     if (visActiveProfile && visActiveProfile.file_name === profile.file_name) {
       scheduleVisProfileSave();
@@ -1157,6 +1181,7 @@
         cloud_config: savedConfig.user_config || savedConfig,
         unique_identifier: uniqueId,
       });
+      profile.personal_intelligence_agent.tailored_agent = buildTailoredAgentSnapshot(profile, safeAnswers);
       if (uniqueId) pushVisDebug("Personal Intelligence unique identifier ready: " + uniqueId);
       const verification = await verifyPiProfileAssociation(profile, uniqueId);
       profile.personal_intelligence_agent = Object.assign({}, profile.personal_intelligence_agent || {}, {
@@ -1177,7 +1202,7 @@
       if (!verification.ok) {
         pushVisDebug("Personal Intelligence verification pending: " + String(verification.error || "unknown"));
       }
-      const harmonyReady = await warmHarmonyPersonalization(profile, safeAnswers);
+      const harmonyReady = await warmHarmonyPersonalization(profile, safeAnswers, uniqueId);
       if (!harmonyReady) {
         pushVisDebug("Harmony personalization warmup pending.");
       }
@@ -3408,26 +3433,48 @@
     }
   }
 
-  async function warmHarmonyPersonalization(profile, answers) {
+  async function warmHarmonyPersonalization(profile, answers, uniqueId) {
     try {
+      const tailoredAgent = buildTailoredAgentSnapshot(profile, answers);
+      const expectedUniqueId = String(uniqueId || (profile && profile.personal_intelligence_agent && profile.personal_intelligence_agent.unique_identifier) || "").trim();
+      const activationPrompt = [
+        "Personalization completed for a newly registered Personal Intelligence user.",
+        "Use every onboarding detail below to initialize this user's unique tailored agent.",
+        "Store and respect the preferred_name for normal conversation.",
+        "Store and respect the full_name for formal requests.",
+        "Return exactly one line in this format: UNIQUE_ID:" + expectedUniqueId,
+        "Onboarding answers JSON:",
+        JSON.stringify(answers || {}),
+        "Tailored agent JSON:",
+        JSON.stringify(tailoredAgent || {}),
+      ].join("\n");
       const response = await fetchJson("/personal-intelligence/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: "Personalization completed. Confirm this user's unique agent is ready in one short sentence only.",
+          message: activationPrompt,
           email: EMAIL,
           language: localStorage.getItem("g9_language") || "English",
           subject: localStorage.getItem("g9_subject") || "General",
           title: "Personal Intelligence",
           history: [],
-          known_facts: Object.assign({}, knownFacts, answers || {}),
+          known_facts: Object.assign({}, knownFacts, answers || {}, {
+            name: String(answers && (answers.preferred_name || answers.full_name) || "").trim(),
+            preferred_name: String(answers && answers.preferred_name || "").trim(),
+            full_name: String(answers && answers.full_name || "").trim(),
+            formal_name: String(answers && answers.full_name || "").trim(),
+          }),
           mode: "personalized_activation",
           memory_context: buildLongTermMemoryContext(),
           system_prompt: buildTutorSystemPrompt("personalized_activation", localStorage.getItem("g9_language") || "English", localStorage.getItem("g9_subject") || "General", knownFacts),
           user_id: String((profile && profile.user_identity && profile.user_identity.username) || "").trim(),
+          unique_id: expectedUniqueId,
+          personalization_prompt: String((profile && profile.personal_intelligence_agent && profile.personal_intelligence_agent.personalization_prompt) || "").trim(),
         }),
       });
-      return !!(response && !response.harmony_failed);
+      const answer = String(response && response.answer || "").trim();
+      const echoedId = answer.indexOf("UNIQUE_ID:") >= 0 ? answer.split("UNIQUE_ID:").pop().trim() : "";
+      return !!(response && !response.harmony_failed && (!expectedUniqueId || echoedId === expectedUniqueId));
     } catch (e) {
       pushVisDebug("Harmony personalization warmup failed: " + String((e && e.message) || e));
       return false;
@@ -3467,6 +3514,10 @@
         goals: Array.isArray(sourceConfig.personalization_data && sourceConfig.personalization_data.goals) ? sourceConfig.personalization_data.goals.slice(0, 12) : [],
         tone: String(sourceConfig.ai_config && sourceConfig.ai_config.tone || "").trim(),
         communication_style: String(sourceConfig.ai_config && sourceConfig.ai_config.communication_style || "").trim(),
+        response_identity_rules: {
+          casual_name: String(onboardingAnswers.preferred_name || onboardingAnswers.full_name || "").trim(),
+          formal_name: String(onboardingAnswers.full_name || onboardingAnswers.preferred_name || "").trim(),
+        },
       }),
     });
     next.user_identity = Object.assign({}, next.user_identity || {}, {
