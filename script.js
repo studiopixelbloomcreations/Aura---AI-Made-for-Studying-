@@ -10,6 +10,7 @@
   const inputBox=document.getElementById('inputBox');
   const sendBtn=document.getElementById('sendBtn');
   const piBrainToggle=document.getElementById('piBrainToggle');
+  const personalIntelligenceTab=document.getElementById('personalIntelligenceTab');
   const piModeSelect=document.getElementById('piModeSelect');
   const piModeActiveLabel=document.getElementById('piModeActiveLabel');
   const micBtn=document.getElementById('micBtn');
@@ -795,6 +796,11 @@
       piBrainToggle.setAttribute('aria-pressed', state.piChatMode ? 'true' : 'false');
       piBrainToggle.title = state.piChatMode ? 'Personal Intelligence brain active' : 'Main Tutor brain active';
     }
+    if(personalIntelligenceTab){
+      personalIntelligenceTab.classList.toggle('active', state.piChatMode);
+      personalIntelligenceTab.setAttribute('aria-pressed', state.piChatMode ? 'true' : 'false');
+      personalIntelligenceTab.title = state.piChatMode ? 'Personal Intelligence active' : 'Open Personal Intelligence';
+    }
     if(inputBox){
       inputBox.placeholder = state.piChatMode
         ? 'Personal Intelligence mode: ask anything...'
@@ -805,6 +811,37 @@
     }
     if(!state.piChatMode){
       setPiActiveModeLabel(getPiModelMode());
+    }
+  }
+
+  function openPersonalIntelligenceMode(){
+    try {
+      if(window.ExamModeContext && window.ExamModeContext.getEnabled && window.ExamModeContext.setEnabled){
+        if(window.ExamModeContext.getEnabled()) window.ExamModeContext.setEnabled(false);
+      }
+    } catch (e) {}
+
+    try {
+      if (badgesTab && badgesTab.classList.contains('active')) {
+        badgesTab.classList.remove('active');
+        if (badgesContent) badgesContent.style.display = 'none';
+        restoreBadgesPrevState();
+      }
+    } catch (e) {}
+
+    if (composerEl) composerEl.style.display = '';
+    if (messagesEl) messagesEl.style.display = '';
+    if (welcomePanel && messagesEl && messagesEl.children.length > 0) {
+      welcomePanel.style.display = 'none';
+    } else {
+      checkWelcomePanel();
+    }
+
+    setPiChatMode(true);
+
+    if(inputBox){
+      inputBox.focus();
+      try { inputBox.dispatchEvent(new Event('input')); } catch (e) {}
     }
   }
 
@@ -1424,6 +1461,13 @@
     piBrainToggle.addEventListener('click', () => {
       setPiChatMode(!state.piChatMode);
       toast(state.piChatMode ? 'Personal Intelligence text mode enabled' : 'Main Tutor mode enabled');
+    });
+  }
+
+  if (personalIntelligenceTab) {
+    personalIntelligenceTab.addEventListener('click', () => {
+      openPersonalIntelligenceMode();
+      toast('Personal Intelligence opened');
     });
   }
 
