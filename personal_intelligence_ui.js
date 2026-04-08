@@ -4473,6 +4473,10 @@
   async function primeAudioPlayback() {
     if (audioUnlocked) return true;
     try {
+      const ctx = ensureAudioContext();
+      if (ctx && ctx.state === "suspended" && typeof ctx.resume === "function") {
+        try { await ctx.resume(); } catch (e) {}
+      }
       const probe = new Audio(SILENT_WAV_DATA_URI);
       probe.muted = true;
       probe.playsInline = true;
@@ -5065,6 +5069,10 @@
     try {
       const ctx = ensureAudioContext();
       if (!ctx || !audioEl) return;
+      if (ctx.state === "suspended" && typeof ctx.resume === "function") {
+        ctx.resume().catch(function () {});
+      }
+      stopSpeakerAnalyser();
       speakerAnalyser = ctx.createAnalyser();
       speakerAnalyser.fftSize = 256;
       speakerAnalyser.smoothingTimeConstant = 0.82;
