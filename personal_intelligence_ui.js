@@ -87,6 +87,8 @@
       : {};
     const username = String((identity && (identity.name || identity.email || identity.user_id)) || "user").trim() || "user";
     const fileName = String(identity && identity.user_id ? identity.user_id : username).replace(/[^a-zA-Z0-9._-]+/g, "_") + VIS_PROFILE_EXTENSION;
+    const onboardingAnswers = Object.assign({}, personalization.onboarding_answers || {});
+    const agentReady = Object.keys(onboardingAnswers).length >= VIS_PERSONALIZE_QUESTIONS.length;
     return {
       file_name: fileName,
       profile_version: 2,
@@ -104,9 +106,9 @@
         important_facts: Object.assign({}, personalization && personalization.memory && personalization.memory.known_facts || {}),
       },
       personal_intelligence_agent: {
-        status: "ready",
+        status: agentReady ? "ready" : "pending",
         provider: "auth_identity",
-        personalization_answers: Object.assign({}, personalization.onboarding_answers || {}),
+        personalization_answers: onboardingAnswers,
         unique_identifier: String(source.unique_id || ""),
       },
       session_state: Object.assign({}, source.session_state || {}, {
@@ -877,7 +879,13 @@
   }
 
   function hasVisPersonalAgent(profile) {
-    return !!profile;
+    const agent = profile && profile.personal_intelligence_agent ? profile.personal_intelligence_agent : null;
+    if (!agent || typeof agent !== "object") return false;
+    if (String(agent.status || "").toLowerCase() !== "ready") return false;
+    const answers = agent.personalization_answers && typeof agent.personalization_answers === "object"
+      ? agent.personalization_answers
+      : {};
+    return Object.keys(answers).length >= VIS_PERSONALIZE_QUESTIONS.length;
   }
 
   function openVisPersonalize(profile) {
@@ -1048,7 +1056,6 @@
     } else {
       await saveVisProfileToCloud(profile);
     }
-    await createVisProfileArtifactInRepo(profile);
     pushVisDebug("Waiting for Personal Intelligence unique identifier.");
     const saveResult = await savePiUserConfig(profile, safeAnswers);
     const savedConfig = saveResult && (saveResult.config || saveResult);
@@ -1076,7 +1083,6 @@
     if (hasVisPersonalAgent(profile)) return;
     if (visPersonalizeOpen) return;
     if (visSetupOpen || visVerificationBusy || visScanning) return;
-    if (!visFacePresent) return;
     pushVisDebug("Opening personalization flow (" + String(reason || "missing_agent") + ").");
     setAssistantStateForVisOffline("Personalization required");
     openVisPersonalize(profile);
@@ -1095,10 +1101,8 @@
       closeVisPersonalize();
       if (profile) {
         switchToVisProfile(profile).then(function () {
-          // Force a quick rescan to confirm identity and resume.
           visRecognitionCandidate = { profileFile: "", count: 0 };
           visNoMatchCount = 0;
-          scheduleVisFrameLoop(400);
         });
       }
     }).catch(function (error) {
@@ -2877,20 +2881,25 @@
 
   async function saveVisProfileToCloud(profile) {
     const identity = getAuthIdentity();
-    if (!identity || !profile) return false;
+    const db = getFirestoreDb();
+    const au = getFirebaseAuthedUser();
+    const uid = au && au.uid ? String(au.uid) : getCurrentUid();
+    if (!identity || !profile || !db || !uid) return false;
     try {
-      await fetchSiteJson("/personal-intelligence/config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const payload = Object.assign({}, profile, {
+        updated_at: nowIso(),
+        auth_identity: {
           user_id: identity.user_id,
           email: identity.email,
           name: identity.name,
           avatar: identity.avatar,
-          identity: identity,
-          answers: (profile.personal_intelligence_agent && profile.personal_intelligence_agent.personalization_answers) || {},
-        }),
+        },
       });
+      await db.collection("users")
+        .doc(uid)
+        .collection("pi_vis_identity_profiles")
+        .doc(String(profile.file_name))
+        .set(payload, { merge: true });
       return true;
     } catch (e) {
       dbg("VIS cloud profile save failed", e && e.message);
@@ -2901,13 +2910,30 @@
   async function loadVisProfilesFromCloud() {
     if (visCloudLoadInFlight) return visRecognitionIndex.slice();
     const identity = getAuthIdentity();
-    if (!identity) return [];
+    const db = getFirestoreDb();
+    const au = getFirebaseAuthedUser();
+    const uid = au && au.uid ? String(au.uid) : getCurrentUid();
+    if (!identity || !db || !uid) return [];
     visCloudLoadInFlight = true;
     try {
-      const out = await fetchSiteJson("/personal-intelligence/config?user_id=" + encodeURIComponent(identity.user_id), {
-        method: "GET",
-      });
-      const profile = buildAuthBackedProfile(identity, out && out.profile ? out.profile : null);
+      const snap = await db.collection("users")
+        .doc(uid)
+        .collection("pi_vis_identity_profiles")
+        .limit(1)
+        .get();
+      let profile = null;
+      if (snap && snap.forEach) {
+        snap.forEach(function (docSnap) {
+          if (profile) return;
+          const data = docSnap && docSnap.data ? docSnap.data() : null;
+          if (!data) return;
+          profile = data;
+        });
+      }
+      if (!profile) {
+        profile = buildAuthBackedProfile(identity, null);
+        await saveVisProfileToCloud(profile);
+      }
       visRecognitionIndex = [{
         profileFile: String(profile.file_name || ""),
         vector: [],
@@ -3005,7 +3031,6 @@
       last_active_timestamp: nowIso(),
     });
     await saveVisProfileToCloud(visActiveProfile);
-    await createVisProfileArtifactInRepo(visActiveProfile);
   }
 
   function applyVisProfileToRuntime(profile) {
@@ -3995,6 +4020,7 @@
       setVisOfflineState(false, "Online - " + String(visLastKnownUserLabel || "User"));
       if (enabled) setAssistantState("listening", "Listening");
       showVisWelcome(visLastKnownUserLabel);
+      ensureVisPersonalAgent(visActiveProfile, "auth_bootstrap");
       return profile;
     }
 
@@ -5248,7 +5274,25 @@
           system_prompt: buildTutorSystemPrompt(detectSupportMode(t), localStorage.getItem("g9_language") || "English", localStorage.getItem("g9_subject") || "General", knownFacts),
         }),
       });
-      const answer = data && data.answer ? String(data.answer) : "I did not get that. Please try again.";
+      let answer = data && data.answer ? String(data.answer) : "I did not get that. Please try again.";
+      if (data && data.harmony_failed) {
+        const errorMsg = "Harmony unavailable. Switching to Puter fallback.";
+        addLog("assistant", "Tutor: " + errorMsg);
+        try {
+          await ensurePuterReady(false);
+          const model = getPIModel();
+          const recent = getRecentHistory(HISTORY_MODEL_WINDOW);
+          const memoryContext = buildLongTermMemoryContext();
+          const chatMessages = [
+            { role: "system", content: buildTutorSystemPrompt(mode, language, subject, knownFacts) + "\nConversation mode: " + mode + (memoryContext ? ("\n\nLong-term memory context:\n" + memoryContext) : "") },
+          ].concat(recent).concat([{ role: "user", content: t }]);
+          const puterResp = await window.puter.ai.chat(chatMessages, { model: model });
+          const puterAnswer = extractPuterText(puterResp);
+          if (puterAnswer) answer = puterAnswer;
+        } catch (fallbackErr) {
+          addLog("assistant", "Tutor: Puter fallback failed: " + String((fallbackErr && fallbackErr.message) || fallbackErr || "unknown error"));
+        }
+      }
       const speakText = buildSpeakText(answer);
       if (!visCanOperateAI()) {
         visPendingResponse = { answer: answer, speakText: speakText, ts: Date.now() };

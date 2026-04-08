@@ -396,6 +396,7 @@ exports.handler = async function handler(event) {
   const aiProvider = cloudEvolveOnly ? "puter_client" : (action ? "local_action" : `agent_harmony:${String(harmony.model_used || "fallback")}`);
   const aiOk = cloudEvolveOnly ? true : (action ? true : !!String(answer || "").trim());
   const aiError = cloudEvolveOnly ? "" : (action ? "" : String((llm && llm.error) || ""));
+  const harmonyFailed = !action && !cloudEvolveOnly && !queryPlansHaveNonPuterSuccess(harmony);
   const latencyMs = Math.max(0, Date.now() - startedAt);
   const runtimeMode = "cloud_only";
   const modelApiAvailability = getProviderAvailability();
@@ -507,7 +508,16 @@ exports.handler = async function handler(event) {
     runtime_mode: runtimeMode,
     observatory,
     agent_harmony: harmony,
+    harmony_failed: harmonyFailed,
     model_api_availability: modelApiAvailability,
     cloud_evolution: cloudEvolution || undefined,
   });
 };
+
+function queryPlansHaveNonPuterSuccess(harmony) {
+  const plans = harmony && Array.isArray(harmony.query_plans) ? harmony.query_plans : [];
+  return plans.some((plan) => {
+    const attempts = plan && Array.isArray(plan.attempts) ? plan.attempts : [];
+    return attempts.some((attempt) => attempt && attempt.ok && String(attempt.model || "").toLowerCase() !== "puter");
+  });
+}
