@@ -106,12 +106,22 @@
       return out.join(", ") || "-";
     }
 
+    function deriveComplexity(observatory, harmony) {
+      const direct = text(observatory && observatory.complexity, "");
+      if (direct) return direct;
+      const plans = harmony && Array.isArray(harmony.query_plans) ? harmony.query_plans : [];
+      if (plans.some(function (plan) { return text(plan && plan.complexity, "") === "high"; })) return "high";
+      if (plans.some(function (plan) { return text(plan && plan.complexity, "") === "medium"; })) return "medium";
+      if (plans.some(function (plan) { return text(plan && plan.complexity, "") === "low"; })) return "low";
+      return "-";
+    }
+
     function setState(detail) {
       const observatory = detail && detail.observatory || {};
       const harmony = detail && (detail.agent_harmony || detail.harmony) || {};
       const agent = detail && detail.agent || {};
       fields.type.textContent = text(observatory.type, "idle");
-      fields.complexity.textContent = text(observatory.complexity, "-");
+      fields.complexity.textContent = deriveComplexity(observatory, harmony);
       fields.queries.textContent = String((observatory.queries && observatory.queries.length) || 0);
       fields.model.textContent = text(
         harmony.model_used && String(harmony.model_used).replace(/^agent_harmony:/, ""),

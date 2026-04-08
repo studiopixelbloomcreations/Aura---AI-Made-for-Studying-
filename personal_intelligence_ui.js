@@ -5496,7 +5496,7 @@
         ts: Date.now(),
       };
       scheduleVisProfileSave();
-      return;
+      return { ok: false, queued: true, provider: "pending" };
     }
     stopTutorAudio();
     try {
@@ -5554,18 +5554,25 @@
           reject(playErr);
         });
       }), Math.max(TTS_TIMEOUT_MS, 15000), "AUDIO_PLAYBACK_TIMEOUT");
+      return { ok: true, provider: "puter_tts" };
     } catch (e) {
       dbg("Puter TTS failed, fallback to browser TTS", e && e.message);
       addLog("assistant", "Tutor: Voice engine fallback (" + String((e && e.message) || "TTS error") + ").");
       try {
         await withTimeout(speakWithBrowserFallback(cleanedText), Math.max(TTS_TIMEOUT_MS, 8000), "BROWSER_TTS_TIMEOUT");
+        return { ok: true, provider: "browser_tts_fallback", fallback_from: String((e && e.message) || "unknown") };
       } catch (e2) {
         const blocked = String((e2 && e2.message) || "").toLowerCase();
         if (blocked.includes("not allowed") || blocked.includes("user agent") || blocked.includes("timeout")) {
           addLog("assistant", "Tutor: Audio playback is blocked. Tap the orb once, then try again.");
         }
         setAssistantState("idle", "Idle");
-        throw e2;
+        return {
+          ok: false,
+          provider: "none",
+          error: String((e2 && e2.message) || e2 || "VOICE_FAILED"),
+          fallback_from: String((e && e.message) || "unknown"),
+        };
       }
     }
   }
