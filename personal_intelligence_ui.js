@@ -793,6 +793,7 @@
 
   async function createVisProfileArtifactInRepo(profile) {
     if (!profile || !profile.file_name) return { ok: false, skipped: true, reason: "missing_profile" };
+    if (VIS_CAMERA_DISABLED) return { ok: false, skipped: true, reason: "camera_runtime_disabled" };
     const fileName = String(profile.file_name || "").trim();
     const json = JSON.stringify(profile, null, 2) + "\n";
     // Web-first path: commit to GitHub via Netlify function.
@@ -4216,13 +4217,15 @@
   }
 
   async function requestPuterTts(text, voiceOptions) {
+    const cleaned = String(text || "").replace(/\s+/g, " ").trim();
+    if (!cleaned) throw new Error("TTS_TEXT_EMPTY");
     await ensurePuterReady(false);
     const ai = window.puter && window.puter.ai;
     if (!ai) throw new Error("PUTER_NOT_LOADED");
-    const payloadA = Object.assign({ text: String(text || "") }, voiceOptions || {});
-    const payloadB = Object.assign({ input: String(text || "") }, voiceOptions || {});
+    const payloadA = Object.assign({ text: cleaned }, voiceOptions || {});
+    const payloadB = Object.assign({ input: cleaned }, voiceOptions || {});
     async function tryMethod(fn) {
-      try { return await fn(String(text || ""), voiceOptions || {}); } catch (e1) {}
+      try { return await fn(cleaned, voiceOptions || {}); } catch (e1) {}
       try { return await fn(payloadA); } catch (e2) {}
       return fn(payloadB);
     }
@@ -5229,16 +5232,23 @@
         return;
       }
 
-      await ensurePuterReady(false);
-      const model = getPIModel();
-      const recent = getRecentHistory(HISTORY_MODEL_WINDOW);
-      const memoryContext = buildLongTermMemoryContext();
-      const chatMessages = [
-        { role: "system", content: buildTutorSystemPrompt(mode, language, subject, knownFacts) + "\nConversation mode: " + mode + (memoryContext ? ("\n\nLong-term memory context:\n" + memoryContext) : "") },
-      ].concat(recent).concat([{ role: "user", content: t }]);
-
-      const puterResp = await window.puter.ai.chat(chatMessages, { model: model });
-      const answer = extractPuterText(puterResp) || "I did not get that. Please try again.";
+      const data = await fetchJson("/personal-intelligence/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: t,
+          email: EMAIL,
+          language: localStorage.getItem("g9_language") || "English",
+          subject: localStorage.getItem("g9_subject") || "General",
+          title: "Personal Intelligence",
+          history: getRecentHistory(HISTORY_BACKEND_WINDOW),
+          known_facts: knownFacts,
+          mode: detectSupportMode(t),
+          memory_context: buildLongTermMemoryContext(),
+          system_prompt: buildTutorSystemPrompt(detectSupportMode(t), localStorage.getItem("g9_language") || "English", localStorage.getItem("g9_subject") || "General", knownFacts),
+        }),
+      });
+      const answer = data && data.answer ? String(data.answer) : "I did not get that. Please try again.";
       const speakText = buildSpeakText(answer);
       if (!visCanOperateAI()) {
         visPendingResponse = { answer: answer, speakText: speakText, ts: Date.now() };
@@ -5249,49 +5259,17 @@
       hideTypingIndicator();
       addLog("assistant", "Tutor: " + answer);
       pushHistory("assistant", answer);
-      dbg("AI provider:", "puter", "ok:", true, "model:", model);
+      if (data && data.learned_facts) mergeKnownFacts(data.learned_facts);
+      if (data && data.memory_updates) mergeKnownFacts(data.memory_updates);
+      if (data && data.action) executeAssistantAction(data.action);
+      renderEvolutionStatus(data);
+      dbg("AI provider:", data && data.ai_provider ? data.ai_provider : "agent_harmony", "ok:", true);
       triggerAutoEvolutionLocalAndCloud(t, answer);
       await playTutorTTS(speakText);
     } catch (e) {
-      dbg("puter ask failed, fallback to backend", e && e.message);
-      try {
-        const data = await fetchJson("/personal-intelligence/ask", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: t,
-            email: EMAIL,
-            language: localStorage.getItem("g9_language") || "English",
-            subject: localStorage.getItem("g9_subject") || "General",
-            title: "Personal Intelligence",
-            history: getRecentHistory(HISTORY_BACKEND_WINDOW),
-            known_facts: knownFacts,
-            mode: detectSupportMode(t),
-            memory_context: buildLongTermMemoryContext(),
-            system_prompt: buildTutorSystemPrompt(detectSupportMode(t), localStorage.getItem("g9_language") || "English", localStorage.getItem("g9_subject") || "General", knownFacts),
-          }),
-        });
-        const answer = data && data.answer ? String(data.answer) : "I did not get that. Please try again.";
-        const speakText = buildSpeakText(answer);
-        if (!visCanOperateAI()) {
-          visPendingResponse = { answer: answer, speakText: speakText, ts: Date.now() };
-          scheduleVisProfileSave();
-          hideTypingIndicator();
-          return;
-        }
-        hideTypingIndicator();
-        addLog("assistant", "Tutor: " + answer);
-        pushHistory("assistant", answer);
-        if (data && data.learned_facts) mergeKnownFacts(data.learned_facts);
-        if (data && data.memory_updates) mergeKnownFacts(data.memory_updates);
-        if (data && data.action) executeAssistantAction(data.action);
-        renderEvolutionStatus(data);
-        await playTutorTTS(speakText);
-      } catch (e2) {
-        hideTypingIndicator();
-        addLog("assistant", "Tutor: Request failed. Please try again.");
-        setAssistantState("idle", "Idle");
-      }
+      hideTypingIndicator();
+      addLog("assistant", "Tutor: Request failed. Please try again.");
+      setAssistantState("idle", "Idle");
     } finally {
       hideTypingIndicator();
     }

@@ -287,9 +287,9 @@ async function puterChatReplyFromPayload(message, payload) {
   if (!answer) {
     return {
       ok: false,
-      error: "PUTER_REQUIRED: send puter_reply.answer from frontend Puter call",
-      answer: fallbackReply(message),
-      speak_text: buildSpeakText(fallbackReply(message)),
+      error: "PUTER_NOT_PROVIDED",
+      answer: "",
+      speak_text: "",
       provider: "none",
       model,
     };
@@ -381,7 +381,7 @@ exports.handler = async function handler(event) {
   const llm = action || cloudEvolveOnly ? null : await puterChatReplyFromPayload(message, payload);
   const seedAnswer = cloudEvolveOnly
     ? String(((payload && payload.puter_reply && payload.puter_reply.answer) || "Cloud evolution sync accepted.")).trim()
-    : (action && action.message ? String(action.message) : llm.answer);
+    : (action && action.message ? String(action.message) : String((llm && llm.answer) || "").trim());
   const harmony = await coordinateAgentHarmony(observatory, {
     seedAnswer,
     adapters: action || cloudEvolveOnly ? {} : buildHarmonyAdapters(),
@@ -389,13 +389,13 @@ exports.handler = async function handler(event) {
   });
   const answer = cloudEvolveOnly || action
     ? seedAnswer
-    : String(harmony.final_answer || seedAnswer).trim();
+    : String(harmony.final_answer || seedAnswer || fallbackReply(message)).trim();
   const speakText = cloudEvolveOnly
     ? buildSpeakText(answer)
-    : (action && action.message ? buildSpeakText(action.message) : buildSpeakText(answer || String(llm.speak_text || "")));
-  const aiProvider = cloudEvolveOnly ? "puter_client" : (action ? "local_action" : String(llm.provider || "puter"));
-  const aiOk = cloudEvolveOnly ? true : (action ? true : !!llm.ok);
-  const aiError = cloudEvolveOnly ? "" : (action ? "" : String(llm.error || ""));
+    : (action && action.message ? buildSpeakText(action.message) : buildSpeakText(answer || String(llm && llm.speak_text || "")));
+  const aiProvider = cloudEvolveOnly ? "puter_client" : (action ? "local_action" : `agent_harmony:${String(harmony.model_used || "fallback")}`);
+  const aiOk = cloudEvolveOnly ? true : (action ? true : !!String(answer || "").trim());
+  const aiError = cloudEvolveOnly ? "" : (action ? "" : String((llm && llm.error) || ""));
   const latencyMs = Math.max(0, Date.now() - startedAt);
   const runtimeMode = "cloud_only";
   const modelApiAvailability = getProviderAvailability();

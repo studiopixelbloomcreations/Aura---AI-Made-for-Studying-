@@ -33,20 +33,43 @@ async function parseResponse(response) {
 
 async function getUserProfile(user_id) {
   const config = ensureConfig();
-  const url = `${config.supabaseUrl}/rest/v1/${config.table}?select=*&user_id=eq.${encodeURIComponent(String(user_id || "").trim())}&limit=1`;
-  const response = await fetch(url, { method: "GET", headers: headers(config) });
-  const rows = await parseResponse(response);
-  if (!response.ok) throw new Error((rows && rows.message) || `Supabase get failed (${response.status})`);
-  return Array.isArray(rows) && rows.length ? rows[0] : null;
+  const userId = encodeURIComponent(String(user_id || "").trim());
+  const urls = [
+    `${config.supabaseUrl}/rest/v1/${config.table}?select=*&user_id=eq.${userId}&limit=1`,
+    `${config.supabaseUrl}/rest/v1/${config.table}?select=user_id,personalization_data,unique_id,created_at,updated_at,user_config,unique_identifier,source_profile_file&user_id=eq.${userId}&limit=1`,
+  ];
+  let lastError = null;
+  for (const url of urls) {
+    const response = await fetch(url, { method: "GET", headers: headers(config) });
+    const rows = await parseResponse(response);
+    if (response.ok) {
+      const row = Array.isArray(rows) && rows.length ? rows[0] : null;
+      if (!row) return null;
+      return normalizeLegacyProfile(row);
+    }
+    lastError = (rows && rows.message) || `Supabase get failed (${response.status})`;
+  }
+  throw new Error(lastError || "Supabase get failed");
 }
 
 async function getUserProfileByUniqueId(unique_id) {
   const config = ensureConfig();
-  const url = `${config.supabaseUrl}/rest/v1/${config.table}?select=*&unique_id=eq.${encodeURIComponent(String(unique_id || "").trim())}&limit=1`;
-  const response = await fetch(url, { method: "GET", headers: headers(config) });
-  const rows = await parseResponse(response);
-  if (!response.ok) throw new Error((rows && rows.message) || `Supabase unique_id lookup failed (${response.status})`);
-  return Array.isArray(rows) && rows.length ? rows[0] : null;
+  const uniqueId = encodeURIComponent(String(unique_id || "").trim());
+  const urls = [
+    `${config.supabaseUrl}/rest/v1/${config.table}?select=*&unique_id=eq.${uniqueId}&limit=1`,
+    `${config.supabaseUrl}/rest/v1/${config.table}?select=user_id,personalization_data,unique_id,created_at,updated_at,user_config,unique_identifier,source_profile_file&unique_identifier=eq.${uniqueId}&limit=1`,
+  ];
+  let lastError = null;
+  for (const url of urls) {
+    const response = await fetch(url, { method: "GET", headers: headers(config) });
+    const rows = await parseResponse(response);
+    if (response.ok) {
+      const row = Array.isArray(rows) && rows.length ? rows[0] : null;
+      return row ? normalizeLegacyProfile(row) : null;
+    }
+    lastError = (rows && rows.message) || `Supabase unique_id lookup failed (${response.status})`;
+  }
+  throw new Error(lastError || "Supabase unique_id lookup failed");
 }
 
 async function saveUserProfile(user_id, data = {}) {
@@ -58,15 +81,34 @@ async function saveUserProfile(user_id, data = {}) {
     unique_id: String(data.unique_id || "").trim(),
     updated_at: new Date().toISOString(),
   };
+  const legacyPayload = {
+    user_id: payload.user_id,
+    unique_identifier: payload.unique_id,
+    user_config: {
+      user_id: payload.user_id,
+      personalization_data: payload.personalization_data,
+      ai_config: payload.ai_config,
+      unique_id: payload.unique_id,
+    },
+    updated_at: payload.updated_at,
+  };
 
-  const response = await fetch(`${config.supabaseUrl}/rest/v1/${config.table}?on_conflict=user_id`, {
-    method: "POST",
-    headers: headers(config),
-    body: JSON.stringify(payload),
-  });
-  const rows = await parseResponse(response);
-  if (!response.ok) throw new Error((rows && rows.message) || `Supabase save failed (${response.status})`);
-  return Array.isArray(rows) && rows.length ? rows[0] : payload;
+  const payloads = [payload, legacyPayload];
+  let lastError = null;
+  for (const candidate of payloads) {
+    const response = await fetch(`${config.supabaseUrl}/rest/v1/${config.table}?on_conflict=user_id`, {
+      method: "POST",
+      headers: headers(config),
+      body: JSON.stringify(candidate),
+    });
+    const rows = await parseResponse(response);
+    if (response.ok) {
+      const row = Array.isArray(rows) && rows.length ? rows[0] : candidate;
+      return normalizeLegacyProfile(row);
+    }
+    lastError = (rows && rows.message) || `Supabase save failed (${response.status})`;
+  }
+  throw new Error(lastError || "Supabase save failed");
 }
 
 async function updateUserMemory(user_id, memory = {}) {
@@ -87,3 +129,14 @@ module.exports = {
   saveUserProfile,
   updateUserMemory,
 };
+
+function normalizeLegacyProfile(row) {
+  const item = row && typeof row === "object" ? row : {};
+  const userConfig = item.user_config && typeof item.user_config === "object" ? item.user_config : {};
+  return {
+    ...item,
+    personalization_data: item.personalization_data || userConfig.personalization_data || {},
+    ai_config: item.ai_config || userConfig.ai_config || {},
+    unique_id: item.unique_id || item.unique_identifier || userConfig.unique_id || "",
+  };
+}
