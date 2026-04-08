@@ -46,6 +46,7 @@
   const VIS_FACE_PROCESS_ENDPOINT = "/process-face";
   const VIS_FACE_REGISTER_ENDPOINT = "/register-user";
   const VIS_ACTIVE_FACE_ENGINE = "faceapi";
+  const VIS_CAMERA_DISABLED = true;
   const VIS_FACE_API_SCRIPT_URL = "https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js";
   const VIS_FACE_API_MODEL_URL = "https://justadudewhohacks.github.io/face-api.js/models";
   const VIS_FACE_API_MIN_CONFIDENCE = 0.5;
@@ -1115,6 +1116,10 @@
   }
 
   function scheduleVisFrameLoop(delayMs) {
+    if (VIS_CAMERA_DISABLED) {
+      clearVisFrameLoop();
+      return;
+    }
     clearVisFrameLoop();
     const delay = typeof delayMs === "number" ? delayMs : VIS_SCAN_INTERVAL_MS;
     visScanLoopTimer = setTimeout(async function () {
@@ -3764,6 +3769,7 @@
   }
 
   async function ensureVisCameraReady() {
+    if (VIS_CAMERA_DISABLED) return false;
     if (!visVideoEl) return false;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
     if (visVideoEl.srcObject && visVideoEl.videoWidth && visVideoEl.videoHeight) {
@@ -3852,6 +3858,7 @@
   }
 
   async function advanceVisCameraInput() {
+    if (VIS_CAMERA_DISABLED) return false;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
     if (Date.now() - visLastCameraSwitchAt < VIS_CAMERA_SWITCH_COOLDOWN_MS) return false;
     if (Date.now() - visCurrentCameraScanStartedAt < VIS_CAMERA_SCAN_PER_INPUT_MS) return false;
@@ -4749,6 +4756,12 @@
       stopWakeWordListener();
       startOrbVisualization();
       ensureMicAnalyser();
+      if (VIS_CAMERA_DISABLED) {
+        setVisOfflineState(false, "Online - " + String(visLastKnownUserLabel || "User"));
+        setAssistantState("listening", "Listening");
+        dbg("VIS camera runtime disabled; using auth identity only");
+        return;
+      }
       if (visOffline) {
         setAssistantStateForVisOffline("Offline - sign in");
       } else {
@@ -5639,7 +5652,7 @@
     },
   };
   window.ShowCameraBox = async function () {
-    return openVisDebugPreview();
+    return false;
   };
   window.CloseCameraBox = function () {
     closeVisDebugPreview();
@@ -5666,17 +5679,19 @@
     setAssistantStateForVisOffline("Offline - VIS init failed");
   });
 
-  // Wire vis_controller events to PI UI offline/online behavior
-  window.addEventListener('vis:offline', function (e) {
-    var reason = (e && e.detail && e.detail.reason) || 'no_face';
-    pauseForVisOffline("Offline - " + reason);
-  });
-  window.addEventListener('vis:online', function () {
-    resumeFromVisOnline();
-  });
-  window.addEventListener('vis:resume', function () {
-    resumeFromVisOnline();
-  });
+  // Wire vis_controller events only when camera runtime is enabled.
+  if (!VIS_CAMERA_DISABLED) {
+    window.addEventListener('vis:offline', function (e) {
+      var reason = (e && e.detail && e.detail.reason) || 'no_face';
+      pauseForVisOffline("Offline - " + reason);
+    });
+    window.addEventListener('vis:online', function () {
+      resumeFromVisOnline();
+    });
+    window.addEventListener('vis:resume', function () {
+      resumeFromVisOnline();
+    });
+  }
 
   try {
     if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
