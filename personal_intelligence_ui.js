@@ -161,6 +161,7 @@
   let visVideoEl = null;
   let visCanvasEl = null;
   let visProcessingCanvas = null;
+  let visAgentContext = null;
   let visSetupEl = null;
   let visDetector = null;
   let visDetectorUnsupported = false;
@@ -3104,7 +3105,11 @@
 
   function applyVisProfileToRuntime(profile) {
     const p = profile && typeof profile === "object" ? profile : null;
-    if (!p) return;
+    if (!p) {
+      visAgentContext = null;
+      try { window.__PI_AGENT_CONTEXT__ = null; } catch (e) {}
+      return;
+    }
     visActiveProfile = p;
     visLastKnownUserLabel = String((p.user_identity && p.user_identity.username) || p.file_name || "Unknown");
     visPersonalizationProfile = Object.assign({}, visPersonalizationProfile || {}, p.personalization_profile || {});
@@ -3114,6 +3119,7 @@
       runtime_key: "vis_instance_" + String(p.file_name || "") + "_" + Date.now().toString(36),
       loaded_at: nowIso(),
     };
+    syncPiAgentContext(p);
     const mergedFacts = Object.assign(
       {},
       (p.conversation_memory && p.conversation_memory.important_facts) || {},
@@ -3179,6 +3185,68 @@
       dbg("PI config save failed", e && e.message);
       return null;
     }
+  }
+
+  function syncPiAgentContext(profile) {
+    const p = profile && typeof profile === "object" ? profile : null;
+    const agent = p && p.personal_intelligence_agent && typeof p.personal_intelligence_agent === "object"
+      ? p.personal_intelligence_agent
+      : {};
+    const cloudConfig = agent.cloud_config && typeof agent.cloud_config === "object" ? agent.cloud_config : {};
+    const aiConfig = p && p.ai_behavior_configuration && typeof p.ai_behavior_configuration === "object"
+      ? p.ai_behavior_configuration
+      : {};
+    const personalizationPrompt = String(
+      agent.personalization_prompt ||
+      aiConfig.personalization_prompt ||
+      cloudConfig.personalization_prompt ||
+      (cloudConfig.ai_config && cloudConfig.ai_config.personalization_prompt) ||
+      ""
+    ).trim();
+    visAgentContext = {
+      user_id: String((p && p.user_identity && p.user_identity.username) || "").trim(),
+      unique_id: String(agent.unique_identifier || cloudConfig.unique_id || cloudConfig.unique_identifier || "").trim(),
+      profile_file: String((p && p.file_name) || "").trim(),
+      personalization_prompt: personalizationPrompt,
+      status: String(agent.status || "").trim() || "pending",
+    };
+    try {
+      window.__PI_AGENT_CONTEXT__ = Object.assign({}, visAgentContext);
+    } catch (e) {}
+    if (visAgentContext.user_id || visAgentContext.unique_id) {
+      pushVisDebug(
+        "Active PI agent context ready: " +
+        String(visAgentContext.user_id || "unknown") +
+        (visAgentContext.unique_id ? (" / " + visAgentContext.unique_id) : "")
+      );
+    }
+  }
+
+  function getPiAgentRequestContext() {
+    const base = visAgentContext && typeof visAgentContext === "object" ? visAgentContext : {};
+    const profile = visActiveProfile && typeof visActiveProfile === "object" ? visActiveProfile : {};
+    const agent = profile.personal_intelligence_agent && typeof profile.personal_intelligence_agent === "object"
+      ? profile.personal_intelligence_agent
+      : {};
+    const cloudConfig = agent.cloud_config && typeof agent.cloud_config === "object" ? agent.cloud_config : {};
+    return {
+      user_id: String(base.user_id || (profile.user_identity && profile.user_identity.username) || "").trim(),
+      unique_id: String(base.unique_id || agent.unique_identifier || cloudConfig.unique_id || cloudConfig.unique_identifier || "").trim(),
+      profile_file: String(base.profile_file || profile.file_name || "").trim(),
+      personalization_prompt: String(
+        base.personalization_prompt ||
+        agent.personalization_prompt ||
+        (profile.ai_behavior_configuration && profile.ai_behavior_configuration.personalization_prompt) ||
+        (cloudConfig.ai_config && cloudConfig.ai_config.personalization_prompt) ||
+        ""
+      ).trim(),
+    };
+  }
+
+  function emitVisHarmonyDebug(detail) {
+    try {
+      window.dispatchEvent(new CustomEvent("pi:harmony-debug", { detail: detail || {} }));
+    } catch (e) {}
   }
 
   async function verifyPiProfileAssociation(profile, uniqueId) {
@@ -4164,6 +4232,8 @@
       const identity = getAuthIdentity();
       if (!identity) {
         visActiveProfile = null;
+        visAgentContext = null;
+        try { window.__PI_AGENT_CONTEXT__ = null; } catch (e) {}
         visRecognitionIndex = [];
         visIndexLoaded = true;
         pauseForVisOffline("Offline - sign in");
@@ -4414,16 +4484,45 @@
     await ensurePuterReady(false);
     const ai = window.puter && window.puter.ai;
     if (!ai) throw new Error("PUTER_NOT_LOADED");
-    const payloadA = Object.assign({ text: cleaned }, voiceOptions || {});
-    const payloadB = Object.assign({ input: cleaned }, voiceOptions || {});
-    async function tryMethod(fn) {
-      try { return await fn(cleaned, voiceOptions || {}); } catch (e1) {}
+    async function tryMethod(fn, options) {
+      const payloadA = Object.assign({ text: cleaned }, options || {});
+      const payloadB = Object.assign({ input: cleaned }, options || {});
+      try { return await fn(cleaned, options || {}); } catch (e1) {}
       try { return await fn(payloadA); } catch (e2) {}
       return fn(payloadB);
     }
-    if (typeof ai.txt2speech === "function") return tryMethod(ai.txt2speech.bind(ai));
-    if (typeof ai.text2speech === "function") return tryMethod(ai.text2speech.bind(ai));
-    if (typeof ai.tts === "function") return tryMethod(ai.tts.bind(ai));
+    const attempts = [];
+    const seen = new Set();
+    function queueOptions(options) {
+      const safe = options && typeof options === "object" ? Object.assign({}, options) : {};
+      const key = JSON.stringify(safe);
+      if (seen.has(key)) return;
+      seen.add(key);
+      attempts.push(safe);
+    }
+    queueOptions(voiceOptions || {});
+    const catalog = window.PuterVoiceCatalog;
+    if (catalog && typeof catalog.getDefault === "function") {
+      const fallback = catalog.getDefault();
+      if (fallback && fallback.options) queueOptions(fallback.options);
+    }
+    queueOptions({ provider: "openai", model: "gpt-4o-mini-tts", voice: "alloy" });
+    const methods = [];
+    if (typeof ai.txt2speech === "function") methods.push(ai.txt2speech.bind(ai));
+    if (typeof ai.text2speech === "function") methods.push(ai.text2speech.bind(ai));
+    if (typeof ai.tts === "function") methods.push(ai.tts.bind(ai));
+    let lastError = null;
+    for (let i = 0; i < methods.length; i += 1) {
+      const method = methods[i];
+      for (let j = 0; j < attempts.length; j += 1) {
+        try {
+          return await tryMethod(method, attempts[j]);
+        } catch (error) {
+          lastError = error;
+        }
+      }
+    }
+    if (lastError) throw lastError;
     throw new Error("PUTER_TTS_UNAVAILABLE");
   }
 
@@ -5387,6 +5486,20 @@
       const language = localStorage.getItem("g9_language") || "English";
       const subject = localStorage.getItem("g9_subject") || "General";
       const mode = detectSupportMode(t);
+      const agentContext = getPiAgentRequestContext();
+      emitVisHarmonyDebug({
+        status: "Processing...",
+        observatory: {
+          type: mode,
+          complexity: "analyzing",
+          queries: [{ text: t }],
+        },
+        harmony: {
+          model_used: "Selecting...",
+          fallback_used: false,
+        },
+        agent: agentContext,
+      });
       if (isActionIntent(t)) {
         const actionData = await fetchJson("/personal-intelligence/ask", {
           method: "POST",
@@ -5402,6 +5515,10 @@
             mode: mode,
             memory_context: buildLongTermMemoryContext(),
             system_prompt: buildTutorSystemPrompt(mode, language, subject, knownFacts),
+            user_id: agentContext.user_id,
+            unique_id: agentContext.unique_id,
+            profile_file: agentContext.profile_file,
+            personalization_prompt: agentContext.personalization_prompt,
           }),
         });
         const actionAnswer = actionData && actionData.answer ? String(actionData.answer) : "I did not get that. Please try again.";
@@ -5419,6 +5536,12 @@
         if (actionData && actionData.memory_updates) mergeKnownFacts(actionData.memory_updates);
         if (actionData && actionData.action) executeAssistantAction(actionData.action);
         renderEvolutionStatus(actionData);
+        emitVisHarmonyDebug({
+          status: "Complete",
+          observatory: actionData && actionData.observatory ? actionData.observatory : { type: mode, complexity: "action", queries: [{ text: t }] },
+          harmony: actionData && actionData.agent_harmony ? actionData.agent_harmony : { model_used: "local_action", fallback_used: false },
+          agent: agentContext,
+        });
         dbg("AI provider:", "local_action", "ok:", true);
         await playTutorTTS(actionSpeakText);
         return;
@@ -5438,11 +5561,21 @@
           mode: detectSupportMode(t),
           memory_context: buildLongTermMemoryContext(),
           system_prompt: buildTutorSystemPrompt(detectSupportMode(t), localStorage.getItem("g9_language") || "English", localStorage.getItem("g9_subject") || "General", knownFacts),
+          user_id: agentContext.user_id,
+          unique_id: agentContext.unique_id,
+          profile_file: agentContext.profile_file,
+          personalization_prompt: agentContext.personalization_prompt,
         }),
       });
       let answer = data && data.answer ? String(data.answer) : "";
       if (data && data.harmony_failed) {
         hideTypingIndicator();
+        emitVisHarmonyDebug({
+          status: "Failed",
+          observatory: data && data.observatory ? data.observatory : { type: mode, complexity: "-", queries: [{ text: t }] },
+          harmony: data && data.agent_harmony ? data.agent_harmony : { model_used: "-", fallback_used: false },
+          agent: agentContext,
+        });
         addLog("assistant", "Tutor: Harmony error: " + String((data && data.ai_error) || "Harmony is unavailable right now."));
         setAssistantState("idle", "Idle");
         renderEvolutionStatus(data);
@@ -5450,6 +5583,12 @@
       }
       if (!answer) {
         hideTypingIndicator();
+        emitVisHarmonyDebug({
+          status: "Failed",
+          observatory: data && data.observatory ? data.observatory : { type: mode, complexity: "-", queries: [{ text: t }] },
+          harmony: data && data.agent_harmony ? data.agent_harmony : { model_used: "-", fallback_used: false },
+          agent: agentContext,
+        });
         addLog("assistant", "Tutor: Harmony returned no response.");
         setAssistantState("idle", "Idle");
         renderEvolutionStatus(data);
@@ -5469,11 +5608,23 @@
       if (data && data.memory_updates) mergeKnownFacts(data.memory_updates);
       if (data && data.action) executeAssistantAction(data.action);
       renderEvolutionStatus(data);
+      emitVisHarmonyDebug({
+        status: "Complete",
+        observatory: data && data.observatory ? data.observatory : { type: mode, complexity: "-", queries: [{ text: t }] },
+        harmony: data && data.agent_harmony ? data.agent_harmony : { model_used: data && data.ai_provider ? data.ai_provider : "agent_harmony", fallback_used: false },
+        agent: agentContext,
+      });
       dbg("AI provider:", data && data.ai_provider ? data.ai_provider : "agent_harmony", "ok:", true);
       triggerAutoEvolutionLocalAndCloud(t, answer);
       await playTutorTTS(speakText);
     } catch (e) {
       hideTypingIndicator();
+      emitVisHarmonyDebug({
+        status: "Failed",
+        observatory: { type: detectSupportMode(t), complexity: "-", queries: [{ text: t }] },
+        harmony: { model_used: "-", fallback_used: false },
+        agent: getPiAgentRequestContext(),
+      });
       addLog("assistant", "Tutor: Request failed. Please try again.");
       setAssistantState("idle", "Idle");
     } finally {
