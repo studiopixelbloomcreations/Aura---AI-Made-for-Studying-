@@ -1076,6 +1076,7 @@
       if (uniqueId) pushVisDebug("Personal Intelligence unique identifier ready: " + uniqueId);
       const verification = await verifyPiProfileAssociation(profile, uniqueId);
       profile.personal_intelligence_agent = Object.assign({}, profile.personal_intelligence_agent || {}, {
+        status: "ready",
         profile_verified: !!verification.ok,
         profile_verified_at: verification.verified_at || nowIso(),
         personalization_prompt: String(
@@ -1084,14 +1085,23 @@
           ""
         ).trim(),
       });
-      await warmHarmonyPersonalization(profile, safeAnswers);
+      if (visActiveProfile && visActiveProfile.file_name === profile.file_name) {
+        scheduleVisProfileSave();
+      } else {
+        await saveVisProfileToCloud(profile);
+      }
       if (!verification.ok) {
-        throw new Error(verification.error || "PI_PROFILE_NOT_VERIFIED");
+        pushVisDebug("Personal Intelligence verification pending: " + String(verification.error || "unknown"));
+      }
+      const harmonyReady = await warmHarmonyPersonalization(profile, safeAnswers);
+      if (!harmonyReady) {
+        pushVisDebug("Harmony personalization warmup pending.");
       }
       return {
         ok: true,
         unique_identifier: uniqueId,
         verification: verification,
+        harmony_ready: !!harmonyReady,
       };
     }
     throw new Error("PI_CONFIG_SAVE_FAILED");
