@@ -1,3 +1,5 @@
+const { env } = require("./env");
+
 function parseModelApiKeys(raw) {
   const text = String(raw || "").trim();
   if (!text) return {};
@@ -10,7 +12,7 @@ function parseModelApiKeys(raw) {
 }
 
 function getModelApiRegistry() {
-  return parseModelApiKeys(process.env.PI_MODEL_API_KEYS_JSON || process.env.MODEL_API_KEYS_JSON || "");
+  return parseModelApiKeys(env("PI_MODEL_API_KEYS_JSON") || env("MODEL_API_KEYS_JSON") || "");
 }
 
 function getModelApiKey(provider) {
@@ -28,8 +30,8 @@ function getModelApiKey(provider) {
     deepseek: "DEEPSEEK_API_KEY",
   };
   const envName = envMap[String(provider).toLowerCase()];
-  if (envName && process.env[envName]) {
-    return String(process.env[envName]).trim();
+  if (envName && env(envName)) {
+    return String(env(envName)).trim();
   }
   return "";
 }

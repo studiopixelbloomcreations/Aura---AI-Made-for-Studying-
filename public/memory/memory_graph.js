@@ -40,7 +40,10 @@
   async function getStudyGraph(userId) {
     try {
       const res = await fetch(`/memory/graph?user_id=${encodeURIComponent(userId || "")}`);
-      if (res.ok) return res.json();
+      if (res.ok) {
+        const payload = await res.json();
+        return payload.data || payload;
+      }
     } catch (error) {}
     return load();
   }

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Aevra AI">
+  <defs><linearGradient id="g" x1="12" y1="12" x2="116" y2="116"><stop stop-color="#A78BFA"/><stop offset="1" stop-color="#22D3EE"/></linearGradient></defs>
+  <path d="M64 8 112 36v56l-48 28-48-28V36L64 8Z" fill="url(#g)"/>
+  <path d="M37 88 59 37c1.8-4.1 7.4-4.1 9.2 0L91 88H78.5L74 77H54l-4.5 11H37Zm21.5-22h11L64 52 58.5 66Z" fill="#111"/>
+</svg>

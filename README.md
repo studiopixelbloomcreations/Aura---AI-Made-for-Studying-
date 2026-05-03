@@ -30,15 +30,23 @@ Aevra AI is a study workspace for students, centered on personal identity, adapt
 
 ## Environment Variables
 
-- `GROQ_API_KEY` — Groq LLM API key (required)
-- `ELEVENLABS_API_KEY` — ElevenLabs TTS API key (required for voice)
-- `SUPABASE_URL` — Supabase project URL (required)
-- `SUPABASE_ANON_KEY` — Supabase anonymous key (required)
-- `SUPABASE_SERVICE_KEY` — Supabase service role key (required for admin ops)
-- `ALLOWED_ORIGINS` — Comma-separated CORS origins
-- `OPENROUTER_API_KEY` — OpenRouter key for Agent Harmony fallback
-- `PUTER_API_KEY` — Puter.js key if needed
-- `FASTAPI_BASE_URL` — Render/FastAPI base URL used by Netlify proxies
+Aevra uses a single JSON environment variable named `AEVRA_ENV` in Netlify, Render, and local shells:
+
+```json
+{
+  "GROQ_API_KEY": "",
+  "OPENROUTER_API_KEY": "",
+  "SUPABASE_URL": "",
+  "SUPABASE_ANON_KEY": "",
+  "SUPABASE_SERVICE_KEY": "",
+  "FIREBASE_CONFIG": {},
+  "ELEVENLABS_API_KEY": "",
+  "ALLOWED_ORIGINS": "http://localhost:5500,https://aevra-ai.netlify.app",
+  "FASTAPI_BASE_URL": ""
+}
+```
+
+The browser only receives public Firebase and Supabase anon configuration through `/public-config`. Service-role keys are used only inside backend and Netlify Function code.
 
 ## Development Setup
 

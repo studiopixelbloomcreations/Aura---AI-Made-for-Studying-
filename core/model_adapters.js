@@ -1,7 +1,9 @@
 const { getModelApiKey } = require("./model_api_registry");
 
+const { env: readEnv } = require("./env");
+
 function env(name, fallback = "") {
-  return String(process.env[name] || fallback).trim();
+  return String(readEnv(name, fallback)).trim();
 }
 
 function providerConfig() {

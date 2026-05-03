@@ -20,17 +20,12 @@
       return null;
     }
 
-    async identifyFromAudio(audioBuffer) {
-      const embedding = await global.AevraVoiceEmbeddingEngine.generateEmbedding(audioBuffer);
-      const response = await fetch("/voice/recognize", {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-aevra-csrf": sessionStorage.getItem("aevra_csrf") || "browser" },
-        body: JSON.stringify({ embedding: Array.from(embedding) }),
-      });
-      const data = await response.json();
+    async identifyFromAudio(audioBlob) {
+      const data = await global.AevraVoiceEmbeddingEngine.recognizeAudioBlob(audioBlob);
       if (data.matched && data.userId) {
         const profile = { userId: data.userId, displayName: data.displayName || "Student", voiceConfidence: data.confidence };
         global.AevraSessionManager.setSession(profile);
+        if (global.AevraState) global.AevraState.setCurrentUser(profile);
         this._identified(profile);
         return profile;
       }

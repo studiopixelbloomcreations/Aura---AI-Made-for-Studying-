@@ -134,6 +134,11 @@
   to = "/.netlify/functions/harmony_ask"
   status = 200
 
+[[redirects]]
+  from = "/vis/identity-profile-commit"
+  to = "/.netlify/functions/vis_identity_profile_commit"
+  status = 200
+
 # Basic headers for HTML/CSS/JS
 [[headers]]
   for = "/*"

@@ -24,9 +24,11 @@ from user_personalization_router import router as personalization_router
 from gamification_router import router as gamification_router
 from exam_mode.exam_routes import router as exam_mode_router
 from personal_assistant_router import router as personal_assistant_router
+from env_utils import env, allowed_origins
+from logging_utils import log_event
 
 # Initialize Groq client
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+client = Groq(api_key=env("GROQ_API_KEY"))
 
 app = FastAPI()
 if Limiter and get_remote_address:
@@ -68,7 +70,7 @@ def _include_optional_upload_routers(app: FastAPI) -> None:
 
 _include_optional_upload_routers(app)
 
-_is_vercel = bool(os.environ.get("VERCEL"))
+_is_vercel = bool(env("VERCEL", ""))
 
 if not _is_vercel:
     # Serve frontend (index.html + assets) under /app
@@ -91,12 +93,7 @@ _default_allowed_origins = {
     "https://aevra-ai.netlify.app",
     "https://aevra-ai.netlify.app",
 }
-_allowed_origins_env = os.environ.get("ALLOWED_ORIGINS")
-if _allowed_origins_env:
-    _configured_origins = {o.strip() for o in _allowed_origins_env.split(",") if o.strip()}
-    _allowed_origins = sorted(_default_allowed_origins | _configured_origins)
-else:
-    _allowed_origins = sorted(_default_allowed_origins)
+_allowed_origins = allowed_origins(_default_allowed_origins)
 
 app.add_middleware(
     CORSMiddleware,
@@ -147,8 +144,8 @@ async def get_progress(request: Request, email: str = "guest@student.com"):
 @app.get("/progress/{user_id}")
 @limiter.limit("100/minute")
 async def get_progress_by_user(request: Request, user_id: str):
-    base = (os.environ.get("SUPABASE_URL") or "").rstrip("/")
-    key = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_ANON_KEY")
+    base = (env("SUPABASE_URL", "") or "").rstrip("/")
+    key = env("SUPABASE_SERVICE_KEY") or env("SUPABASE_ANON_KEY")
     if base and key:
         try:
             res = requests.get(
@@ -160,7 +157,7 @@ async def get_progress_by_user(request: Request, user_id: str):
             rows = res.json()
             return {"ok": True, "user_id": user_id, "progress": rows[0] if rows else None}
         except Exception as exc:
-            print({"at": "progress_fetch", "user_id": user_id, "error": str(exc)})
+            log_event("error", "progress_fetch", {"user_id": user_id, "error": str(exc)})
     return {"ok": True, "user_id": user_id, "progress": user_progress.get(user_id)}
 
 

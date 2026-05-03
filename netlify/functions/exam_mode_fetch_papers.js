@@ -1,8 +1,11 @@
 const fs = require("fs");
 const path = require("path");
+const { allowedOrigin } = require("../../core/env");
+const logger = require("../../core/logger");
 
 function json(statusCode, obj) {
-  return { statusCode, headers: { "content-type": "application/json", "access-control-allow-origin": process.env.ALLOWED_ORIGINS || "http://localhost:5500", "access-control-allow-methods": "POST,OPTIONS", "access-control-allow-headers": "content-type,authorization,x-aevra-csrf" }, body: JSON.stringify(obj) };
+  const normalized = Object.prototype.hasOwnProperty.call(obj || {}, "success") ? obj : { success: statusCode < 400, data: statusCode < 400 ? obj : null, error: statusCode < 400 ? null : (obj && obj.error || "Request failed") };
+  return { statusCode, headers: { "content-type": "application/json", "access-control-allow-origin": allowedOrigin(), "access-control-allow-methods": "POST,OPTIONS", "access-control-allow-headers": "content-type,authorization,x-aevra-csrf" }, body: JSON.stringify(normalized) };
 }
 function subjectKey(subject) {
   const s = String(subject || "Mathematics").trim().toLowerCase();
@@ -31,9 +34,9 @@ exports.handler = async function handler(event) {
       difficulty: q.difficulty,
       topic: q.topic,
     }));
-    return json(200, { ok: true, subject, termTest, questions });
+    return json(200, { success: true, data: { subject, termTest, questions }, error: null });
   } catch (error) {
-    console.error(JSON.stringify({ at: new Date().toISOString(), fn: "exam_mode_fetch_papers", error: String(error && error.stack || error) }));
-    return json(500, { error: "Exam questions are unavailable right now.", questions: [] });
+    logger.error("exam_mode_fetch_papers", { error: String(error && error.stack || error) });
+    return json(500, { success: false, data: null, error: "Exam questions are unavailable right now." });
   }
 };

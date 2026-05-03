@@ -1,0 +1,16 @@
+@media (max-width: 768px) {
+  .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 20; transform: translateX(-100%); transition: transform var(--transition-normal); box-shadow: 0 24px 60px rgba(0,0,0,.35); }
+  .sidebar.open { transform: translateX(0); }
+  .chat-area { width: 100%; }
+  .hamburger-btn { display: grid; place-items: center; }
+  .input-area { left: 0; right: 0; bottom: 0; padding: 12px; }
+  .messages-container { padding: 12px 14px 130px; }
+  .message-bubble { max-width: 88%; }
+  .voice-btn { width: 56px; height: 56px; }
+  .suggestion-chips { overflow-x: auto; flex-wrap: nowrap; justify-content: flex-start; max-width: calc(100vw - 28px); padding-bottom: 8px; }
+  .chip { white-space: nowrap; }
+  .feature-row { grid-template-columns: 1fr; }
+  .landing-logo { width: 140px; height: 140px; }
+  .panel { top: auto; left: 0; right: 0; bottom: 0; width: 100%; max-height: 80vh; border-radius: 18px 18px 0 0; transform: translateY(100%); }
+  .panel.open { transform: translateY(0); }
+}

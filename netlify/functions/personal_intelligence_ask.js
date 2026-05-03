@@ -1,26 +1,32 @@
+const { env, allowedOrigin } = require("../../core/env");
+const logger = require("../../core/logger");
+
 function json(statusCode, obj) {
+  const normalized = Object.prototype.hasOwnProperty.call(obj || {}, "success")
+    ? obj
+    : { success: statusCode < 400, data: statusCode < 400 ? obj : null, error: statusCode < 400 ? null : (obj && obj.error || "Request failed") };
   return {
     statusCode,
     headers: {
       "content-type": "application/json",
-      "access-control-allow-origin": process.env.ALLOWED_ORIGINS || "http://localhost:5500",
+      "access-control-allow-origin": allowedOrigin(),
       "access-control-allow-methods": "POST,OPTIONS",
       "access-control-allow-headers": "content-type,authorization,x-aevra-csrf",
       "cache-control": "no-store",
     },
-    body: JSON.stringify(obj),
+    body: JSON.stringify(normalized),
   };
 }
 
 const AEVRA_SYSTEM_PROMPT = "You are Aevra, a warm and intelligent AI study companion designed for students. You explain concepts clearly, adapt to each student's learning style, and make studying feel engaging rather than overwhelming. You are encouraging, patient, and always focused on helping the student genuinely understand - not just memorize. Your name is Aevra.";
 
 function sbHeaders() {
-  const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+  const key = env("SUPABASE_SERVICE_KEY") || env("SUPABASE_ANON_KEY");
   return { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json" };
 }
 
 async function supabase(path, options) {
-  const base = String(process.env.SUPABASE_URL || "").replace(/\/$/, "");
+  const base = String(env("SUPABASE_URL", "")).replace(/\/$/, "");
   if (!base) throw new Error("SUPABASE_URL is not configured");
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 30000);
@@ -41,8 +47,12 @@ function buildSystemPrompt(profile, config) {
   return `${AEVRA_SYSTEM_PROMPT}\n\nPersonalization: The user's name is ${name}. Use a ${config.tone || "friendly"} tone. Humor level: ${config.humor_level || 5}/10. Be ${config.verbosity || "medium"} in your responses. Teaching style: ${config.teaching_style || "socratic"}. The user is a Grade ${grade} student.`;
 }
 
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
+}
+
 async function groq(messages) {
-  const key = process.env.GROQ_API_KEY;
+  const key = env("GROQ_API_KEY");
   if (!key) throw new Error("GROQ_API_KEY is not configured");
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -70,6 +80,13 @@ exports.handler = async function handler(event) {
   if (!userId || !message) return json(422, { error: "userId and message are required" });
 
   try {
+    if (!isUuid(userId)) {
+      const result = await groq([
+        { role: "system", content: AEVRA_SYSTEM_PROMPT },
+        { role: "user", content: message },
+      ]);
+      return json(200, { success: true, data: { response: result.text, answer: result.text, sessionId: sessionId || `guest-${Date.now()}`, tokensUsed: result.tokens }, error: null });
+    }
     const profiles = await supabase(`user_profiles?id=eq.${encodeURIComponent(userId)}&select=*&limit=1`, { method: "GET" }).catch(() => []);
     const configs = await supabase(`personalization_configs?user_id=eq.${encodeURIComponent(userId)}&select=*&limit=1`, { method: "GET" }).catch(() => []);
     const profile = profiles && profiles[0] || { id: userId, display_name: "Student", grade: 9 };
@@ -94,9 +111,9 @@ exports.handler = async function handler(event) {
     const updated = history.concat([{ role: "user", content: message, at: new Date().toISOString() }, { role: "assistant", content: result.text, at: new Date().toISOString() }]);
     await supabase(`conversation_sessions?id=eq.${encodeURIComponent(sessionId)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ messages: updated, updated_at: new Date().toISOString() }) }).catch(() => null);
 
-    return json(200, { response: result.text, answer: result.text, sessionId, tokensUsed: result.tokens });
+    return json(200, { success: true, data: { response: result.text, answer: result.text, sessionId, tokensUsed: result.tokens }, error: null });
   } catch (error) {
-    console.error(JSON.stringify({ at: new Date().toISOString(), fn: "personal_intelligence_ask", userId, error: String(error && error.stack || error) }));
-    return json(500, { error: "Aevra could not answer right now. Please try again." });
+    logger.error("personal_intelligence_ask", { userId, error: String(error && error.stack || error) });
+    return json(500, { success: false, data: null, error: "Aevra could not answer right now. Please try again." });
   }
 };

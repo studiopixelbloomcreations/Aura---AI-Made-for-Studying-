@@ -1,9 +1,5 @@
-import base64
-import math
-import os
 from typing import List
 
-import numpy as np
 import requests
 from fastapi import APIRouter, File, UploadFile, Request
 from fastapi.responses import FileResponse
@@ -11,6 +7,9 @@ from pydantic import BaseModel
 from typing import Optional
 
 from voice_service import save_upload_bytes, speech_to_text, text_to_speech
+from audio_embedding_service import convert_to_pcm16k, cosine_similarity, decode_audio_base64, extract_embedding
+from env_utils import env
+from logging_utils import log_event
 
 router = APIRouter(prefix="/voice", tags=["voice"])
 
@@ -29,37 +28,19 @@ class VoiceRecognizePayload(BaseModel):
 
 class VoiceEnrollPayload(BaseModel):
     userId: str
-    embedding: List[float]
+    embedding: Optional[List[float]] = None
+    audio: Optional[str] = None
+    audio_base64: Optional[str] = None
     displayName: Optional[str] = "Student"
 
 
-def _cosine(a: List[float], b: List[float]) -> float:
-    aa = np.array(a, dtype=float)
-    bb = np.array(b, dtype=float)
-    if aa.size != bb.size or aa.size == 0:
-        return 0.0
-    denom = float(np.linalg.norm(aa) * np.linalg.norm(bb))
-    return float(np.dot(aa, bb) / denom) if denom else 0.0
-
-
-def _simple_pcm_embedding(raw: bytes) -> List[float]:
-    if not raw:
-        return [0.0] * 26
-    arr = np.frombuffer(raw, dtype=np.uint8).astype(np.float32)
-    arr = (arr - np.mean(arr)) / (np.std(arr) + 1e-6)
-    chunks = np.array_split(arr, 13)
-    mean = [float(np.mean(c)) for c in chunks]
-    var = [float(np.var(c)) for c in chunks]
-    return mean + var
-
-
 def _supabase_headers():
-    key = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_ANON_KEY")
+    key = env("SUPABASE_SERVICE_KEY") or env("SUPABASE_ANON_KEY")
     return {"apikey": key or "", "authorization": f"Bearer {key}", "content-type": "application/json"}
 
 
 def _supabase_url(path: str) -> str:
-    base = (os.environ.get("SUPABASE_URL") or "").rstrip("/")
+    base = str(env("SUPABASE_URL", "") or "").rstrip("/")
     if not base:
         raise RuntimeError("SUPABASE_URL is not configured")
     return f"{base}/rest/v1/{path}"
@@ -67,40 +48,65 @@ def _supabase_url(path: str) -> str:
 
 @router.post("/recognize")
 async def recognize(request: Request, audio: Optional[UploadFile] = File(None), language: str = "en-US"):
-    content_type = request.headers.get("content-type", "")
-    if "application/json" in content_type:
-      payload = VoiceRecognizePayload(**(await request.json()))
-      embedding = payload.embedding
-      if embedding is None:
-          encoded = payload.audio or payload.audio_base64 or ""
-          raw = base64.b64decode(encoded.split(",", 1)[-1]) if encoded else b""
-          embedding = _simple_pcm_embedding(raw)
-      rows = requests.get(_supabase_url("voice_signatures?select=user_id,embedding"), headers=_supabase_headers(), timeout=60).json()
-      best = {"userId": None, "confidence": 0.0}
-      for row in rows if isinstance(rows, list) else []:
-          score = _cosine(embedding, row.get("embedding") or [])
-          if score > best["confidence"]:
-              best = {"userId": row.get("user_id"), "confidence": score}
-      return {"matched": best["confidence"] >= 0.85, "userId": best["userId"] if best["confidence"] >= 0.85 else None, "confidence": best["confidence"]}
+    try:
+        content_type = request.headers.get("content-type", "")
+        raw = b""
+        suffix = ".webm"
+        embedding = None
 
-    if audio is None:
-        return {"matched": False, "userId": None, "confidence": 0, "error": "audio upload or JSON embedding is required"}
-    raw = await audio.read()
-    ext = (audio.filename or "audio").split(".")[-1] if audio.filename and "." in audio.filename else "webm"
-    path = save_upload_bytes(raw, ext)
-    out = speech_to_text(path, language=language)
-    return {"ok": True, "text": out.text, "engine": out.engine, "matched": False, "userId": None, "confidence": 0}
+        if "application/json" in content_type:
+            payload = VoiceRecognizePayload(**(await request.json()))
+            embedding = payload.embedding
+            encoded = payload.audio or payload.audio_base64 or ""
+            if embedding is None and encoded:
+                raw = decode_audio_base64(encoded)
+        elif audio is not None:
+            raw = await audio.read()
+            suffix = "." + ((audio.filename or "audio.webm").split(".")[-1] or "webm")
+
+        if embedding is None:
+            if not raw:
+                return {"success": False, "data": None, "error": "Audio is required for voice recognition."}
+            embedding = extract_embedding(convert_to_pcm16k(raw, suffix=suffix))
+
+        rows = requests.get(_supabase_url("voice_signatures?select=user_id,embedding"), headers=_supabase_headers(), timeout=60).json()
+        best = {"userId": None, "confidence": 0.0}
+        for row in rows if isinstance(rows, list) else []:
+            score = cosine_similarity(embedding, row.get("embedding") or [])
+            if score > best["confidence"]:
+                best = {"userId": row.get("user_id"), "confidence": score}
+
+        data = {
+            "matched": best["confidence"] >= 0.85,
+            "userId": best["userId"] if best["confidence"] >= 0.85 else None,
+            "confidence": best["confidence"],
+        }
+        log_event("info", "voice_recognition", data)
+        return {"success": True, "data": data, "error": None, **data}
+    except Exception as exc:
+        log_event("error", "voice_recognition_error", {"error": str(exc)})
+        return {"success": False, "data": None, "error": "Voice recognition is unavailable right now."}
 
 
 @router.post("/enroll")
 async def enroll(req: VoiceEnrollPayload):
-    if len(req.embedding) != 26:
-        return {"ok": False, "error": "26-dimensional voice embedding is required"}
-    profile = {"id": req.userId, "display_name": req.displayName or "Student", "grade": 9}
-    requests.post(_supabase_url("user_profiles?on_conflict=id"), headers={**_supabase_headers(), "Prefer": "resolution=merge-duplicates,return=minimal"}, json=profile, timeout=60)
-    saved = requests.post(_supabase_url("voice_signatures"), headers={**_supabase_headers(), "Prefer": "return=representation"}, json={"user_id": req.userId, "embedding": req.embedding}, timeout=60)
-    saved.raise_for_status()
-    return {"ok": True, "userId": req.userId}
+    try:
+        embedding = req.embedding
+        if embedding is None:
+            encoded = req.audio or req.audio_base64 or ""
+            if not encoded:
+                return {"success": False, "data": None, "error": "Audio or embedding is required."}
+            embedding = extract_embedding(convert_to_pcm16k(decode_audio_base64(encoded), suffix=".webm"))
+        if len(embedding) != 26:
+            return {"success": False, "data": None, "error": "26-dimensional voice embedding is required."}
+        profile = {"id": req.userId, "display_name": req.displayName or "Student", "grade": 9}
+        requests.post(_supabase_url("user_profiles?on_conflict=id"), headers={**_supabase_headers(), "Prefer": "resolution=merge-duplicates,return=minimal"}, json=profile, timeout=60)
+        saved = requests.post(_supabase_url("voice_signatures"), headers={**_supabase_headers(), "Prefer": "return=representation"}, json={"user_id": req.userId, "embedding": embedding}, timeout=60)
+        saved.raise_for_status()
+        return {"success": True, "data": {"userId": req.userId}, "error": None, "ok": True, "userId": req.userId}
+    except Exception as exc:
+        log_event("error", "voice_enroll_error", {"userId": req.userId, "error": str(exc)})
+        return {"success": False, "data": None, "error": "Voice enrollment could not be saved."}
 
 
 @router.post("/speak")

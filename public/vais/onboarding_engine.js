@@ -18,7 +18,7 @@
     constructor() {
       this.index = 0;
       this.cancelled = false;
-      this.embeddings = [];
+      this.samples = [];
       this.userId = crypto.randomUUID();
     }
 
@@ -28,19 +28,15 @@
 
     cancelOnboarding() { this.cancelled = true; }
 
-    validateAudio(buffer) {
-      if (!buffer || buffer.length < 8000) return "Recording is too short. Please try that phrase again.";
-      let sum = 0;
-      for (let i = 0; i < buffer.length; i++) sum += buffer[i] * buffer[i];
-      if (Math.sqrt(sum / buffer.length) < 0.01) return "That was too quiet. Please speak a little closer to the microphone.";
+    validateAudio(blob) {
+      if (!blob || blob.size < 2500) return "Recording is too short or quiet. Please try that phrase again.";
       return "";
     }
 
-    async capturePhrase(buffer) {
-      const qualityError = this.validateAudio(buffer);
+    async capturePhrase(blob) {
+      const qualityError = this.validateAudio(blob);
       if (qualityError) throw new Error(qualityError);
-      const embedding = await global.AevraVoiceEmbeddingEngine.generateEmbedding(buffer);
-      this.embeddings.push(Array.from(embedding));
+      this.samples.push(blob);
       this.index += 1;
       return this.getProgress();
     }
@@ -52,18 +48,26 @@
     }
 
     async finish() {
-      if (this.embeddings.length !== TRAINING_PHRASES.length) throw new Error("Voice enrollment needs all training phrases.");
-      const avg = new Array(this.embeddings[0].length).fill(0);
-      this.embeddings.forEach((embedding) => embedding.forEach((v, i) => { avg[i] += v; }));
-      for (let i = 0; i < avg.length; i++) avg[i] /= this.embeddings.length;
+      if (this.samples.length !== TRAINING_PHRASES.length) throw new Error("Voice enrollment needs all training phrases.");
+      const combined = new Blob(this.samples, { type: "audio/webm" });
+      const audio = await blobToBase64(combined);
       const res = await fetch("/voice/enroll", {
         method: "POST",
         headers: { "content-type": "application/json", "x-aevra-csrf": sessionStorage.getItem("aevra_csrf") || "browser" },
-        body: JSON.stringify({ userId: this.userId, profile: this.profile, embedding: avg }),
+        body: JSON.stringify({ userId: this.userId, profile: this.profile, audio }),
       });
       if (!res.ok) throw new Error("Voice enrollment could not be saved.");
       return res.json();
     }
+  }
+
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || "").split(",", 2)[1] || "");
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
   }
 
   global.AevraOnboardingEngine = { AevraOnboardingEngine, TRAINING_PHRASES };

@@ -21,9 +21,9 @@
       }
     }
 
-    async handleVoiceInput(audioBuffer) {
+    async handleVoiceInput(audioBlob) {
       try {
-        return await this.identity.identifyFromAudio(audioBuffer);
+        return await this.identity.identifyFromAudio(audioBlob);
       } catch (error) {
         this.dispatchEvent(new CustomEvent("error", { detail: friendly(error) }));
         return null;

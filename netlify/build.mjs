@@ -12,6 +12,8 @@ const rootFilesToCopy = [
   "auth.js",
   "badges.js",
   "chat.js",
+  "core/logger.js",
+  "core/state_manager.js",
   "firebase_runtime_config.js",
   "gamification.js",
   "gamification_sync.js",
@@ -45,6 +47,7 @@ const rootFilesToCopy = [
   "timer.js",
   "upload.js",
   "voice_multimodal_ui.js",
+  "vis_controller.js",
 ];
 
 const rootDirsToCopy = [

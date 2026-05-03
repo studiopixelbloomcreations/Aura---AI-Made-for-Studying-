@@ -33,18 +33,23 @@
       const prompt = [systemPrompt].concat((messages || []).map((m) => m.content)).filter(Boolean).join("\n\n");
       return global.puter.ai.chat(prompt, { model: model.split(":")[1] });
     }
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
     const res = await fetch("/harmony/ask", {
       method: "POST",
       headers: { "content-type": "application/json", "x-aevra-csrf": sessionStorage.getItem("aevra_csrf") || "browser" },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
+    clearTimeout(timer);
     const data = await res.json().catch(() => ({}));
-    if (!res.ok || data.error) {
+    const body = data.data || data;
+    if (!res.ok || data.success === false || data.error) {
       const row = status.find((s) => s.model === model);
       if (row) row.status = res.status === 429 ? "rate_limited" : "error";
       throw new Error(data.error || "Model request failed");
     }
-    return data.response || data.answer || "";
+    return body.response || body.answer || "";
   }
 
   async function harmonize(userMessage, userProfile) {
@@ -55,13 +60,16 @@
     const ordered = [preferred].concat(MODELS.filter((m) => m !== preferred));
     let lastError = null;
     for (const model of ordered) {
-      try {
-        const response = await sendToModel(model, messages, systemPrompt);
-        const row = status.find((s) => s.model === model);
-        if (row) row.status = "ok";
-        return response;
-      } catch (error) {
-        lastError = error;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const response = await sendToModel(model, messages, systemPrompt);
+          const row = status.find((s) => s.model === model);
+          if (row) row.status = "ok";
+          return response;
+        } catch (error) {
+          lastError = error;
+          if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 200));
+        }
       }
     }
     throw lastError || new Error("All Aevra models are unavailable.");
