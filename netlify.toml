@@ -9,8 +9,8 @@
 
 [[redirects]]
   from = "/"
-  to = "/landing.html"
-  status = 302
+  to = "/index.html"
+  status = 200
 
 
 # API redirect to Netlify Functions
@@ -119,6 +119,21 @@
   to = "/.netlify/functions/voice_recognize"
   status = 200
 
+[[redirects]]
+  from = "/voice/enroll"
+  to = "/.netlify/functions/voice_enroll"
+  status = 200
+
+[[redirects]]
+  from = "/memory/graph"
+  to = "/.netlify/functions/memory_graph"
+  status = 200
+
+[[redirects]]
+  from = "/harmony/ask"
+  to = "/.netlify/functions/harmony_ask"
+  status = 200
+
 # Basic headers for HTML/CSS/JS
 [[headers]]
   for = "/*"
@@ -127,7 +142,7 @@
     X-Content-Type-Options = "nosniff"
     Cross-Origin-Opener-Policy = "same-origin-allow-popups"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Content-Security-Policy = "default-src 'self' https://www.gstatic.com https://accounts.google.com https://*.google.com https://*.googleapis.com https://*.firebaseapp.com; script-src 'self' https://www.gstatic.com https://apis.google.com https://accounts.google.com https://unpkg.com https://js.puter.com https://*.puter.com https://cdn.jsdelivr.net 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' blob: data: https:; connect-src 'self' https://* wss://* data: blob:; frame-src 'self' https://accounts.google.com https://*.google.com https://*.firebaseapp.com https://*.puter.com; frame-ancestors 'self';"
+    Content-Security-Policy = "default-src 'self' https://www.gstatic.com https://accounts.google.com https://*.google.com https://*.googleapis.com https://*.firebaseapp.com; script-src 'self' https://www.gstatic.com https://apis.google.com https://accounts.google.com https://unpkg.com https://js.puter.com https://*.puter.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' blob: data: https:; connect-src 'self' https://* wss://* data: blob:; frame-src 'self' https://accounts.google.com https://*.google.com https://*.firebaseapp.com https://*.puter.com; frame-ancestors 'self';"
 
 # Cache static assets
 [[headers]]

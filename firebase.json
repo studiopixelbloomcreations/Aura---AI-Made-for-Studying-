@@ -1,7 +1,7 @@
 {
   "hosting": [
     {
-      "target": "tutorai-official",
+      "target": "aevra-ai-official",
       "public": ".",
       "ignore": [
         "firebase.json",

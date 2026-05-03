@@ -109,7 +109,7 @@
     if(!refs || !refs.db) return;
     if(state.firestoreDisabled) return;
 
-    const docRef = refs.db.collection('users').doc(uid).collection('tutor').doc('progress');
+    const docRef = refs.db.collection('users').doc(uid).collection('aevra').doc('progress');
     try {
       const snap = await docRef.get();
       if(snap.exists){
@@ -142,7 +142,7 @@
     const refs = getRefs();
     if(!refs || !refs.db) return;
     if(state.firestoreDisabled) return;
-    const docRef = refs.db.collection('users').doc(uid).collection('tutor').doc('chats');
+    const docRef = refs.db.collection('users').doc(uid).collection('aevra').doc('chats');
     try {
       const snap = await docRef.get();
       if(!snap.exists) return;
@@ -163,7 +163,7 @@
     const refs = getRefs();
     if(!refs || !refs.db) throw new Error('FIRESTORE_UNAVAILABLE');
     if(state.firestoreDisabled) return;
-    const docRef = refs.db.collection('users').doc(uid).collection('tutor').doc('chats');
+    const docRef = refs.db.collection('users').doc(uid).collection('aevra').doc('chats');
     const payload = {
       chats: _trimChats(chats),
       active: active || null,
@@ -191,7 +191,7 @@
     if(!refs || !refs.db) throw new Error('FIRESTORE_UNAVAILABLE');
     if(state.firestoreDisabled) return;
     const computed = _computeBadges(progress);
-    const docRef = refs.db.collection('users').doc(uid).collection('tutor').doc('gamification');
+    const docRef = refs.db.collection('users').doc(uid).collection('aevra').doc('gamification');
     await docRef.set(Object.assign({}, computed, { email: email || null, updatedAt: Date.now() }), { merge: true });
     const lbRef = refs.db.collection('leaderboard').doc(uid);
     await lbRef.set({
@@ -207,7 +207,7 @@
     const refs = getRefs();
     if(!refs || !refs.db) return null;
     if(state.firestoreDisabled) return null;
-    const docRef = refs.db.collection('users').doc(uid).collection('tutor').doc('gamification');
+    const docRef = refs.db.collection('users').doc(uid).collection('aevra').doc('gamification');
     const snap = await docRef.get();
     return snap.exists ? (snap.data() || null) : null;
   }
@@ -232,7 +232,7 @@
     const refs = getRefs();
     if(!refs || !refs.db) throw new Error('FIRESTORE_UNAVAILABLE');
     if(state.firestoreDisabled) return;
-    const docRef = refs.db.collection('users').doc(uid).collection('tutor').doc('progress');
+    const docRef = refs.db.collection('users').doc(uid).collection('aevra').doc('progress');
     await docRef.set(payload, { merge: true });
   }
 

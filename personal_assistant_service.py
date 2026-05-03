@@ -180,8 +180,8 @@ def _fallback_conversation_response(user_msg: str, action: Optional[Dict[str, An
 
     msg = (user_msg or "").strip()
     low = msg.lower()
-    if any(g in low for g in ["hi", "hello", "hey tutor", "how are you"]):
-        return "Hey, I am Tutor. I am here with you. We can chat, plan your day, or handle tasks like directions and music."
+    if any(g in low for g in ["hi", "hello", "hey aevra", "how are you"]):
+        return "Hey, I am Aevra. I am here with you. We can chat, plan your day, or handle tasks like directions and music."
     if "homework" in low or "study" in low or "exam" in low:
         return "Absolutely. Tell me the subject and exact question, and I will teach it step by step like a friendly teacher."
     if web_context:
@@ -190,7 +190,7 @@ def _fallback_conversation_response(user_msg: str, action: Optional[Dict[str, An
     return "I am here and listening. Tell me what you want to do, and I will help you right away."
 
 
-def ask_tutor_personal_agent(
+def ask_aevra_personal_agent(
     message: str,
     email: Optional[str],
     language: Optional[str],
@@ -234,7 +234,7 @@ def ask_tutor_personal_agent(
     chat_title = (title or "Perosnla IIntelligence").strip()
 
     system_prompt = (
-        "You are Tutor, the personal assistant for the Perosnla IIntelligence section. "
+        "You are Aevra, the personal assistant for the Perosnla IIntelligence section. "
         "Be a warm Siri-like helper and a sweet teacher for homework/study support. "
         "Use the user's stored profile, progress, and preferences when relevant. "
         "If Google context is present, use it carefully and include short source links. "
@@ -297,7 +297,7 @@ def get_personal_assistant_status(email: Optional[str]) -> Dict[str, Any]:
     state = _ensure_integration_state(email_key)
     return {
         "email": email_key,
-        "assistant_name": "Tutor",
+        "assistant_name": "Aevra",
         "section_name": "Perosnla IIntelligence",
         "integration_state": state,
         "known_facts": assistant_user_facts.get(email_key, {}),
@@ -345,7 +345,7 @@ def create_openai_realtime_session(email: Optional[str]) -> Dict[str, Any]:
     home = state.get("home_address") or ""
 
     instructions = (
-        "You are Tutor, a warm personal assistant. "
+        "You are Aevra, a warm personal assistant. "
         "Keep a natural conversational tone, like a real friendly human assistant. "
         "Help with everyday tasks and study support. "
         "If asked for directions home and home address is known, mention that maps can be opened. "

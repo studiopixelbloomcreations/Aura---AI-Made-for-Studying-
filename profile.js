@@ -209,7 +209,7 @@
       try {
         if(window.firebase && firebase.firestore){
           const db = firebase.firestore();
-          const snap = await db.collection('users').doc(uid).collection('tutor').doc('topic_stats').get();
+          const snap = await db.collection('users').doc(uid).collection('aevra').doc('topic_stats').get();
           topicStats = snap && snap.exists ? (snap.data() || null) : null;
         }
       } catch (e) {}

@@ -25,7 +25,7 @@ By default, it loads local `index.html` from this repository.
 If you want to load your deployed site instead:
 
 ```powershell
-$env:APP_START_URL="https://tutorv1.netlify.app/"; npm run desktop
+$env:APP_START_URL="https://aevra-ai.netlify.app/"; npm run desktop
 ```
 
 ## 3) What desktop mode adds

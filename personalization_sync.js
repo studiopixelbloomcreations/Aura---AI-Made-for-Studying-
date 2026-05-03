@@ -38,7 +38,7 @@
     const topic = opts.topic || getTopic();
     const score = Number.isFinite(opts.score) ? opts.score : 0;
     const correct = !!opts.correct;
-    const docRef = db.collection('users').doc(uid).collection('tutor').doc('topic_stats');
+    const docRef = db.collection('users').doc(uid).collection('aevra').doc('topic_stats');
     const field = topic.replace(/[^a-zA-Z0-9_\- ]/g, '').slice(0, 40) || 'General';
     const payload = {};
     payload['topics.' + field + '.topic'] = topic;
@@ -47,7 +47,7 @@
     payload['topics.' + field + '.score_total'] = firebase.firestore.FieldValue.increment(score);
     payload['updatedAt'] = Date.now();
     await docRef.set(payload, { merge: true });
-    const profileRef = db.collection('users').doc(uid).collection('tutor').doc('profile');
+    const profileRef = db.collection('users').doc(uid).collection('aevra').doc('profile');
     await profileRef.set({ preferred_language: getLanguage(), email: getEmail(), updatedAt: Date.now() }, { merge: true });
     return true;
   }
@@ -83,7 +83,7 @@
       const uid = (window.GoogleSync && window.GoogleSync.getUid) ? window.GoogleSync.getUid() : null;
       if(uid && window.firebase && firebase.firestore){
         const db = firebase.firestore();
-        db.collection('users').doc(uid).collection('tutor').doc('profile')
+        db.collection('users').doc(uid).collection('aevra').doc('profile')
           .set({ email: getEmail(), preferred_language: getLanguage(), updatedAt: Date.now() }, { merge: true })
           .catch(()=>{});
       }

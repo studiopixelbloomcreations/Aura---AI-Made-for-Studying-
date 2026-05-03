@@ -110,7 +110,7 @@
       try {
         const result = await runtime.request(text, []);
         const answer = result && result.answer ? String(result.answer) : "I could not generate a response.";
-        addLog("Tutor", answer);
+        addLog("Aevra", answer);
         setStatus("Speaking", "is-speaking");
         if (typeof runtime.speakText === "function") runtime.speakText(answer);
         window.setTimeout(function () {

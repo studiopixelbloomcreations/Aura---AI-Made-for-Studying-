@@ -11,7 +11,7 @@ function providerConfig() {
       baseUrl: env("PI_OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
       model: env("PI_OPENROUTER_MODEL", "openai/gpt-4o-mini"),
       headers: {
-        "HTTP-Referer": env("PI_OPENROUTER_REFERER", "https://tutorv1.netlify.app"),
+        "HTTP-Referer": env("PI_OPENROUTER_REFERER", "https://aevra-ai.netlify.app"),
         "X-Title": env("PI_OPENROUTER_TITLE", "Personal Intelligence"),
       },
     },

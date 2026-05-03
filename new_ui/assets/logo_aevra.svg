@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Aevra AI">
+  <defs>
+    <linearGradient id="aevraGem" x1="18" y1="18" x2="110" y2="110" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8B5CF6"/>
+      <stop offset="1" stop-color="#06B6D4"/>
+    </linearGradient>
+  </defs>
+  <path d="M64 8 112 36v56l-48 28-48-28V36L64 8Z" fill="url(#aevraGem)"/>
+  <path d="M64 8v112M16 36l48 28 48-28M16 92l48-28 48 28" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="3"/>
+  <path d="M39 88 60 38c1.6-3.8 6.9-3.8 8.5 0L90 88h-12l-4.4-11H54.3L50 88H39Zm19.4-22h11.1L64 51.7 58.4 66Z" fill="#fff"/>
+</svg>

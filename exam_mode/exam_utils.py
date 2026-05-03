@@ -1,11 +1,14 @@
+import json
 import random
 import re
 import os
+import time
+from pathlib import Path
 from typing import Dict, List, Tuple
 
-# Helper utilities for Exam Mode.
-# scrape_papers() now attempts real scraping via paperswiki.com with caching (lazy imports),
-# and falls back to a synthetic generator if scraping fails.
+# Helper utilities for Exam Mode. Local Grade 9 question-bank content is the
+# primary source so Exam Mode remains useful even when public paper sites block
+# automated requests. Live scraping is attempted only after the local bank.
 
 SUBJECT_TYPE_MAP = {
     "Maths": ["algebra", "geometry", "number_theory", "probability"],
@@ -24,12 +27,68 @@ def normalize_term(term: str) -> str:
     return term
 
 
+def _load_question_bank() -> Dict[str, List[Dict]]:
+    bank_path = Path(__file__).with_name("question_bank.json")
+    with bank_path.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def _subject_key(subject: str) -> str:
+    raw = (subject or "").strip().lower()
+    aliases = {
+        "math": "Mathematics",
+        "maths": "Mathematics",
+        "mathematics": "Mathematics",
+        "science": "Science",
+        "english": "English",
+        "history": "History",
+        "geography": "Geography",
+        "ict": "ICT",
+        "information communication technology": "ICT",
+    }
+    return aliases.get(raw, subject or "Mathematics")
+
+
+def get_local_questions(subject: str, limit: int = 20) -> List[Dict]:
+    bank = _load_question_bank()
+    questions = list(bank.get(_subject_key(subject), []))
+    random.shuffle(questions)
+    return questions[: max(1, int(limit or 20))]
+
+
 def scrape_papers(subject: str, term: str) -> Dict[int, List[Dict]]:
     """
-    Try dynamic scrape from paperswiki.com with caching.
-    On failure (including missing libs), fall back to synthetic generation.
+    Return local Grade 9 question-bank papers first. If explicitly enabled,
+    attempt live scraping with polite headers/rate limiting and preserve local
+    questions as the fallback.
     Returns: {year: [{id, year, subject, term, text, type, choices, answer}, ...]}
     """
+    local_questions = get_local_questions(subject, 20)
+    if local_questions:
+        term_norm = normalize_term(term)
+        return {
+            2026: [
+                {
+                    "id": q.get("id"),
+                    "year": 2026,
+                    "subject": _subject_key(subject),
+                    "term": term_norm,
+                    "text": q.get("question"),
+                    "type": q.get("topic"),
+                    "choices": list((q.get("options") or {}).values()),
+                    "answer": q.get("correct_answer"),
+                    "explanation": q.get("explanation"),
+                    "difficulty": q.get("difficulty"),
+                    "topic": q.get("topic"),
+                }
+                for q in local_questions
+            ]
+        }
+
+    if os.environ.get("EXAM_LIVE_FETCH", "").strip().lower() not in {"1", "true", "yes", "on"}:
+        raise RuntimeError("No local question bank entries are available for this subject")
+
+    time.sleep(1.0)
     # Lazy import to avoid hard dependency unless used
     try:
         from .paper_cache import cache, cache_key  # type: ignore

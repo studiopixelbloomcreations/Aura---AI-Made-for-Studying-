@@ -134,9 +134,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   persistReturnTarget();
-  const continueTutorLink = document.getElementById("continueTutorLink");
-  if (continueTutorLink) {
-    continueTutorLink.setAttribute("href", getReturnTarget());
+  const continueAevraLink = document.getElementById("continueAevraLink");
+  if (continueAevraLink) {
+    continueAevraLink.setAttribute("href", getReturnTarget());
   }
 
   try {

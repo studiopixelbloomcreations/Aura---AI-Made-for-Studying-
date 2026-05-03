@@ -794,7 +794,7 @@
     if(piBrainToggle){
       piBrainToggle.classList.toggle('active', state.piChatMode);
       piBrainToggle.setAttribute('aria-pressed', state.piChatMode ? 'true' : 'false');
-      piBrainToggle.title = state.piChatMode ? 'Personal Intelligence brain active' : 'Main Tutor brain active';
+      piBrainToggle.title = state.piChatMode ? 'Personal Intelligence brain active' : 'Main Aevra brain active';
     }
     if(inputBox){
       inputBox.placeholder = state.piChatMode
@@ -1358,7 +1358,7 @@
       await ensurePuterReady(true);
       const mainModel = getMainModel();
       const systemPrompt =
-        'You are The Tutor, a helpful study tutor for Grade 9 students. ' +
+        'You are Aevra AI, a helpful study aevra for Grade 9 students. ' +
         'Keep answers accurate, clear, and practical. ' +
         'Current subject: ' + state.subject + '. ' +
         'Respond in ' + state.language + '.';
@@ -1458,7 +1458,7 @@
   if (piBrainToggle) {
     piBrainToggle.addEventListener('click', () => {
       setPiChatMode(!state.piChatMode);
-      toast(state.piChatMode ? 'Personal Intelligence text mode enabled' : 'Main Tutor mode enabled');
+      toast(state.piChatMode ? 'Personal Intelligence text mode enabled' : 'Main Aevra mode enabled');
     });
   }
 

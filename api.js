@@ -1,7 +1,7 @@
 // api.js
 (function(){
   const LOCAL_DEFAULT_BASE = 'http://127.0.0.1:8000';
-  const HOSTED_DEFAULT_BASE = 'https://grade9-ai-tutor-api-production.up.railway.app';
+  const HOSTED_DEFAULT_BASE = 'https://grade9-ai-aevra-api-production.up.railway.app';
 
   function isLoopbackHost(hostname){
     return hostname === 'localhost' || hostname === '127.0.0.1';

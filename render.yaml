@@ -1,7 +1,7 @@
 services:
   # Web Service (Frontend)
   - type: web
-    name: grade9-ai-tutor-frontend
+    name: grade9-ai-aevra-frontend
     env: static
     rootDir: .
     buildCommand: "echo 'No build needed'"
@@ -26,7 +26,7 @@ services:
 
   # API Service (Backend)
   - type: web
-    name: grade9-ai-tutor-api
+    name: grade9-ai-aevra-api
     env: python
     rootDir: .
     buildCommand: "pip install -r requirements.txt"
@@ -34,5 +34,12 @@ services:
     envVars:
       - key: GROQ_API_KEY
         sync: false
-        value: "your_groq_api_key_here"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
     healthCheckPath: /health

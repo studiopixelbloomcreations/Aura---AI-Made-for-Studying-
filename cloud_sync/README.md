@@ -16,7 +16,7 @@ npm run cloud-sync:watch:fast
 
 ## Environment variables
 
-- `TUTOR_REPO_ROOT` (optional): absolute repo path; default is current project root.
+- `AEVRA_REPO_ROOT` (optional): absolute repo path; default is current project root.
 - `CLOUD_SYNC_BRANCH` (optional): branch to track; default `main`.
 - `CLOUD_SYNC_POLL_MS` (optional): polling interval in ms; default `1000`.
 - `CLOUD_SYNC_STARTUP_PULL` (optional): `true/false`; default `true`.

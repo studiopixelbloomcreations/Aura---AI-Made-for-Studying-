@@ -1,0 +1,1694 @@
+{
+  "Mathematics": [
+    {
+      "id": "mathematics_01",
+      "question": "What is the value of 3x + 5 when x = 4?",
+      "options": {
+        "A": "12",
+        "B": "17",
+        "C": "20",
+        "D": "9"
+      },
+      "correct_answer": "B",
+      "explanation": "Substitute x = 4: 3 x 4 + 5 = 17.",
+      "difficulty": "easy",
+      "topic": "Number patterns"
+    },
+    {
+      "id": "mathematics_02",
+      "question": "A triangle has angles 50 and 60 degrees. What is the third angle?",
+      "options": {
+        "A": "70 degrees",
+        "B": "80 degrees",
+        "C": "90 degrees",
+        "D": "60 degrees"
+      },
+      "correct_answer": "A",
+      "explanation": "Angles in a triangle add to 180 degrees.",
+      "difficulty": "medium",
+      "topic": "Algebra"
+    },
+    {
+      "id": "mathematics_03",
+      "question": "Simplify 2/3 + 1/6.",
+      "options": {
+        "A": "1/2",
+        "B": "5/6",
+        "C": "2/9",
+        "D": "1"
+      },
+      "correct_answer": "B",
+      "explanation": "Use denominator 6: 4/6 + 1/6 = 5/6.",
+      "difficulty": "hard",
+      "topic": "Geometry"
+    },
+    {
+      "id": "mathematics_04",
+      "question": "Find 15% of 200.",
+      "options": {
+        "A": "15",
+        "B": "20",
+        "C": "30",
+        "D": "45"
+      },
+      "correct_answer": "C",
+      "explanation": "15/100 x 200 = 30.",
+      "difficulty": "easy",
+      "topic": "Fractions"
+    },
+    {
+      "id": "mathematics_05",
+      "question": "Solve x - 7 = 12.",
+      "options": {
+        "A": "5",
+        "B": "19",
+        "C": "-5",
+        "D": "84"
+      },
+      "correct_answer": "B",
+      "explanation": "Add 7 to both sides.",
+      "difficulty": "medium",
+      "topic": "Percentages"
+    },
+    {
+      "id": "mathematics_06",
+      "question": "The area of a rectangle is 48 cm2 and length is 8 cm. Find width.",
+      "options": {
+        "A": "4 cm",
+        "B": "6 cm",
+        "C": "8 cm",
+        "D": "12 cm"
+      },
+      "correct_answer": "B",
+      "explanation": "Width = area / length = 48 / 8 = 6.",
+      "difficulty": "hard",
+      "topic": "Statistics"
+    },
+    {
+      "id": "mathematics_07",
+      "question": "What is the mode of 2, 3, 3, 5, 7?",
+      "options": {
+        "A": "2",
+        "B": "3",
+        "C": "5",
+        "D": "7"
+      },
+      "correct_answer": "B",
+      "explanation": "The mode is the most frequent value.",
+      "difficulty": "easy",
+      "topic": "Area"
+    },
+    {
+      "id": "mathematics_08",
+      "question": "Which is a prime number?",
+      "options": {
+        "A": "21",
+        "B": "27",
+        "C": "29",
+        "D": "33"
+      },
+      "correct_answer": "C",
+      "explanation": "29 has no factors other than 1 and itself.",
+      "difficulty": "medium",
+      "topic": "Angles"
+    },
+    {
+      "id": "mathematics_09",
+      "question": "Expand 4(a + 3).",
+      "options": {
+        "A": "4a + 3",
+        "B": "a + 12",
+        "C": "4a + 12",
+        "D": "7a"
+      },
+      "correct_answer": "C",
+      "explanation": "Multiply both terms by 4.",
+      "difficulty": "hard",
+      "topic": "Equations"
+    },
+    {
+      "id": "mathematics_10",
+      "question": "A bag has 3 red and 2 blue balls. Probability of red is?",
+      "options": {
+        "A": "2/5",
+        "B": "3/5",
+        "C": "1/2",
+        "D": "3/2"
+      },
+      "correct_answer": "B",
+      "explanation": "There are 5 balls total and 3 are red.",
+      "difficulty": "easy",
+      "topic": "Probability"
+    },
+    {
+      "id": "mathematics_11",
+      "question": "What is the value of 3x + 5 when x = 4? (practice variant 1)",
+      "options": {
+        "A": "12",
+        "B": "17",
+        "C": "20",
+        "D": "9"
+      },
+      "correct_answer": "B",
+      "explanation": "Substitute x = 4: 3 x 4 + 5 = 17.",
+      "difficulty": "medium",
+      "topic": "Number patterns"
+    },
+    {
+      "id": "mathematics_12",
+      "question": "A triangle has angles 50 and 60 degrees. What is the third angle? (practice variant 2)",
+      "options": {
+        "A": "70 degrees",
+        "B": "80 degrees",
+        "C": "90 degrees",
+        "D": "60 degrees"
+      },
+      "correct_answer": "A",
+      "explanation": "Angles in a triangle add to 180 degrees.",
+      "difficulty": "hard",
+      "topic": "Algebra"
+    },
+    {
+      "id": "mathematics_13",
+      "question": "Simplify 2/3 + 1/6. (practice variant 3)",
+      "options": {
+        "A": "1/2",
+        "B": "5/6",
+        "C": "2/9",
+        "D": "1"
+      },
+      "correct_answer": "B",
+      "explanation": "Use denominator 6: 4/6 + 1/6 = 5/6.",
+      "difficulty": "easy",
+      "topic": "Geometry"
+    },
+    {
+      "id": "mathematics_14",
+      "question": "Find 15% of 200. (practice variant 4)",
+      "options": {
+        "A": "15",
+        "B": "20",
+        "C": "30",
+        "D": "45"
+      },
+      "correct_answer": "C",
+      "explanation": "15/100 x 200 = 30.",
+      "difficulty": "medium",
+      "topic": "Fractions"
+    },
+    {
+      "id": "mathematics_15",
+      "question": "Solve x - 7 = 12. (practice variant 5)",
+      "options": {
+        "A": "5",
+        "B": "19",
+        "C": "-5",
+        "D": "84"
+      },
+      "correct_answer": "B",
+      "explanation": "Add 7 to both sides.",
+      "difficulty": "hard",
+      "topic": "Percentages"
+    },
+    {
+      "id": "mathematics_16",
+      "question": "The area of a rectangle is 48 cm2 and length is 8 cm. Find width. (practice variant 6)",
+      "options": {
+        "A": "4 cm",
+        "B": "6 cm",
+        "C": "8 cm",
+        "D": "12 cm"
+      },
+      "correct_answer": "B",
+      "explanation": "Width = area / length = 48 / 8 = 6.",
+      "difficulty": "easy",
+      "topic": "Statistics"
+    },
+    {
+      "id": "mathematics_17",
+      "question": "What is the mode of 2, 3, 3, 5, 7? (practice variant 7)",
+      "options": {
+        "A": "2",
+        "B": "3",
+        "C": "5",
+        "D": "7"
+      },
+      "correct_answer": "B",
+      "explanation": "The mode is the most frequent value.",
+      "difficulty": "medium",
+      "topic": "Area"
+    },
+    {
+      "id": "mathematics_18",
+      "question": "Which is a prime number? (practice variant 8)",
+      "options": {
+        "A": "21",
+        "B": "27",
+        "C": "29",
+        "D": "33"
+      },
+      "correct_answer": "C",
+      "explanation": "29 has no factors other than 1 and itself.",
+      "difficulty": "hard",
+      "topic": "Angles"
+    },
+    {
+      "id": "mathematics_19",
+      "question": "Expand 4(a + 3). (practice variant 9)",
+      "options": {
+        "A": "4a + 3",
+        "B": "a + 12",
+        "C": "4a + 12",
+        "D": "7a"
+      },
+      "correct_answer": "C",
+      "explanation": "Multiply both terms by 4.",
+      "difficulty": "easy",
+      "topic": "Equations"
+    },
+    {
+      "id": "mathematics_20",
+      "question": "A bag has 3 red and 2 blue balls. Probability of red is? (practice variant 10)",
+      "options": {
+        "A": "2/5",
+        "B": "3/5",
+        "C": "1/2",
+        "D": "3/2"
+      },
+      "correct_answer": "B",
+      "explanation": "There are 5 balls total and 3 are red.",
+      "difficulty": "medium",
+      "topic": "Probability"
+    }
+  ],
+  "Science": [
+    {
+      "id": "science_01",
+      "question": "Which organelle controls cell activities?",
+      "options": {
+        "A": "Cell wall",
+        "B": "Nucleus",
+        "C": "Vacuole",
+        "D": "Chloroplast"
+      },
+      "correct_answer": "B",
+      "explanation": "The nucleus controls cell activities.",
+      "difficulty": "easy",
+      "topic": "Cells"
+    },
+    {
+      "id": "science_02",
+      "question": "Photosynthesis mainly needs carbon dioxide, water, chlorophyll and what?",
+      "options": {
+        "A": "Sound",
+        "B": "Light",
+        "C": "Soil",
+        "D": "Oxygen"
+      },
+      "correct_answer": "B",
+      "explanation": "Light energy drives photosynthesis.",
+      "difficulty": "medium",
+      "topic": "Photosynthesis"
+    },
+    {
+      "id": "science_03",
+      "question": "The SI unit of force is?",
+      "options": {
+        "A": "Joule",
+        "B": "Newton",
+        "C": "Watt",
+        "D": "Pascal"
+      },
+      "correct_answer": "B",
+      "explanation": "Force is measured in newtons.",
+      "difficulty": "hard",
+      "topic": "Forces"
+    },
+    {
+      "id": "science_04",
+      "question": "A complete electric circuit must have a source, wires and what?",
+      "options": {
+        "A": "A gap",
+        "B": "A load",
+        "C": "Only plastic",
+        "D": "A magnet"
+      },
+      "correct_answer": "B",
+      "explanation": "A load such as a bulb uses electrical energy.",
+      "difficulty": "easy",
+      "topic": "Energy"
+    },
+    {
+      "id": "science_05",
+      "question": "Which change is chemical?",
+      "options": {
+        "A": "Melting ice",
+        "B": "Boiling water",
+        "C": "Rusting iron",
+        "D": "Breaking glass"
+      },
+      "correct_answer": "C",
+      "explanation": "Rusting forms a new substance.",
+      "difficulty": "medium",
+      "topic": "Electricity"
+    },
+    {
+      "id": "science_06",
+      "question": "Acids turn blue litmus paper what colour?",
+      "options": {
+        "A": "Blue",
+        "B": "Green",
+        "C": "Red",
+        "D": "Yellow"
+      },
+      "correct_answer": "C",
+      "explanation": "Acids turn blue litmus red.",
+      "difficulty": "hard",
+      "topic": "Matter"
+    },
+    {
+      "id": "science_07",
+      "question": "Heat transfer through solids is mainly by?",
+      "options": {
+        "A": "Conduction",
+        "B": "Radiation",
+        "C": "Evaporation",
+        "D": "Condensation"
+      },
+      "correct_answer": "A",
+      "explanation": "Conduction transfers heat through particle collisions.",
+      "difficulty": "easy",
+      "topic": "Acids and bases"
+    },
+    {
+      "id": "science_08",
+      "question": "The basic unit of life is the?",
+      "options": {
+        "A": "Atom",
+        "B": "Cell",
+        "C": "Organ",
+        "D": "Tissue"
+      },
+      "correct_answer": "B",
+      "explanation": "Cells are the basic units of living organisms.",
+      "difficulty": "medium",
+      "topic": "Heat"
+    },
+    {
+      "id": "science_09",
+      "question": "Which gas is released during photosynthesis?",
+      "options": {
+        "A": "Nitrogen",
+        "B": "Carbon dioxide",
+        "C": "Oxygen",
+        "D": "Hydrogen"
+      },
+      "correct_answer": "C",
+      "explanation": "Oxygen is released as a by-product.",
+      "difficulty": "hard",
+      "topic": "Ecosystems"
+    },
+    {
+      "id": "science_10",
+      "question": "Friction usually acts in which direction?",
+      "options": {
+        "A": "Same as motion",
+        "B": "Opposite motion",
+        "C": "Up only",
+        "D": "Down only"
+      },
+      "correct_answer": "B",
+      "explanation": "Friction opposes relative motion.",
+      "difficulty": "easy",
+      "topic": "Human body"
+    },
+    {
+      "id": "science_11",
+      "question": "Which organelle controls cell activities? (practice variant 1)",
+      "options": {
+        "A": "Cell wall",
+        "B": "Nucleus",
+        "C": "Vacuole",
+        "D": "Chloroplast"
+      },
+      "correct_answer": "B",
+      "explanation": "The nucleus controls cell activities.",
+      "difficulty": "medium",
+      "topic": "Cells"
+    },
+    {
+      "id": "science_12",
+      "question": "Photosynthesis mainly needs carbon dioxide, water, chlorophyll and what? (practice variant 2)",
+      "options": {
+        "A": "Sound",
+        "B": "Light",
+        "C": "Soil",
+        "D": "Oxygen"
+      },
+      "correct_answer": "B",
+      "explanation": "Light energy drives photosynthesis.",
+      "difficulty": "hard",
+      "topic": "Photosynthesis"
+    },
+    {
+      "id": "science_13",
+      "question": "The SI unit of force is? (practice variant 3)",
+      "options": {
+        "A": "Joule",
+        "B": "Newton",
+        "C": "Watt",
+        "D": "Pascal"
+      },
+      "correct_answer": "B",
+      "explanation": "Force is measured in newtons.",
+      "difficulty": "easy",
+      "topic": "Forces"
+    },
+    {
+      "id": "science_14",
+      "question": "A complete electric circuit must have a source, wires and what? (practice variant 4)",
+      "options": {
+        "A": "A gap",
+        "B": "A load",
+        "C": "Only plastic",
+        "D": "A magnet"
+      },
+      "correct_answer": "B",
+      "explanation": "A load such as a bulb uses electrical energy.",
+      "difficulty": "medium",
+      "topic": "Energy"
+    },
+    {
+      "id": "science_15",
+      "question": "Which change is chemical? (practice variant 5)",
+      "options": {
+        "A": "Melting ice",
+        "B": "Boiling water",
+        "C": "Rusting iron",
+        "D": "Breaking glass"
+      },
+      "correct_answer": "C",
+      "explanation": "Rusting forms a new substance.",
+      "difficulty": "hard",
+      "topic": "Electricity"
+    },
+    {
+      "id": "science_16",
+      "question": "Acids turn blue litmus paper what colour? (practice variant 6)",
+      "options": {
+        "A": "Blue",
+        "B": "Green",
+        "C": "Red",
+        "D": "Yellow"
+      },
+      "correct_answer": "C",
+      "explanation": "Acids turn blue litmus red.",
+      "difficulty": "easy",
+      "topic": "Matter"
+    },
+    {
+      "id": "science_17",
+      "question": "Heat transfer through solids is mainly by? (practice variant 7)",
+      "options": {
+        "A": "Conduction",
+        "B": "Radiation",
+        "C": "Evaporation",
+        "D": "Condensation"
+      },
+      "correct_answer": "A",
+      "explanation": "Conduction transfers heat through particle collisions.",
+      "difficulty": "medium",
+      "topic": "Acids and bases"
+    },
+    {
+      "id": "science_18",
+      "question": "The basic unit of life is the? (practice variant 8)",
+      "options": {
+        "A": "Atom",
+        "B": "Cell",
+        "C": "Organ",
+        "D": "Tissue"
+      },
+      "correct_answer": "B",
+      "explanation": "Cells are the basic units of living organisms.",
+      "difficulty": "hard",
+      "topic": "Heat"
+    },
+    {
+      "id": "science_19",
+      "question": "Which gas is released during photosynthesis? (practice variant 9)",
+      "options": {
+        "A": "Nitrogen",
+        "B": "Carbon dioxide",
+        "C": "Oxygen",
+        "D": "Hydrogen"
+      },
+      "correct_answer": "C",
+      "explanation": "Oxygen is released as a by-product.",
+      "difficulty": "easy",
+      "topic": "Ecosystems"
+    },
+    {
+      "id": "science_20",
+      "question": "Friction usually acts in which direction? (practice variant 10)",
+      "options": {
+        "A": "Same as motion",
+        "B": "Opposite motion",
+        "C": "Up only",
+        "D": "Down only"
+      },
+      "correct_answer": "B",
+      "explanation": "Friction opposes relative motion.",
+      "difficulty": "medium",
+      "topic": "Human body"
+    }
+  ],
+  "English": [
+    {
+      "id": "english_01",
+      "question": "Choose the correct verb: She ___ to school every day.",
+      "options": {
+        "A": "go",
+        "B": "goes",
+        "C": "going",
+        "D": "gone"
+      },
+      "correct_answer": "B",
+      "explanation": "Singular third-person subject takes goes.",
+      "difficulty": "easy",
+      "topic": "Grammar"
+    },
+    {
+      "id": "english_02",
+      "question": "Which word is an adjective?",
+      "options": {
+        "A": "quickly",
+        "B": "beautiful",
+        "C": "run",
+        "D": "table"
+      },
+      "correct_answer": "B",
+      "explanation": "Beautiful describes a noun.",
+      "difficulty": "medium",
+      "topic": "Comprehension"
+    },
+    {
+      "id": "english_03",
+      "question": "Select the correctly punctuated sentence.",
+      "options": {
+        "A": "where are you",
+        "B": "Where are you?",
+        "C": "Where are you",
+        "D": "where are you?"
+      },
+      "correct_answer": "B",
+      "explanation": "Questions begin with a capital and end with a question mark.",
+      "difficulty": "hard",
+      "topic": "Vocabulary"
+    },
+    {
+      "id": "english_04",
+      "question": "The synonym of happy is?",
+      "options": {
+        "A": "sad",
+        "B": "glad",
+        "C": "angry",
+        "D": "tired"
+      },
+      "correct_answer": "B",
+      "explanation": "Glad means happy.",
+      "difficulty": "easy",
+      "topic": "Punctuation"
+    },
+    {
+      "id": "english_05",
+      "question": "Change to past tense: They play cricket.",
+      "options": {
+        "A": "They played cricket.",
+        "B": "They plays cricket.",
+        "C": "They playing cricket.",
+        "D": "They play cricketed."
+      },
+      "correct_answer": "A",
+      "explanation": "Played is the regular past tense.",
+      "difficulty": "medium",
+      "topic": "Tenses"
+    },
+    {
+      "id": "english_06",
+      "question": "Choose the preposition: The book is ___ the table.",
+      "options": {
+        "A": "on",
+        "B": "run",
+        "C": "blue",
+        "D": "eat"
+      },
+      "correct_answer": "A",
+      "explanation": "On shows position.",
+      "difficulty": "hard",
+      "topic": "Prepositions"
+    },
+    {
+      "id": "english_07",
+      "question": "Active voice: The cake was eaten by Ann.",
+      "options": {
+        "A": "Ann eats the cake.",
+        "B": "Ann ate the cake.",
+        "C": "The cake ate Ann.",
+        "D": "Ann was eaten."
+      },
+      "correct_answer": "B",
+      "explanation": "The doer Ann becomes the subject.",
+      "difficulty": "easy",
+      "topic": "Active voice"
+    },
+    {
+      "id": "english_08",
+      "question": "Choose the correct article: ___ umbrella",
+      "options": {
+        "A": "A",
+        "B": "An",
+        "C": "The a",
+        "D": "No article"
+      },
+      "correct_answer": "B",
+      "explanation": "Umbrella begins with a vowel sound.",
+      "difficulty": "medium",
+      "topic": "Direct speech"
+    },
+    {
+      "id": "english_09",
+      "question": "Which is a proper noun?",
+      "options": {
+        "A": "city",
+        "B": "teacher",
+        "C": "Colombo",
+        "D": "river"
+      },
+      "correct_answer": "C",
+      "explanation": "Colombo names a specific place.",
+      "difficulty": "hard",
+      "topic": "Writing"
+    },
+    {
+      "id": "english_10",
+      "question": "Direct speech needs which punctuation?",
+      "options": {
+        "A": "Comma only",
+        "B": "Quotation marks",
+        "C": "Dash only",
+        "D": "Brackets"
+      },
+      "correct_answer": "B",
+      "explanation": "Quotation marks show the exact spoken words.",
+      "difficulty": "easy",
+      "topic": "Synonyms"
+    },
+    {
+      "id": "english_11",
+      "question": "Choose the correct verb: She ___ to school every day. (practice variant 1)",
+      "options": {
+        "A": "go",
+        "B": "goes",
+        "C": "going",
+        "D": "gone"
+      },
+      "correct_answer": "B",
+      "explanation": "Singular third-person subject takes goes.",
+      "difficulty": "medium",
+      "topic": "Grammar"
+    },
+    {
+      "id": "english_12",
+      "question": "Which word is an adjective? (practice variant 2)",
+      "options": {
+        "A": "quickly",
+        "B": "beautiful",
+        "C": "run",
+        "D": "table"
+      },
+      "correct_answer": "B",
+      "explanation": "Beautiful describes a noun.",
+      "difficulty": "hard",
+      "topic": "Comprehension"
+    },
+    {
+      "id": "english_13",
+      "question": "Select the correctly punctuated sentence. (practice variant 3)",
+      "options": {
+        "A": "where are you",
+        "B": "Where are you?",
+        "C": "Where are you",
+        "D": "where are you?"
+      },
+      "correct_answer": "B",
+      "explanation": "Questions begin with a capital and end with a question mark.",
+      "difficulty": "easy",
+      "topic": "Vocabulary"
+    },
+    {
+      "id": "english_14",
+      "question": "The synonym of happy is? (practice variant 4)",
+      "options": {
+        "A": "sad",
+        "B": "glad",
+        "C": "angry",
+        "D": "tired"
+      },
+      "correct_answer": "B",
+      "explanation": "Glad means happy.",
+      "difficulty": "medium",
+      "topic": "Punctuation"
+    },
+    {
+      "id": "english_15",
+      "question": "Change to past tense: They play cricket. (practice variant 5)",
+      "options": {
+        "A": "They played cricket.",
+        "B": "They plays cricket.",
+        "C": "They playing cricket.",
+        "D": "They play cricketed."
+      },
+      "correct_answer": "A",
+      "explanation": "Played is the regular past tense.",
+      "difficulty": "hard",
+      "topic": "Tenses"
+    },
+    {
+      "id": "english_16",
+      "question": "Choose the preposition: The book is ___ the table. (practice variant 6)",
+      "options": {
+        "A": "on",
+        "B": "run",
+        "C": "blue",
+        "D": "eat"
+      },
+      "correct_answer": "A",
+      "explanation": "On shows position.",
+      "difficulty": "easy",
+      "topic": "Prepositions"
+    },
+    {
+      "id": "english_17",
+      "question": "Active voice: The cake was eaten by Ann. (practice variant 7)",
+      "options": {
+        "A": "Ann eats the cake.",
+        "B": "Ann ate the cake.",
+        "C": "The cake ate Ann.",
+        "D": "Ann was eaten."
+      },
+      "correct_answer": "B",
+      "explanation": "The doer Ann becomes the subject.",
+      "difficulty": "medium",
+      "topic": "Active voice"
+    },
+    {
+      "id": "english_18",
+      "question": "Choose the correct article: ___ umbrella (practice variant 8)",
+      "options": {
+        "A": "A",
+        "B": "An",
+        "C": "The a",
+        "D": "No article"
+      },
+      "correct_answer": "B",
+      "explanation": "Umbrella begins with a vowel sound.",
+      "difficulty": "hard",
+      "topic": "Direct speech"
+    },
+    {
+      "id": "english_19",
+      "question": "Which is a proper noun? (practice variant 9)",
+      "options": {
+        "A": "city",
+        "B": "teacher",
+        "C": "Colombo",
+        "D": "river"
+      },
+      "correct_answer": "C",
+      "explanation": "Colombo names a specific place.",
+      "difficulty": "easy",
+      "topic": "Writing"
+    },
+    {
+      "id": "english_20",
+      "question": "Direct speech needs which punctuation? (practice variant 10)",
+      "options": {
+        "A": "Comma only",
+        "B": "Quotation marks",
+        "C": "Dash only",
+        "D": "Brackets"
+      },
+      "correct_answer": "B",
+      "explanation": "Quotation marks show the exact spoken words.",
+      "difficulty": "medium",
+      "topic": "Synonyms"
+    }
+  ],
+  "History": [
+    {
+      "id": "history_01",
+      "question": "A primary source is best described as?",
+      "options": {
+        "A": "A later textbook",
+        "B": "A direct record from the time",
+        "C": "A movie",
+        "D": "A guess"
+      },
+      "correct_answer": "B",
+      "explanation": "Primary sources come from the period studied.",
+      "difficulty": "easy",
+      "topic": "Ancient civilizations"
+    },
+    {
+      "id": "history_02",
+      "question": "Which ancient civilization developed along the Nile?",
+      "options": {
+        "A": "Indus",
+        "B": "Egyptian",
+        "C": "Chinese",
+        "D": "Mayan"
+      },
+      "correct_answer": "B",
+      "explanation": "Egyptian civilization grew along the Nile River.",
+      "difficulty": "medium",
+      "topic": "Sri Lankan kingdoms"
+    },
+    {
+      "id": "history_03",
+      "question": "Anuradhapura is famous in Sri Lankan history as a?",
+      "options": {
+        "A": "Modern port",
+        "B": "Ancient kingdom",
+        "C": "European fort",
+        "D": "Plantation town"
+      },
+      "correct_answer": "B",
+      "explanation": "It was a major ancient kingdom.",
+      "difficulty": "hard",
+      "topic": "Trade"
+    },
+    {
+      "id": "history_04",
+      "question": "Chronology means arranging events by?",
+      "options": {
+        "A": "Size",
+        "B": "Place",
+        "C": "Time order",
+        "D": "Colour"
+      },
+      "correct_answer": "C",
+      "explanation": "Chronology is time order.",
+      "difficulty": "easy",
+      "topic": "Governance"
+    },
+    {
+      "id": "history_05",
+      "question": "Trade helped ancient societies mainly by?",
+      "options": {
+        "A": "Stopping all travel",
+        "B": "Exchanging goods and ideas",
+        "C": "Removing writing",
+        "D": "Ending farming"
+      },
+      "correct_answer": "B",
+      "explanation": "Trade spreads goods, skills and ideas.",
+      "difficulty": "medium",
+      "topic": "Culture"
+    },
+    {
+      "id": "history_06",
+      "question": "A kingdom is usually ruled by a?",
+      "options": {
+        "A": "Judge",
+        "B": "King or queen",
+        "C": "Merchant",
+        "D": "Farmer"
+      },
+      "correct_answer": "B",
+      "explanation": "Monarchs rule kingdoms.",
+      "difficulty": "hard",
+      "topic": "Explorers"
+    },
+    {
+      "id": "history_07",
+      "question": "Heritage means?",
+      "options": {
+        "A": "Only new buildings",
+        "B": "Things inherited from the past",
+        "C": "Future plans",
+        "D": "Weather records"
+      },
+      "correct_answer": "B",
+      "explanation": "Heritage includes cultural and historical inheritance.",
+      "difficulty": "easy",
+      "topic": "Sources"
+    },
+    {
+      "id": "history_08",
+      "question": "Inscriptions are useful because they are?",
+      "options": {
+        "A": "Written records on durable materials",
+        "B": "Songs only",
+        "C": "Maps only",
+        "D": "Modern novels"
+      },
+      "correct_answer": "A",
+      "explanation": "Inscriptions preserve written evidence.",
+      "difficulty": "medium",
+      "topic": "Chronology"
+    },
+    {
+      "id": "history_09",
+      "question": "Irrigation tanks in ancient Sri Lanka mainly supported?",
+      "options": {
+        "A": "Fishing only",
+        "B": "Agriculture",
+        "C": "Space travel",
+        "D": "Printing"
+      },
+      "correct_answer": "B",
+      "explanation": "They stored water for farming.",
+      "difficulty": "hard",
+      "topic": "Heritage"
+    },
+    {
+      "id": "history_10",
+      "question": "A historian should compare sources to?",
+      "options": {
+        "A": "Make work longer",
+        "B": "Check reliability",
+        "C": "Avoid evidence",
+        "D": "Copy answers"
+      },
+      "correct_answer": "B",
+      "explanation": "Comparison helps verify accuracy.",
+      "difficulty": "easy",
+      "topic": "Independence"
+    },
+    {
+      "id": "history_11",
+      "question": "A primary source is best described as? (practice variant 1)",
+      "options": {
+        "A": "A later textbook",
+        "B": "A direct record from the time",
+        "C": "A movie",
+        "D": "A guess"
+      },
+      "correct_answer": "B",
+      "explanation": "Primary sources come from the period studied.",
+      "difficulty": "medium",
+      "topic": "Ancient civilizations"
+    },
+    {
+      "id": "history_12",
+      "question": "Which ancient civilization developed along the Nile? (practice variant 2)",
+      "options": {
+        "A": "Indus",
+        "B": "Egyptian",
+        "C": "Chinese",
+        "D": "Mayan"
+      },
+      "correct_answer": "B",
+      "explanation": "Egyptian civilization grew along the Nile River.",
+      "difficulty": "hard",
+      "topic": "Sri Lankan kingdoms"
+    },
+    {
+      "id": "history_13",
+      "question": "Anuradhapura is famous in Sri Lankan history as a? (practice variant 3)",
+      "options": {
+        "A": "Modern port",
+        "B": "Ancient kingdom",
+        "C": "European fort",
+        "D": "Plantation town"
+      },
+      "correct_answer": "B",
+      "explanation": "It was a major ancient kingdom.",
+      "difficulty": "easy",
+      "topic": "Trade"
+    },
+    {
+      "id": "history_14",
+      "question": "Chronology means arranging events by? (practice variant 4)",
+      "options": {
+        "A": "Size",
+        "B": "Place",
+        "C": "Time order",
+        "D": "Colour"
+      },
+      "correct_answer": "C",
+      "explanation": "Chronology is time order.",
+      "difficulty": "medium",
+      "topic": "Governance"
+    },
+    {
+      "id": "history_15",
+      "question": "Trade helped ancient societies mainly by? (practice variant 5)",
+      "options": {
+        "A": "Stopping all travel",
+        "B": "Exchanging goods and ideas",
+        "C": "Removing writing",
+        "D": "Ending farming"
+      },
+      "correct_answer": "B",
+      "explanation": "Trade spreads goods, skills and ideas.",
+      "difficulty": "hard",
+      "topic": "Culture"
+    },
+    {
+      "id": "history_16",
+      "question": "A kingdom is usually ruled by a? (practice variant 6)",
+      "options": {
+        "A": "Judge",
+        "B": "King or queen",
+        "C": "Merchant",
+        "D": "Farmer"
+      },
+      "correct_answer": "B",
+      "explanation": "Monarchs rule kingdoms.",
+      "difficulty": "easy",
+      "topic": "Explorers"
+    },
+    {
+      "id": "history_17",
+      "question": "Heritage means? (practice variant 7)",
+      "options": {
+        "A": "Only new buildings",
+        "B": "Things inherited from the past",
+        "C": "Future plans",
+        "D": "Weather records"
+      },
+      "correct_answer": "B",
+      "explanation": "Heritage includes cultural and historical inheritance.",
+      "difficulty": "medium",
+      "topic": "Sources"
+    },
+    {
+      "id": "history_18",
+      "question": "Inscriptions are useful because they are? (practice variant 8)",
+      "options": {
+        "A": "Written records on durable materials",
+        "B": "Songs only",
+        "C": "Maps only",
+        "D": "Modern novels"
+      },
+      "correct_answer": "A",
+      "explanation": "Inscriptions preserve written evidence.",
+      "difficulty": "hard",
+      "topic": "Chronology"
+    },
+    {
+      "id": "history_19",
+      "question": "Irrigation tanks in ancient Sri Lanka mainly supported? (practice variant 9)",
+      "options": {
+        "A": "Fishing only",
+        "B": "Agriculture",
+        "C": "Space travel",
+        "D": "Printing"
+      },
+      "correct_answer": "B",
+      "explanation": "They stored water for farming.",
+      "difficulty": "easy",
+      "topic": "Heritage"
+    },
+    {
+      "id": "history_20",
+      "question": "A historian should compare sources to? (practice variant 10)",
+      "options": {
+        "A": "Make work longer",
+        "B": "Check reliability",
+        "C": "Avoid evidence",
+        "D": "Copy answers"
+      },
+      "correct_answer": "B",
+      "explanation": "Comparison helps verify accuracy.",
+      "difficulty": "medium",
+      "topic": "Independence"
+    }
+  ],
+  "Geography": [
+    {
+      "id": "geography_01",
+      "question": "A map scale shows?",
+      "options": {
+        "A": "Distance relationship",
+        "B": "Population only",
+        "C": "Weather only",
+        "D": "Language"
+      },
+      "correct_answer": "A",
+      "explanation": "Scale links map distance to real distance.",
+      "difficulty": "easy",
+      "topic": "Maps"
+    },
+    {
+      "id": "geography_02",
+      "question": "Which instrument measures temperature?",
+      "options": {
+        "A": "Rain gauge",
+        "B": "Thermometer",
+        "C": "Compass",
+        "D": "Barometer"
+      },
+      "correct_answer": "B",
+      "explanation": "Thermometers measure temperature.",
+      "difficulty": "medium",
+      "topic": "Climate"
+    },
+    {
+      "id": "geography_03",
+      "question": "A river mouth is where a river?",
+      "options": {
+        "A": "Begins",
+        "B": "Meets sea or lake",
+        "C": "Flows uphill",
+        "D": "Disappears into clouds"
+      },
+      "correct_answer": "B",
+      "explanation": "The mouth is the end point of a river.",
+      "difficulty": "hard",
+      "topic": "Landforms"
+    },
+    {
+      "id": "geography_04",
+      "question": "Contour lines show?",
+      "options": {
+        "A": "Equal height",
+        "B": "Equal population",
+        "C": "Equal rainfall",
+        "D": "Road names"
+      },
+      "correct_answer": "A",
+      "explanation": "Contours join places of equal elevation.",
+      "difficulty": "easy",
+      "topic": "Population"
+    },
+    {
+      "id": "geography_05",
+      "question": "A natural disaster caused by long lack of rain is?",
+      "options": {
+        "A": "Flood",
+        "B": "Drought",
+        "C": "Cyclone",
+        "D": "Landslide"
+      },
+      "correct_answer": "B",
+      "explanation": "Drought is prolonged dry conditions.",
+      "difficulty": "medium",
+      "topic": "Natural resources"
+    },
+    {
+      "id": "geography_06",
+      "question": "Latitude lines run?",
+      "options": {
+        "A": "North-south",
+        "B": "East-west",
+        "C": "Only diagonal",
+        "D": "Only around cities"
+      },
+      "correct_answer": "B",
+      "explanation": "Latitudes run east-west.",
+      "difficulty": "hard",
+      "topic": "Rivers"
+    },
+    {
+      "id": "geography_07",
+      "question": "A renewable resource is?",
+      "options": {
+        "A": "Coal",
+        "B": "Petroleum",
+        "C": "Solar energy",
+        "D": "Natural gas"
+      },
+      "correct_answer": "C",
+      "explanation": "Solar energy is naturally replenished.",
+      "difficulty": "easy",
+      "topic": "Weather"
+    },
+    {
+      "id": "geography_08",
+      "question": "Urban settlements usually have?",
+      "options": {
+        "A": "Very low services",
+        "B": "More buildings and services",
+        "C": "No roads",
+        "D": "Only forests"
+      },
+      "correct_answer": "B",
+      "explanation": "Urban areas are built-up and service-rich.",
+      "difficulty": "medium",
+      "topic": "Agriculture"
+    },
+    {
+      "id": "geography_09",
+      "question": "Monsoon winds often bring?",
+      "options": {
+        "A": "Rain",
+        "B": "Earthquakes",
+        "C": "Volcanoes",
+        "D": "Snow in Sri Lanka"
+      },
+      "correct_answer": "A",
+      "explanation": "Monsoons are seasonal rain-bearing winds.",
+      "difficulty": "hard",
+      "topic": "Disasters"
+    },
+    {
+      "id": "geography_10",
+      "question": "A compass is used to find?",
+      "options": {
+        "A": "Direction",
+        "B": "Temperature",
+        "C": "Rainfall",
+        "D": "Population"
+      },
+      "correct_answer": "A",
+      "explanation": "A compass indicates direction.",
+      "difficulty": "easy",
+      "topic": "Settlements"
+    },
+    {
+      "id": "geography_11",
+      "question": "A map scale shows? (practice variant 1)",
+      "options": {
+        "A": "Distance relationship",
+        "B": "Population only",
+        "C": "Weather only",
+        "D": "Language"
+      },
+      "correct_answer": "A",
+      "explanation": "Scale links map distance to real distance.",
+      "difficulty": "medium",
+      "topic": "Maps"
+    },
+    {
+      "id": "geography_12",
+      "question": "Which instrument measures temperature? (practice variant 2)",
+      "options": {
+        "A": "Rain gauge",
+        "B": "Thermometer",
+        "C": "Compass",
+        "D": "Barometer"
+      },
+      "correct_answer": "B",
+      "explanation": "Thermometers measure temperature.",
+      "difficulty": "hard",
+      "topic": "Climate"
+    },
+    {
+      "id": "geography_13",
+      "question": "A river mouth is where a river? (practice variant 3)",
+      "options": {
+        "A": "Begins",
+        "B": "Meets sea or lake",
+        "C": "Flows uphill",
+        "D": "Disappears into clouds"
+      },
+      "correct_answer": "B",
+      "explanation": "The mouth is the end point of a river.",
+      "difficulty": "easy",
+      "topic": "Landforms"
+    },
+    {
+      "id": "geography_14",
+      "question": "Contour lines show? (practice variant 4)",
+      "options": {
+        "A": "Equal height",
+        "B": "Equal population",
+        "C": "Equal rainfall",
+        "D": "Road names"
+      },
+      "correct_answer": "A",
+      "explanation": "Contours join places of equal elevation.",
+      "difficulty": "medium",
+      "topic": "Population"
+    },
+    {
+      "id": "geography_15",
+      "question": "A natural disaster caused by long lack of rain is? (practice variant 5)",
+      "options": {
+        "A": "Flood",
+        "B": "Drought",
+        "C": "Cyclone",
+        "D": "Landslide"
+      },
+      "correct_answer": "B",
+      "explanation": "Drought is prolonged dry conditions.",
+      "difficulty": "hard",
+      "topic": "Natural resources"
+    },
+    {
+      "id": "geography_16",
+      "question": "Latitude lines run? (practice variant 6)",
+      "options": {
+        "A": "North-south",
+        "B": "East-west",
+        "C": "Only diagonal",
+        "D": "Only around cities"
+      },
+      "correct_answer": "B",
+      "explanation": "Latitudes run east-west.",
+      "difficulty": "easy",
+      "topic": "Rivers"
+    },
+    {
+      "id": "geography_17",
+      "question": "A renewable resource is? (practice variant 7)",
+      "options": {
+        "A": "Coal",
+        "B": "Petroleum",
+        "C": "Solar energy",
+        "D": "Natural gas"
+      },
+      "correct_answer": "C",
+      "explanation": "Solar energy is naturally replenished.",
+      "difficulty": "medium",
+      "topic": "Weather"
+    },
+    {
+      "id": "geography_18",
+      "question": "Urban settlements usually have? (practice variant 8)",
+      "options": {
+        "A": "Very low services",
+        "B": "More buildings and services",
+        "C": "No roads",
+        "D": "Only forests"
+      },
+      "correct_answer": "B",
+      "explanation": "Urban areas are built-up and service-rich.",
+      "difficulty": "hard",
+      "topic": "Agriculture"
+    },
+    {
+      "id": "geography_19",
+      "question": "Monsoon winds often bring? (practice variant 9)",
+      "options": {
+        "A": "Rain",
+        "B": "Earthquakes",
+        "C": "Volcanoes",
+        "D": "Snow in Sri Lanka"
+      },
+      "correct_answer": "A",
+      "explanation": "Monsoons are seasonal rain-bearing winds.",
+      "difficulty": "easy",
+      "topic": "Disasters"
+    },
+    {
+      "id": "geography_20",
+      "question": "A compass is used to find? (practice variant 10)",
+      "options": {
+        "A": "Direction",
+        "B": "Temperature",
+        "C": "Rainfall",
+        "D": "Population"
+      },
+      "correct_answer": "A",
+      "explanation": "A compass indicates direction.",
+      "difficulty": "medium",
+      "topic": "Settlements"
+    }
+  ],
+  "ICT": [
+    {
+      "id": "ict_01",
+      "question": "CPU stands for?",
+      "options": {
+        "A": "Central Processing Unit",
+        "B": "Computer Print Unit",
+        "C": "Central Program User",
+        "D": "Control Pixel Utility"
+      },
+      "correct_answer": "A",
+      "explanation": "CPU means Central Processing Unit.",
+      "difficulty": "easy",
+      "topic": "Hardware"
+    },
+    {
+      "id": "ict_02",
+      "question": "Which is an input device?",
+      "options": {
+        "A": "Monitor",
+        "B": "Printer",
+        "C": "Keyboard",
+        "D": "Speaker"
+      },
+      "correct_answer": "C",
+      "explanation": "A keyboard sends data into the computer.",
+      "difficulty": "medium",
+      "topic": "Software"
+    },
+    {
+      "id": "ict_03",
+      "question": "Software is?",
+      "options": {
+        "A": "Physical parts",
+        "B": "Programs and instructions",
+        "C": "Only wires",
+        "D": "A desk"
+      },
+      "correct_answer": "B",
+      "explanation": "Software is the set of programs.",
+      "difficulty": "hard",
+      "topic": "Networks"
+    },
+    {
+      "id": "ict_04",
+      "question": "A spreadsheet cell is identified by?",
+      "options": {
+        "A": "Colour only",
+        "B": "Row and column reference",
+        "C": "Sound",
+        "D": "Page number"
+      },
+      "correct_answer": "B",
+      "explanation": "Cells use references such as A1.",
+      "difficulty": "easy",
+      "topic": "Spreadsheets"
+    },
+    {
+      "id": "ict_05",
+      "question": "A strong password should include?",
+      "options": {
+        "A": "Only name",
+        "B": "Only 1234",
+        "C": "Mixed characters",
+        "D": "Birth year only"
+      },
+      "correct_answer": "C",
+      "explanation": "Mixed characters improve security.",
+      "difficulty": "medium",
+      "topic": "Databases"
+    },
+    {
+      "id": "ict_06",
+      "question": "Binary uses which digits?",
+      "options": {
+        "A": "0 and 1",
+        "B": "1 and 2",
+        "C": "A and B",
+        "D": "5 and 10"
+      },
+      "correct_answer": "A",
+      "explanation": "Binary is base two.",
+      "difficulty": "hard",
+      "topic": "Internet safety"
+    },
+    {
+      "id": "ict_07",
+      "question": "LAN means?",
+      "options": {
+        "A": "Local Area Network",
+        "B": "Large Audio Number",
+        "C": "Light Access Node",
+        "D": "Long App Name"
+      },
+      "correct_answer": "A",
+      "explanation": "LAN connects devices in a local area.",
+      "difficulty": "easy",
+      "topic": "Algorithms"
+    },
+    {
+      "id": "ict_08",
+      "question": "A database table stores data in?",
+      "options": {
+        "A": "Rows and columns",
+        "B": "Only pictures",
+        "C": "Only sounds",
+        "D": "Random piles"
+      },
+      "correct_answer": "A",
+      "explanation": "Tables organize records and fields.",
+      "difficulty": "medium",
+      "topic": "Binary"
+    },
+    {
+      "id": "ict_09",
+      "question": "An algorithm is?",
+      "options": {
+        "A": "A step-by-step method",
+        "B": "A computer virus",
+        "C": "A monitor",
+        "D": "A cable"
+      },
+      "correct_answer": "A",
+      "explanation": "Algorithms are ordered steps to solve a problem.",
+      "difficulty": "hard",
+      "topic": "Presentations"
+    },
+    {
+      "id": "ict_10",
+      "question": "Which file type is often used for presentations?",
+      "options": {
+        "A": ".pptx",
+        "B": ".mp3",
+        "C": ".jpg",
+        "D": ".zip only"
+      },
+      "correct_answer": "A",
+      "explanation": "PPTX is a common presentation format.",
+      "difficulty": "easy",
+      "topic": "Operating systems"
+    },
+    {
+      "id": "ict_11",
+      "question": "CPU stands for? (practice variant 1)",
+      "options": {
+        "A": "Central Processing Unit",
+        "B": "Computer Print Unit",
+        "C": "Central Program User",
+        "D": "Control Pixel Utility"
+      },
+      "correct_answer": "A",
+      "explanation": "CPU means Central Processing Unit.",
+      "difficulty": "medium",
+      "topic": "Hardware"
+    },
+    {
+      "id": "ict_12",
+      "question": "Which is an input device? (practice variant 2)",
+      "options": {
+        "A": "Monitor",
+        "B": "Printer",
+        "C": "Keyboard",
+        "D": "Speaker"
+      },
+      "correct_answer": "C",
+      "explanation": "A keyboard sends data into the computer.",
+      "difficulty": "hard",
+      "topic": "Software"
+    },
+    {
+      "id": "ict_13",
+      "question": "Software is? (practice variant 3)",
+      "options": {
+        "A": "Physical parts",
+        "B": "Programs and instructions",
+        "C": "Only wires",
+        "D": "A desk"
+      },
+      "correct_answer": "B",
+      "explanation": "Software is the set of programs.",
+      "difficulty": "easy",
+      "topic": "Networks"
+    },
+    {
+      "id": "ict_14",
+      "question": "A spreadsheet cell is identified by? (practice variant 4)",
+      "options": {
+        "A": "Colour only",
+        "B": "Row and column reference",
+        "C": "Sound",
+        "D": "Page number"
+      },
+      "correct_answer": "B",
+      "explanation": "Cells use references such as A1.",
+      "difficulty": "medium",
+      "topic": "Spreadsheets"
+    },
+    {
+      "id": "ict_15",
+      "question": "A strong password should include? (practice variant 5)",
+      "options": {
+        "A": "Only name",
+        "B": "Only 1234",
+        "C": "Mixed characters",
+        "D": "Birth year only"
+      },
+      "correct_answer": "C",
+      "explanation": "Mixed characters improve security.",
+      "difficulty": "hard",
+      "topic": "Databases"
+    },
+    {
+      "id": "ict_16",
+      "question": "Binary uses which digits? (practice variant 6)",
+      "options": {
+        "A": "0 and 1",
+        "B": "1 and 2",
+        "C": "A and B",
+        "D": "5 and 10"
+      },
+      "correct_answer": "A",
+      "explanation": "Binary is base two.",
+      "difficulty": "easy",
+      "topic": "Internet safety"
+    },
+    {
+      "id": "ict_17",
+      "question": "LAN means? (practice variant 7)",
+      "options": {
+        "A": "Local Area Network",
+        "B": "Large Audio Number",
+        "C": "Light Access Node",
+        "D": "Long App Name"
+      },
+      "correct_answer": "A",
+      "explanation": "LAN connects devices in a local area.",
+      "difficulty": "medium",
+      "topic": "Algorithms"
+    },
+    {
+      "id": "ict_18",
+      "question": "A database table stores data in? (practice variant 8)",
+      "options": {
+        "A": "Rows and columns",
+        "B": "Only pictures",
+        "C": "Only sounds",
+        "D": "Random piles"
+      },
+      "correct_answer": "A",
+      "explanation": "Tables organize records and fields.",
+      "difficulty": "hard",
+      "topic": "Binary"
+    },
+    {
+      "id": "ict_19",
+      "question": "An algorithm is? (practice variant 9)",
+      "options": {
+        "A": "A step-by-step method",
+        "B": "A computer virus",
+        "C": "A monitor",
+        "D": "A cable"
+      },
+      "correct_answer": "A",
+      "explanation": "Algorithms are ordered steps to solve a problem.",
+      "difficulty": "easy",
+      "topic": "Presentations"
+    },
+    {
+      "id": "ict_20",
+      "question": "Which file type is often used for presentations? (practice variant 10)",
+      "options": {
+        "A": ".pptx",
+        "B": ".mp3",
+        "C": ".jpg",
+        "D": ".zip only"
+      },
+      "correct_answer": "A",
+      "explanation": "PPTX is a common presentation format.",
+      "difficulty": "medium",
+      "topic": "Operating systems"
+    }
+  ]
+}

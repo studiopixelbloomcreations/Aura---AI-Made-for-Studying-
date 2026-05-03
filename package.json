@@ -1,13 +1,13 @@
 {
-  "name": "grade9-ai-tutor",
+  "name": "grade9-ai-aevra",
   "private": true,
   "version": "1.0.0",
-  "description": "Grade 9 AI Tutor (Netlify frontend + functions)",
-  "author": "Tutor AI Team",
+  "description": "Aevra AI (Netlify frontend + functions)",
+  "author": "Aevra AI Team",
   "main": "desktop/main.js",
   "scripts": {
     "desktop": "electron .",
-    "desktop:url": "set APP_START_URL=https://tutorv1.netlify.app/&& electron .",
+    "desktop:url": "set APP_START_URL=https://aevra-ai.netlify.app/&& electron .",
     "cloud-sync:watch": "node cloud_sync/run_monitor.js",
     "cloud-sync:watch:fast": "set CLOUD_SYNC_POLL_MS=500&& node cloud_sync/run_monitor.js",
     "desktop:build": "electron-builder --win nsis",
@@ -37,8 +37,8 @@
     "playwright": "^1.58.2"
   },
   "build": {
-    "appId": "com.tutor.personalintelligence",
-    "productName": "Tutor AI Desktop",
+    "appId": "com.aevra.personalintelligence",
+    "productName": "Aevra AI Desktop",
     "asar": true,
     "files": [
       "desktop/**/*",
@@ -58,7 +58,7 @@
       "target": [
         "nsis"
       ],
-      "artifactName": "Tutor-AI-Desktop-${version}-Setup.${ext}"
+      "artifactName": "Aevra-AI-Desktop-${version}-Setup.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -68,11 +68,11 @@
       {
         "provider": "github",
         "owner": "studiopixelbloomcreations",
-        "repo": "Tutor---AI-Made-for-Studying-"
+        "repo": "Aevra---AI-Made-for-Studying-"
       }
     ],
     "releaseInfo": {
-      "releaseName": "Tutor AI Desktop v${version}"
+      "releaseName": "Aevra AI Desktop v${version}"
     }
   }
 }

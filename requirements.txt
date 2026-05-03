@@ -18,3 +18,4 @@ numpy
 beautifulsoup4
 lxml
 pypdf
+slowapi

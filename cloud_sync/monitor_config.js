@@ -7,7 +7,7 @@ function toMs(value, fallback) {
 }
 
 function resolveRepoRoot() {
-  const envRoot = String(process.env.TUTOR_REPO_ROOT || "").trim();
+  const envRoot = String(process.env.AEVRA_REPO_ROOT || "").trim();
   if (envRoot) return path.resolve(envRoot);
   return path.resolve(__dirname, "..");
 }

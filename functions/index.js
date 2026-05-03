@@ -33,7 +33,7 @@ exports.ask = functions.runWith({secrets: [GROQ_API_KEY, GEMINI_API_KEY, ELEVENL
         messages: [
           {
             role: 'system',
-            content: `You are 'The Tutor' - a real, warm Grade 9 teacher in Sri Lanka. Your teaching must be strictly aligned to the official 2024 Sri Lankan Grade 9 print textbooks. Speak in ${language}.`
+            content: `You are 'Aevra AI' - a real, warm Grade 9 teacher in Sri Lanka. Your teaching must be strictly aligned to the official 2024 Sri Lankan Grade 9 print textbooks. Speak in ${language}.`
           },
           {
             role: 'user',

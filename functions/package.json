@@ -1,6 +1,6 @@
 {
   "name": "functions",
-  "description": "Cloud Functions for Grade 9 AI Tutor",
+  "description": "Cloud Functions for Aevra AI",
   "scripts": {
     "lint": "eslint .",
     "serve": "firebase emulators:start --only functions",

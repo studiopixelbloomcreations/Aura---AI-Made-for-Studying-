@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Aevra AI | Landing</title>
+  <meta name="description" content="Aevra AI landing page for Grade 9 students." />
+  <link rel="stylesheet" href="landing.css?v=20260307c" />
+</head>
+<body>
+  <main class="landing-shell" role="main">
+    <canvas id="lpParticleField" class="lp-particle-field" aria-hidden="true"></canvas>
+    <div class="lp-noise" aria-hidden="true"></div>
+    <div class="lp-orb lp-orb-a" aria-hidden="true"></div>
+    <div class="lp-orb lp-orb-b" aria-hidden="true"></div>
+    <div class="lp-orb lp-orb-c" aria-hidden="true"></div>
+
+    <header class="lp-nav">
+      <div class="lp-brand">
+        <span class="lp-brand-mark">T9</span>
+        <span class="lp-brand-text">Aevra AI</span>
+      </div>
+      <nav class="lp-links" aria-label="Landing navigation">
+        <a href="#features">Features</a>
+        <a href="#demo">Live Demo</a>
+        <a href="#allFeatures">All Features</a>
+        <a href="#pios">PI-OS</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#voices">Voices</a>
+      </nav>
+      <div class="lp-nav-actions">
+        <button id="themeToggle" class="lp-btn-ghost" type="button" aria-label="Toggle light mode">Light Mode</button>
+        <a href="signup.html?return=index.html" class="lp-btn-ghost">Sign Up</a>
+        <button id="launchAevraBtn" class="lp-nav-cta" type="button">Launch Aevra</button>
+      </div>
+    </header>
+
+    <section class="lp-hero lp-reveal">
+      <p class="lp-eyebrow">Aevra AI | Built for Grade 9 in Sri Lanka</p>
+      <h1>AI study support that feels personal, fast, and actually useful.</h1>
+      <p class="lp-sub">
+        Aevra AI explains hard topics in simple steps, adapts to your level, and keeps your momentum high with quizzes, voice, and progress tracking.
+      </p>
+      <div class="lp-actions">
+        <button id="launchAevraBtn2" class="lp-btn-primary" type="button">Start Learning Now</button>
+        <a class="lp-btn-ghost" href="#features">See Features</a>
+      </div>
+      <div class="lp-proof-row" id="proof">
+        <div class="lp-proof-item"><span>24/7</span><small>Instant AI support</small></div>
+        <div class="lp-proof-item"><span>Voice + Text</span><small>Two learning modes</small></div>
+        <div class="lp-proof-item"><span>Smart Tracking</span><small>Streaks, points, badges</small></div>
+        <div class="lp-proof-item"><span>Exam Focus</span><small>Goal-based preparation</small></div>
+      </div>
+    </section>
+
+    <section class="lp-grid" id="features" aria-label="Key features">
+      <article class="lp-card lp-reveal"><h3>Autonomous Evolution Engine</h3><p>Every interaction can trigger analysis, proposals, sandbox checks, and safe runtime promotion.</p></article>
+      <article class="lp-card lp-reveal"><h3>Cloud Agent Swarm</h3><p>Distributed worker orchestration processes queued planning/research tasks with lease-aware execution.</p></article>
+      <article class="lp-card lp-reveal"><h3>Deep Research + Citations</h3><p>Research pipeline ranks sources and emits citation-backed summaries for roadmap-style queries.</p></article>
+      <article class="lp-card lp-reveal"><h3>Governed Safe Rollout</h3><p>Risk-scored rollout modes (auto/canary/hold) protect system stability while enabling self-improvement.</p></article>
+    </section>
+
+    <section class="lp-demo lp-reveal" id="demo" aria-label="Live aevra demo">
+      <div class="lp-demo-copy">
+        <p class="lp-demo-kicker">Live Demo</p>
+        <h3>See how a real study support moment unfolds</h3>
+        <p>Ask. Understand. Improve. Aevra AI breaks a topic down, checks your understanding, and gives a focused next step.</p>
+      </div>
+      <div class="lp-demo-window" role="presentation">
+        <div class="lp-demo-head"><span></span><span></span><span></span><strong>Aevra AI Session</strong></div>
+        <div class="lp-demo-chat">
+          <div class="lp-bubble lp-user">Can you explain balancing chemical equations?</div>
+          <div class="lp-bubble lp-ai">Absolutely. Start by counting atoms on both sides, then change coefficients only, never subscripts.</div>
+          <div class="lp-bubble lp-ai">Try this: <em>__ H2 + __ O2 -> __ H2O</em>. Want me to solve it with you step-by-step?</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="lp-section lp-reveal" id="allFeatures" aria-label="Full feature list">
+      <div class="lp-section-head">
+        <p>Everything in your AI</p>
+        <h3>Full platform capabilities, all in one learning workspace.</h3>
+      </div>
+      <div class="lp-feature-catalog">
+        <article class="lp-mini-card"><h4>Chat Aevra</h4><p>Always-available conversational aevra.</p></article>
+        <article class="lp-mini-card"><h4>Recent Chats</h4><p>Open past conversations quickly.</p></article>
+        <article class="lp-mini-card"><h4>New Chat Reset</h4><p>Start fresh when changing topics.</p></article>
+        <article class="lp-mini-card"><h4>Voice Input</h4><p>Ask questions naturally by speaking.</p></article>
+        <article class="lp-mini-card"><h4>Read Aloud</h4><p>Listen to AI responses with TTS.</p></article>
+        <article class="lp-mini-card"><h4>AI Voice Choice</h4><p>Switch voices from settings.</p></article>
+        <article class="lp-mini-card"><h4>Document Upload</h4><p>Use PDF, DOCX, PPTX, TXT files.</p></article>
+        <article class="lp-mini-card"><h4>Image Upload</h4><p>Upload photos and question screenshots.</p></article>
+        <article class="lp-mini-card"><h4>Profile Insights</h4><p>See score, accuracy, and progress chart.</p></article>
+        <article class="lp-mini-card"><h4>Topic Breakdown</h4><p>Track strengths and weak areas.</p></article>
+        <article class="lp-mini-card"><h4>Gamification</h4><p>Earn points and maintain streaks.</p></article>
+        <article class="lp-mini-card"><h4>Badges</h4><p>Unlock badge milestones as you improve.</p></article>
+        <article class="lp-mini-card"><h4>Leaderboard</h4><p>Compare progress with peers.</p></article>
+        <article class="lp-mini-card"><h4>Daily Goals</h4><p>Set 30m, 1h, 2h, or 3h study goals.</p></article>
+        <article class="lp-mini-card"><h4>Subject Defaults</h4><p>Choose your default study subject.</p></article>
+        <article class="lp-mini-card"><h4>Language Switch</h4><p>English and Sinhala support.</p></article>
+        <article class="lp-mini-card"><h4>Theme Modes</h4><p>Dark and light mode available.</p></article>
+        <article class="lp-mini-card"><h4>Personal Intelligence</h4><p>Dedicated deep-reasoning AI mode.</p></article>
+        <article class="lp-mini-card"><h4>Exam Mode</h4><p>Special flow for exam prep and papers.</p></article>
+        <article class="lp-mini-card"><h4>Google Auth</h4><p>Secure sign-in and account continuity.</p></article>
+        <article class="lp-mini-card"><h4>Account Controls</h4><p>Manage profile and sign-out safely.</p></article>
+        <article class="lp-mini-card"><h4>Admin Model Settings</h4><p>Protected model control for admins.</p></article>
+        <article class="lp-mini-card"><h4>Cloud Sync</h4><p>Progress and personalization sync support.</p></article>
+        <article class="lp-mini-card"><h4>Desktop Ready</h4><p>Electron desktop build available.</p></article>
+        <article class="lp-mini-card"><h4>Memory Facade</h4><p>Short-term, profile, experience, and skill memory are normalized from existing stores.</p></article>
+        <article class="lp-mini-card"><h4>Experience Analyzer</h4><p>Finds failures, corrections, latency spikes, and repeated weak outcomes.</p></article>
+        <article class="lp-mini-card"><h4>Proposal Generator</h4><p>Creates targeted module upgrade proposals with expected impact summaries.</p></article>
+        <article class="lp-mini-card"><h4>Sandbox Gate</h4><p>Validates syntax, contracts, and behavior before any runtime promotion.</p></article>
+        <article class="lp-mini-card"><h4>Deployment Manager</h4><p>Promotes only allowed evolvable modules with rollback-friendly history.</p></article>
+        <article class="lp-mini-card"><h4>Reinforcement Scoring</h4><p>Module scores update from success, failure, correction, and latency signals.</p></article>
+        <article class="lp-mini-card"><h4>Persistent Graph Store</h4><p>Cloud graph persists user-fact relationships for long-term reasoning.</p></article>
+        <article class="lp-mini-card"><h4>Swarm Task Queue</h4><p>Priority queue with retries, exponential backoff, and dead-letter handling.</p></article>
+        <article class="lp-mini-card"><h4>Distributed Workers</h4><p>Worker fanout support with worker IDs and execution leases.</p></article>
+        <article class="lp-mini-card"><h4>Research Reports</h4><p>Structured report history with ranked citations and traceable outputs.</p></article>
+        <article class="lp-mini-card"><h4>Multi-Layer Graph</h4><p>User, skills, tasks, interests, and emotion layers for richer reasoning context.</p></article>
+        <article class="lp-mini-card"><h4>Strategic Memory</h4><p>Persistent long-horizon goals for planning beyond one conversation.</p></article>
+        <article class="lp-mini-card"><h4>Async Agent Civilization</h4><p>Strategic, research, memory, and safety agents run as coordinated async cycles.</p></article>
+        <article class="lp-mini-card"><h4>Sri Lanka Intelligence Layer</h4><p>Sinhala/Tamil/English context support with locale-aware operating mode.</p></article>
+        <article class="lp-mini-card"><h4>Governed Rollout Engine</h4><p>Risk scoring automatically chooses auto-promote, canary, or hold mode.</p></article>
+        <article class="lp-mini-card"><h4>Production Health API</h4><p>Readiness, queue metrics, and rollout summary in one endpoint.</p></article>
+        <article class="lp-mini-card"><h4>Governance API</h4><p>Central state inspection across queue, swarm, research, graph, and rollout.</p></article>
+        <article class="lp-mini-card"><h4>Dashboard API</h4><p>Pagination-ready observability and replay data for ops monitoring.</p></article>
+        <article class="lp-mini-card"><h4>Worker Tick API</h4><p>Secure remote execution endpoint for true multi-instance swarm workers.</p></article>
+        <article class="lp-mini-card"><h4>Observability Log</h4><p>Event trail for ask cycles, phase runs, and production diagnostics.</p></article>
+        <article class="lp-mini-card"><h4>Security + Rate Limits</h4><p>Admin-token protection and endpoint-level rate limiting for cloud safety.</p></article>
+      </div>
+    </section>
+
+    <section class="lp-section lp-reveal" id="pios" aria-label="PI-OS Evolution">
+      <div class="lp-section-head">
+        <p>PI-OS Evolution</p>
+        <h3>How the Personal Intelligence Operating System evolves safely in cloud.</h3>
+      </div>
+      <div class="lp-feature-catalog">
+        <article class="lp-mini-card"><h4>1. Interaction Capture</h4><p>Each request is logged with success, corrections, and latency signals.</p></article>
+        <article class="lp-mini-card"><h4>2. Weakness Detection</h4><p>Analyzer finds repeated failures, bottlenecks, and missing capability patterns.</p></article>
+        <article class="lp-mini-card"><h4>3. Proposal Generation</h4><p>Evolution proposals are generated for allowed runtime module domains only.</p></article>
+        <article class="lp-mini-card"><h4>4. Sandbox Validation</h4><p>Syntax, contracts, and behavior tests must pass before promotion is allowed.</p></article>
+        <article class="lp-mini-card"><h4>5. Distributed Swarm</h4><p>Worker queue runs planning/research tasks with retries and dead-letter handling.</p></article>
+        <article class="lp-mini-card"><h4>6. Deep Research</h4><p>Sources are ranked and persisted with citations for roadmap-grade responses.</p></article>
+        <article class="lp-mini-card"><h4>7. Multi-Layer Memory</h4><p>Graph + strategic memory retains user context for long-horizon intelligence.</p></article>
+        <article class="lp-mini-card"><h4>8. Governed Rollout</h4><p>Risk-scored rollout mode chooses auto-promote, canary, or hold.</p></article>
+        <article class="lp-mini-card"><h4>9. Production Ops</h4><p>Dashboard, governance, and health APIs expose real-time system state.</p></article>
+      </div>
+    </section>
+
+    <section class="lp-section lp-reveal" id="journey" aria-label="Student learning journey">
+      <div class="lp-section-head"><p>How progress grows</p><h3>One session becomes a habit. A habit becomes mastery.</h3></div>
+      <div class="lp-journey-grid">
+        <div class="lp-journey-step"><span>01</span><h4>Start With Doubt</h4><p>Bring any confusing question from classwork or homework.</p></div>
+        <div class="lp-journey-step"><span>02</span><h4>Understand Core Idea</h4><p>The aevra explains the why before the formula.</p></div>
+        <div class="lp-journey-step"><span>03</span><h4>Practice Smarter</h4><p>Get focused drills and corrected thinking patterns.</p></div>
+        <div class="lp-journey-step"><span>04</span><h4>Track Momentum</h4><p>Points, streaks, and profile analytics keep consistency high.</p></div>
+      </div>
+    </section>
+
+    <section class="lp-pricing lp-reveal" id="pricing" aria-label="Pricing plans">
+      <div class="lp-pricing-head"><p>Simple plans</p><h3>Start free. Upgrade when you want deeper learning support.</h3></div>
+      <div class="lp-pricing-grid">
+        <article class="lp-plan">
+          <div class="lp-plan-tag">Starter</div><h4>Free</h4><p class="lp-plan-price">$0<span>/month</span></p>
+          <ul><li>Daily AI chat support</li><li>Core subject guidance</li><li>Basic progress tracking</li></ul>
+          <button class="lp-plan-btn launch-now" type="button">Start Free</button>
+        </article>
+        <article class="lp-plan lp-plan-featured">
+          <div class="lp-plan-tag">Most Popular</div><h4>Scholar Pro</h4><p class="lp-plan-price">$7<span>/month</span></p>
+          <ul><li>Everything in Starter</li><li>Advanced exam drill sets</li><li>Priority voice study support</li><li>Detailed mastery analytics</li></ul>
+          <button class="lp-plan-btn launch-now" type="button">Choose Pro</button>
+        </article>
+      </div>
+    </section>
+
+    <section class="lp-testimonials lp-reveal" id="voices" aria-label="Student testimonials">
+      <div class="lp-testimonial"><p>"I used to avoid algebra. Now I can solve and explain it myself."</p><strong>Amaya, Grade 9</strong></div>
+      <div class="lp-testimonial"><p>"The voice explanations are clear and calm. It feels like a real aevra."</p><strong>Nethum, Grade 9</strong></div>
+      <div class="lp-testimonial"><p>"The progress dashboard keeps me consistent. My streak motivates me every day."</p><strong>Shanuki, Grade 9</strong></div>
+    </section>
+
+    <section class="lp-final lp-reveal" aria-label="Final action">
+      <h3>Ready to learn with momentum?</h3>
+      <p>Launch Aevra AI and continue your Grade 9 journey with guided explanations, smart practice, and measurable progress.</p>
+      <div class="lp-actions">
+        <button class="lp-btn-primary launch-now" type="button">Launch Aevra</button>
+        <a href="signup.html?return=index.html" class="lp-btn-ghost">Create Account</a>
+      </div>
+    </section>
+  </main>
+
+  <script src="landing.js?v=20260307c"></script>
+</body>
+</html>

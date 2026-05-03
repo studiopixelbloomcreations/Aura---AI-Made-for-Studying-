@@ -1,7 +1,7 @@
 (function () {
   var TOKEN_KEY = 'g9_token';
   var TOKEN_EXP_KEY = 'g9_token_exp';
-  var THEME_KEY = 'tutor_landing_theme';
+  var THEME_KEY = 'aevra_landing_theme';
   var systemQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 
   function isTokenValid() {
@@ -16,7 +16,7 @@
     }
   }
 
-  function launchTutor() {
+  function launchAevra() {
     if (isTokenValid()) {
       window.location.href = 'app.html';
       return;
@@ -222,12 +222,12 @@
     initParticleField();
 
     var launchButtons = [
-      document.getElementById('launchTutorBtn'),
-      document.getElementById('launchTutorBtn2')
+      document.getElementById('launchAevraBtn'),
+      document.getElementById('launchAevraBtn2')
     ];
     document.querySelectorAll('.launch-now').forEach(function (btn) { launchButtons.push(btn); });
     launchButtons.forEach(function (btn) {
-      if (btn) btn.addEventListener('click', launchTutor);
+      if (btn) btn.addEventListener('click', launchAevra);
     });
 
     var themeBtn = document.getElementById('themeToggle');

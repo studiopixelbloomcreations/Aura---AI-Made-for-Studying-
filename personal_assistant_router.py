@@ -4,7 +4,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from personal_assistant_service import (
-    ask_tutor_personal_agent,
+    ask_aevra_personal_agent,
     connect_service,
     create_openai_realtime_session,
     get_personal_assistant_status,
@@ -40,7 +40,7 @@ class RealtimeSessionPayload(BaseModel):
 
 @router.post("/ask")
 async def personal_assistant_ask(req: PersonalAssistantAskRequest):
-    return ask_tutor_personal_agent(
+    return ask_aevra_personal_agent(
         message=req.message,
         email=req.email,
         language=req.language,

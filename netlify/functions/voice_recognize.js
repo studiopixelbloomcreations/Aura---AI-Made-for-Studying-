@@ -1,92 +1,50 @@
 function json(statusCode, obj) {
-  return {
-    statusCode,
-    headers: {
-      "content-type": "application/json",
-      "access-control-allow-origin": "*",
-      "access-control-allow-methods": "GET,POST,OPTIONS",
-      "access-control-allow-headers": "content-type,authorization",
-      "cache-control": "no-store",
-    },
-    body: JSON.stringify(obj),
-  };
+  return { statusCode, headers: { "content-type": "application/json", "access-control-allow-origin": process.env.ALLOWED_ORIGINS || "http://localhost:5500", "access-control-allow-methods": "POST,OPTIONS", "access-control-allow-headers": "content-type,authorization,x-aevra-csrf", "cache-control": "no-store" }, body: JSON.stringify(obj) };
 }
-
-function normalizeLang(language) {
-  const raw = String(language || "en-US").trim().toLowerCase();
-  if (!raw) return "en";
-  if (raw.startsWith("si")) return "si";
-  if (raw.startsWith("en")) return "en";
-  const cut = raw.split("-")[0];
-  return cut || "en";
+function cosine(a, b) {
+  const len = Math.min(a.length, b.length);
+  let dot = 0, ma = 0, mb = 0;
+  for (let i = 0; i < len; i++) { dot += a[i] * b[i]; ma += a[i] * a[i]; mb += b[i] * b[i]; }
+  return ma && mb ? dot / (Math.sqrt(ma) * Math.sqrt(mb)) : 0;
 }
-
-function decodeBase64Audio(input) {
-  const raw = String(input || "").trim();
-  const normalized = raw.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
-  return Buffer.from(padded, "base64");
+async function forwardAudio(payload) {
+  const base = String(process.env.FASTAPI_BASE_URL || process.env.BACKEND_URL || "").replace(/\/$/, "");
+  if (!base) throw new Error("FASTAPI_BASE_URL is not configured");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000);
+  try {
+    const res = await fetch(`${base}/voice/recognize`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Backend HTTP ${res.status}`);
+    return data;
+  } finally {
+    clearTimeout(timer);
+  }
 }
-
 exports.handler = async function handler(event) {
   if (event.httpMethod === "OPTIONS") return json(200, { ok: true });
   if (event.httpMethod !== "POST") return json(405, { error: "Method not allowed" });
-
-  const groqKey = String(process.env.GROQ_API_KEY || "").trim();
-  if (!groqKey) {
-    return json(500, { ok: false, error: "Missing GROQ_API_KEY in Netlify environment variables." });
-  }
-
-  let payload = {};
   try {
-    payload = JSON.parse(event.body || "{}");
-  } catch (e) {
-    return json(400, { ok: false, error: "Invalid JSON body." });
-  }
-
-  const audioBase64 = String((payload && payload.audio_base64) || "").trim();
-  const mimeType = String((payload && payload.mime_type) || "audio/webm").trim();
-  const filename = String((payload && payload.filename) || "speech.webm").trim();
-  const language = normalizeLang(payload && payload.language);
-  if (!audioBase64) return json(400, { ok: false, error: "audio_base64 is required." });
-
-  try {
-    const audioBuffer = decodeBase64Audio(audioBase64);
-    if (!audioBuffer || audioBuffer.length < 16) {
-      return json(400, { ok: false, error: "Audio payload is empty." });
+    const payload = JSON.parse(event.body || "{}");
+    if (payload.audio || payload.audio_base64) {
+      const data = await forwardAudio(payload);
+      return json(200, { matched: !!data.matched, userId: data.userId || data.user_id || null, confidence: Number(data.confidence || 0), text: data.text });
     }
-
-    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-    const timer = controller ? setTimeout(() => controller.abort(), 25000) : null;
-    const fd = new FormData();
-    fd.append("model", "whisper-large-v3-turbo");
-    fd.append("response_format", "json");
-    fd.append("language", language);
-    fd.append("temperature", "0");
-    fd.append("file", new Blob([audioBuffer], { type: mimeType || "audio/webm" }), filename || "speech.webm");
-
-    const res = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${groqKey}`,
-      },
-      body: fd,
-      signal: controller ? controller.signal : undefined,
+    const embedding = Array.isArray(payload.embedding) ? payload.embedding.map(Number) : [];
+    if (embedding.length !== 26) return json(422, { error: "audio or 26-dimensional embedding is required" });
+    const base = String(process.env.SUPABASE_URL || "").replace(/\/$/, "");
+    const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+    if (!base || !key) return json(500, { error: "Supabase is not configured" });
+    const res = await fetch(`${base}/rest/v1/voice_signatures?select=user_id,embedding`, { headers: { apikey: key, authorization: `Bearer ${key}` } });
+    const rows = await res.json().catch(() => []);
+    let best = { userId: null, confidence: 0 };
+    rows.forEach((row) => {
+      const score = cosine(embedding, Array.isArray(row.embedding) ? row.embedding.map(Number) : []);
+      if (score > best.confidence) best = { userId: row.user_id, confidence: score };
     });
-    if (timer) clearTimeout(timer);
-
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const detail =
-        (data && data.error && (data.error.message || data.error)) ||
-        (data && data.message) ||
-        `HTTP ${res.status}`;
-      return json(502, { ok: false, error: `STT provider failed: ${String(detail)}` });
-    }
-
-    const text = String((data && data.text) || "").trim();
-    return json(200, { ok: true, text, engine: "groq:whisper-large-v3-turbo" });
-  } catch (e) {
-    return json(502, { ok: false, error: `STT request failed: ${String(e && e.message ? e.message : e)}` });
+    return json(200, { matched: best.confidence >= 0.85, userId: best.confidence >= 0.85 ? best.userId : null, confidence: best.confidence });
+  } catch (error) {
+    console.error(JSON.stringify({ at: new Date().toISOString(), fn: "voice_recognize", error: String(error && error.stack || error) }));
+    return json(500, { matched: false, userId: null, confidence: 0, error: "Voice recognition is unavailable right now." });
   }
 };

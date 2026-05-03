@@ -98,7 +98,7 @@
       try {
         await ensurePuterReady(true);
         const systemPrompt =
-          'You are The Tutor, a helpful study tutor for Grade 9 students. ' +
+          'You are Aevra AI, a helpful study aevra for Grade 9 students. ' +
           'Keep answers accurate, clear, and practical. ' +
           'Current subject: ' + state.subject + '. ' +
           'Respond in ' + state.language + '.';

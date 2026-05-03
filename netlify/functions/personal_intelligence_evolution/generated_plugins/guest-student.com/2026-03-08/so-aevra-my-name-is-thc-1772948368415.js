@@ -1,5 +1,5 @@
-const id = 'tutor-greeting-acknowledgement';
-const describe = 'Acknowledges the user provided name and invites them to start a tutoring session.';
+const id = 'aevra-greeting-acknowledgement';
+const describe = 'Acknowledges the user provided name and invites them to start a study support session.';
 
 /**
  * Runs the logic to acknowledge the user's name based on provided facts.
@@ -11,13 +11,13 @@ async function run() {
     name: "THC in"
   };
 
-  const responseMessage = `Hello, ${userData.name}. It is nice to meet you. I am ready to act as your tutor. What subject or topic would you like to learn about today?`;
+  const responseMessage = `Hello, ${userData.name}. It is nice to meet you. I am ready to act as your aevra. What subject or topic would you like to learn about today?`;
 
   return {
     content: responseMessage,
     meta: {
       user_name: userData.name,
-      session_type: 'general_tutoring'
+      session_type: 'general_study support'
     }
   };
 }

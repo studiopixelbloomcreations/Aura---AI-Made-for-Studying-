@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Grade 9 AI Tutor</title>
+  <title>Aevra AI</title>
   <style>
     :root{
       /* Dark (default) Copilot-grade with Apple glass */
@@ -153,7 +153,7 @@
       <button id="toggleSidebar" class="icon" title="Toggle Sidebar">☰</button>
       <button id="homeBtn" class="icon" title="Home">🏠</button>
       <div class="brand">
-        <div class="title">Grade 9 AI Tutor</div>
+        <div class="title">Aevra AI</div>
         <div class="badge">Liquid Glass</div>
       </div>
     </div>
@@ -178,7 +178,7 @@
   </header>
 
   <main id="main" class="main">
-    <h1 id="welcomeTitle" class="welcome fade-in">Welcome to Tutor</h1>
+    <h1 id="welcomeTitle" class="welcome fade-in">Welcome to Aevra</h1>
     <div id="homeGrid" class="home-grid">
       <div class="card large sheen" id="newsCard"><h3>Today’s News</h3><div class="content" id="newsContent">Loading top stories…</div></div>
       <div class="card sheen" id="weatherCard"><h3>Weather Forecast</h3><div class="content" id="weatherContent">Locating…</div></div>
@@ -220,13 +220,13 @@
 
     // State
     let chats=[]; let activeChatId=null;
-    function saveState(){ localStorage.setItem('ai_tutor_chats', JSON.stringify({chats, activeChatId})); }
+    function saveState(){ localStorage.setItem('ai_aevra_chats', JSON.stringify({chats, activeChatId})); }
     function loadState(){
-      try{ const raw=localStorage.getItem('ai_tutor_chats'); if(!raw) return; const s=JSON.parse(raw); chats=s.chats||[]; activeChatId=s.activeChatId||null; }catch{ chats=[]; activeChatId=null; }
+      try{ const raw=localStorage.getItem('ai_aevra_chats'); if(!raw) return; const s=JSON.parse(raw); chats=s.chats||[]; activeChatId=s.activeChatId||null; }catch{ chats=[]; activeChatId=null; }
     }
 
     // Theme handling
-    const THEME_KEY='ai_tutor_theme';
+    const THEME_KEY='ai_aevra_theme';
     const mql=window.matchMedia('(prefers-color-scheme: dark)');
     function applyTheme(mode){
       const m= mode || localStorage.getItem(THEME_KEY) || 'system';

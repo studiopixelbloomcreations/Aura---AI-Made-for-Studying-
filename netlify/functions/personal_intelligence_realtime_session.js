@@ -28,7 +28,7 @@ exports.handler = async function handler(event) {
     voice,
     modalities: ["text", "audio"],
     instructions:
-      "You are Tutor, a warm personal assistant. Keep replies natural, short, and helpful for daily tasks and study support.",
+      "You are Aevra, a warm personal assistant. Keep replies natural, short, and helpful for daily tasks and study support.",
   };
 
   try {

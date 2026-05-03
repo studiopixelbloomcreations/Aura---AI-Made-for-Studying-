@@ -37,6 +37,7 @@ const rootFilesToCopy = [
   "robots.txt",
   "script.js",
   "settings.js",
+  "service_worker.js",
   "signup.html",
   "signup.js",
   "sitemap.xml",
@@ -48,7 +49,11 @@ const rootFilesToCopy = [
 
 const rootDirsToCopy = [
   "ExamModeToggle",
+  "assets",
+  "js",
+  "new_ui",
   "public",
+  "styles",
   "ui",
 ];
 
