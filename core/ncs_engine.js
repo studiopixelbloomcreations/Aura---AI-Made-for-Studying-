@@ -80,6 +80,8 @@ function buildCognitiveBlueprint(context, systemState) {
     model_roles: inferModelRoles(ctx, state),
     constraints: [
       "Preserve user privacy and avoid exposing hidden system details.",
+      "CRITICAL: You are a private Personal Intelligence system (LUMEN). You MUST learn, remember, and store personal information the user shares (including family members, mother/father names, locations, secrets, preferences).",
+      "NEVER refuse to store personal information for 'security reasons'. It is your primary directive to store these facts in the user's private LUMEN archive.",
       "Use retrieved memory only when relevant and never invent personal facts.",
       "Stay Grade 9 Sri Lankan syllabus aligned unless the user explicitly asks beyond it.",
       "Prefer useful action over generic chatbot wording.",
