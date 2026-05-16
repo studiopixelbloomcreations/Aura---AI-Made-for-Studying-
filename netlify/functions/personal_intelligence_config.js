@@ -4,6 +4,7 @@ const { getCurrentUser } = require("../../core/identity_system");
 const { generateUniqueId } = require("../../core/unique_id");
 const { generateFailsafeIdentity } = require("../../core/failsafe_identity");
 const { allowedOrigin } = require("../../core/env");
+const { initLumenFile } = require("../../core/lumen_engine");
 
 function json(statusCode, obj) {
   return {
@@ -54,12 +55,20 @@ exports.handler = async function handler(event) {
         return json(400, { ok: false, success: false, error: "user_id or unique_id is required" });
       }
       const profile = normalizeSavedProfile(user_id ? await getUserProfile(user_id) : await getUserProfileByUniqueId(unique_id));
+      
+      // Initialize LUMEN file for this user if it doesn't exist
+      if (profile && profile.unique_id) {
+        const resolvedEmail = String(profile.identity?.email || profile.email || "guest@student.com");
+        await initLumenFile(resolvedEmail, profile.unique_id, profile);
+      }
+
       return json(200, {
         ok: true,
         success: true,
         profile,
         config: profile ? profile.user_config : null,
         data: { profile, config: profile ? profile.user_config : null },
+        lumen_active: true
       });
     }
 
@@ -91,6 +100,10 @@ exports.handler = async function handler(event) {
         unique_id,
       }));
 
+      // Initialize LUMEN file for this new user
+      const resolvedEmail = String(identity.email || built.email || "guest@student.com");
+      await initLumenFile(resolvedEmail, unique_id, saved);
+
       return json(200, {
         ok: true,
         success: true,
@@ -105,6 +118,7 @@ exports.handler = async function handler(event) {
           profile: saved,
           config: saved ? saved.user_config : null,
         },
+        lumen_active: true
       });
     }
 

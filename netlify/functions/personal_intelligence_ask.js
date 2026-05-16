@@ -13,6 +13,7 @@ const { buildUserProfileRecord, buildPersonalizationPrompt } = require("../../co
 const { generateUniqueId } = require("../../core/unique_id");
 const { generateFailsafeIdentity } = require("../../core/failsafe_identity");
 const { detectSystemState, buildCognitiveBlueprint, compileCognitivePrompt, updateCognitivePerformance } = require("../../core/ncs_engine");
+const { readLumenFile, updateLumenMemory: lumenUpdate, buildLumenPrompt } = require("../../core/lumen_engine");
 
 function json(statusCode, obj) {
   return {
@@ -349,13 +350,23 @@ exports.handler = async function handler(event) {
         unique_id,
       });
     }
-    personalizationPrompt = String(
-      (profile && profile.ai_config && profile.ai_config.personalization_prompt) ||
-      buildPersonalizationPrompt({
-        personalization_data: profile && profile.personalization_data || {},
-        ai_config: profile && profile.ai_config || {},
-      })
-    ).trim();
+    
+    // OVERRIDE basic personalization with LUMEN
+    const lumenMemory = await readLumenFile(String(authUser.email || payload.email || "guest@student.com"), profile ? profile.unique_id : "");
+    const lumenPrompt = buildLumenPrompt(lumenMemory);
+    
+    if (lumenPrompt) {
+      // Use the deep LUMEN memory directly, overriding the static initial profile
+      personalizationPrompt = lumenPrompt;
+    } else {
+      personalizationPrompt = String(
+        (profile && profile.ai_config && profile.ai_config.personalization_prompt) ||
+        buildPersonalizationPrompt({
+          personalization_data: profile && profile.personalization_data || {},
+          ai_config: profile && profile.ai_config || {},
+        })
+      ).trim();
+    }
   } catch (error) {
     profile = null;
     personalizationPrompt = "";
@@ -417,6 +428,14 @@ exports.handler = async function handler(event) {
 
   try {
     if (resolvedUserId && Object.keys(memoryUpdates).length) {
+      // Write to LUMEN file explicitly
+      const resolvedEmail = String(authUser.email || payload.email || "guest@student.com");
+      const uId = profile ? profile.unique_id : "";
+      if (uId) {
+         await lumenUpdate(resolvedEmail, uId, memoryUpdates);
+      }
+      
+      // Also update traditional memory as fallback
       await updateUserMemory(resolvedUserId, {
         known_facts: memoryUpdates,
         last_message: message,
@@ -520,6 +539,7 @@ exports.handler = async function handler(event) {
     action,
     user_profile: profile || undefined,
     personalization_prompt: personalizationPrompt || undefined,
+    lumen_active: true,
     ncs: {
       system_state: ncsSystemState,
       cognitive_blueprint: cognitiveBlueprint,

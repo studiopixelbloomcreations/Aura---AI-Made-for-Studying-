@@ -420,7 +420,7 @@
       </div>
       <div class="pi-top-status">
         <span class="pi-top-dot"></span>
-        <span class="pi-top-label">Online</span>
+        <span class="pi-top-label">LUMEN Active</span>
       </div>
       <button class="pi-mode-toggle" type="button" aria-label="Switch mode">
         <span class="pi-mode-pill active" data-mode="text">Text</span>
@@ -4522,7 +4522,7 @@
       }];
       visIndexLoaded = true;
       updateVisExpectedProfile();
-      setVisOfflineState(false, "Online - " + String(visLastKnownUserLabel || "User"));
+      setVisOfflineState(false, "LUMEN Active - " + String(visLastKnownUserLabel || "User"));
       if (enabled) setAssistantState("listening", "Listening");
       showVisWelcome(visLastKnownUserLabel);
       ensureVisPersonalAgent(visActiveProfile, "auth_bootstrap");
@@ -5395,7 +5395,7 @@
       startOrbVisualization();
       ensureMicAnalyser();
       if (VIS_CAMERA_DISABLED) {
-        setVisOfflineState(false, "Online - " + String(visLastKnownUserLabel || "User"));
+        setVisOfflineState(false, "LUMEN Active - " + String(visLastKnownUserLabel || "User"));
         setAssistantState("listening", "Listening");
         return;
       }
