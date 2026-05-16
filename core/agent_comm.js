@@ -1,4 +1,5 @@
 const { env: readEnv } = require("./env");
+const crypto = require("crypto");
 
 function env(name, fallback = "") {
   return String(readEnv(name, fallback)).trim();
@@ -76,22 +77,36 @@ async function getUserProfileByUniqueId(unique_id) {
 
 async function saveUserProfile(user_id, data = {}) {
   const config = ensureConfig();
+  const userId = String(user_id || data.user_id || "").trim();
+  const uniqueId = normalizeUniqueId(data.unique_id, userId, data);
   const payload = {
-    user_id: String(user_id || data.user_id || "").trim(),
+    user_id: userId,
     personalization_data: data.personalization_data || {},
     ai_config: data.ai_config || {},
-    unique_id: String(data.unique_id || "").trim(),
+    unique_id: uniqueId,
+    unique_identifier: uniqueId,
+    user_config: {
+      user_id: userId,
+      personalization_data: data.personalization_data || {},
+      ai_config: data.ai_config || {},
+      unique_id: uniqueId,
+      unique_identifier: uniqueId,
+    },
+    source_profile_file: String(data.source_profile_file || ""),
     updated_at: new Date().toISOString(),
   };
   const legacyPayload = {
     user_id: payload.user_id,
+    unique_id: payload.unique_id,
     unique_identifier: payload.unique_id,
     user_config: {
       user_id: payload.user_id,
       personalization_data: payload.personalization_data,
       ai_config: payload.ai_config,
       unique_id: payload.unique_id,
+      unique_identifier: payload.unique_id,
     },
+    source_profile_file: payload.source_profile_file,
     updated_at: payload.updated_at,
   };
 
@@ -141,4 +156,15 @@ function normalizeLegacyProfile(row) {
     ai_config: item.ai_config || userConfig.ai_config || {},
     unique_id: item.unique_id || item.unique_identifier || userConfig.unique_id || "",
   };
+}
+
+function normalizeUniqueId(value, userId, data) {
+  const direct = String(value || "").trim();
+  if (direct) return direct;
+  const seed = JSON.stringify({
+    user_id: userId || "anonymous",
+    personalization_data: data && data.personalization_data || {},
+    ai_config: data && data.ai_config || {},
+  });
+  return crypto.createHash("sha256").update(seed).digest("hex");
 }
