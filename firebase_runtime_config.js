@@ -14,6 +14,10 @@
     configPromise = (async function () {
       const existing = readInlineConfig();
       if (existing) return existing;
+      try {
+        const params = new URLSearchParams(window.location.search || "");
+        if (params.get("visMock") === "1") return null;
+      } catch (e) {}
       if (window.__OFFLINE_MODE__ === true || navigator.onLine === false) {
         console.warn("[FirebaseConfig] offline mode enabled");
         return null;
@@ -28,24 +32,18 @@
         });
         if (!response.ok) {
           console.warn("[FirebaseConfig] public-config missing:", response.status);
-          const stub = { apiKey: "test", authDomain: "test", projectId: "test" };
-          window.__FIREBASE_CONFIG__ = stub;
-          return stub;
+          return null;
         }
         const payload = await response.json();
         if (!payload || !payload.ok || !payload.firebase) {
           console.warn("[FirebaseConfig] invalid payload");
-          const stub = { apiKey: "test", authDomain: "test", projectId: "test" };
-          window.__FIREBASE_CONFIG__ = stub;
-          return stub;
+          return null;
         }
         window.__FIREBASE_CONFIG__ = payload.firebase;
         return payload.firebase;
       } catch (err) {
-        console.warn("[FirebaseConfig] fallback to local stub");
-        const stub = { apiKey: "test", authDomain: "test", projectId: "test" };
-        window.__FIREBASE_CONFIG__ = stub;
-        return stub;
+        console.warn("[FirebaseConfig] public-config request failed");
+        return null;
       }
     })();
     return configPromise;

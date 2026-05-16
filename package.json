@@ -1,5 +1,5 @@
 {
-  "name": "grade9-ai-aevra",
+  "name": "aevra-ai",
   "private": true,
   "version": "1.0.0",
   "description": "Aevra AI (Netlify frontend + functions)",
@@ -7,9 +7,9 @@
   "main": "desktop/main.js",
   "scripts": {
     "desktop": "electron .",
-    "desktop:url": "electron .",
+    "desktop:url": "set APP_START_URL=https://aevra-ai.netlify.app/&& electron .",
     "cloud-sync:watch": "node cloud_sync/run_monitor.js",
-    "cloud-sync:watch:fast": "node cloud_sync/run_monitor.js",
+    "cloud-sync:watch:fast": "set CLOUD_SYNC_POLL_MS=500&& node cloud_sync/run_monitor.js",
     "desktop:build": "electron-builder --win nsis",
     "desktop:publish": "electron-builder --win nsis --publish always",
     "test:evolution": "node netlify/functions/personal_intelligence_evolution/evolution.test.js",

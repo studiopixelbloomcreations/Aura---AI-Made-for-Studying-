@@ -1,91 +1,36 @@
-# Aevra AI — Personal Intelligence Platform for Students
+# Aevra AI - Local Test and Deployment
 
-> A voice-first, personalized AI study companion.
+Aevra AI is a glass UI study intelligence platform with Netlify functions, FastAPI support modules, Supabase-backed personalization, Harmony model routing, and the Neural Command System.
 
-## What is Aevra AI?
+## Run Locally
 
-Aevra AI is a study workspace for students, centered on personal identity, adaptive tutoring, exam practice, memory, and progress. It combines a vanilla HTML/CSS/JS frontend, Netlify Functions, a FastAPI backend, Supabase persistence, Firebase Authentication, and multi-model AI routing.
-
-## Features
-
-- Voice identity (VAIS) — Aevra recognizes users by their enrolled voice signature
-- Personalized AI — adapts tone, verbosity, humor, subjects, and teaching style
-- Exam Mode — Grade 9 past-paper style practice questions with explanations
-- Memory Graph — stores studied concepts, sessions, questions, answers, and weak areas
-- Gamification — points, streaks, badges, levels, and progress panels
-- Multi-model AI — Groq primary with OpenRouter, Puter.js, and other fallbacks through Harmony
-- Offline shell — service worker cache-first strategy for static assets
-
-## Tech Stack
-
-- Frontend: Vanilla HTML, CSS, JavaScript
-- Hosting: Netlify
-- Functions: Netlify Functions on Node.js
-- Backend: FastAPI on Python
-- Database: Supabase PostgreSQL with Row Level Security
-- Auth: Firebase Authentication
-- Primary AI: Groq `llama-3.1-70b-versatile`
-- Voice: Web Audio API, Web Speech API, MFCC-style embeddings, ElevenLabs TTS
-- Testing: Playwright visual test and Node hardening checks
-
-## Environment Variables
-
-Aevra uses a single JSON environment variable named `AEVRA_ENV` in Netlify, Render, and local shells:
-
-```json
-{
-  "GROQ_API_KEY": "",
-  "OPENROUTER_API_KEY": "",
-  "MISTRAL_API_KEY": "",
-  "HUGGINGFACE_API_KEY": "",
-  "DEEPSEEK_API_KEY": "",
-  "PUTER_API_KEY": "",
-  "GEMINI_API_KEY": "",
-  "OPENAI_API_KEY": "",
-  "SUPABASE_URL": "",
-  "SUPABASE_ANON_KEY": "",
-  "SUPABASE_SERVICE_KEY": "",
-  "FIREBASE_CONFIG": {
-    "apiKey": "",
-    "authDomain": "",
-    "projectId": "",
-    "storageBucket": "",
-    "messagingSenderId": "",
-    "appId": "",
-    "measurementId": ""
-  },
-  "ELEVENLABS_API_KEY": "",
-  "BACKEND_BASE_URL": "",
-  "FRONTEND_BASE_URL": "",
-  "ALLOWED_ORIGINS": "https://aevrav1.netlify.app",
-  "FASTAPI_BASE_URL": "",
-  "ENVIRONMENT": "production"
-}
+```powershell
+python -m http.server 5500
 ```
 
-The browser only receives public Firebase and Supabase anon configuration through `/public-config`. Service-role keys are used only inside backend and Netlify Function code.
-
-## Development Setup
-
-1. Install dependencies with `npm install`.
-2. Install Python dependencies with `pip install -r requirements.txt`.
-3. Copy `.env.example` to your local environment manager and fill required keys.
-4. Run the static app with `python -m http.server 5500`.
-5. Run the FastAPI backend with `uvicorn main:app --reload`.
+Open `http://127.0.0.1:5500/app.html`.
 
 ## Tests
 
-- Visual Intelligence tests: `node tests/vis_playwright_test.js`
-- Hardening checks: `npm run test:hardening`
+```powershell
+npm run test:hardening
+node tests/vis_playwright_test.js
+```
+
+## Production Configuration
+
+Use `AEVRA_MASTER_CONFIG` as the primary environment variable. It is a JSON object with sections for `firebase`, `supabase`, model providers, `security`, `features`, `limits`, `routing`, `harmony`, and `evolution`.
+
+Legacy provider variables such as `GROQ_API_KEY`, `OPENROUTER_API_KEY`, and `SUPABASE_URL` are still read as fallbacks by `core/config_loader.js`.
+
+## Core Systems
+
+- NCS: `core/ncs_engine.js`
+- Master config loader: `core/config_loader.js`
+- Harmony router: `core/agent_harmony.js`
+- Voice identity: `core/voice_identity.js` and `/voice/identity`
+- Supabase production schema: `supabase/migrations/20260516_aevra_ncs_production_schema.sql`
 
 ## Deployment
 
-Netlify builds from `netlify/build.mjs` and publishes `netlify/dist`. Netlify Functions live in `netlify/functions`. The FastAPI backend can be deployed on Render using `render.yaml`; set the same environment variables in Render and Netlify.
-
-## Architecture
-
-VAIS manages microphone capture, wake phrase detection, browser-side MFCC-style voice embeddings, Supabase-stored signatures, confidence scoring, onboarding, and secure session storage.
-
-Harmony classifies each user message, selects the best model path, and falls back across configured providers when a model is unavailable or rate limited.
-
-The Memory Graph stores concepts, sessions, questions, answers, and relationships in Supabase JSONB metadata so Aevra can summarize weak areas for future prompts.
+Netlify uses `netlify.toml`, `netlify/build.mjs`, and `netlify/functions`. Render/FastAPI support remains available through `main.py` and `render.yaml`.

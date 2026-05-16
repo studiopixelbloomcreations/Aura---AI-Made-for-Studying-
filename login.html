@@ -1,40 +1,67 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sign in | Aevra AI</title>
-  <meta name="description" content="Sign in to Aevra AI.">
-  <link rel="canonical" href="https://aevrav1.netlify.app/login.html">
-  <link rel="stylesheet" href="login.css?v=20260313glass1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sign in — Aevra AI</title>
+  <link rel="stylesheet" href="login.css">
 </head>
 <body>
-  <main class="login-root">
+  <main class="login-root" role="main" aria-labelledby="signinTitle">
     <div class="background-layer" aria-hidden="true"></div>
-    <section class="login-card" aria-labelledby="loginTitle">
+
+    <section class="login-card" role="region" aria-labelledby="signinTitle">
       <header class="card-header">
-        <div class="logo" aria-hidden="true">A</div>
-        <h1 id="loginTitle">Aevra AI</h1>
-        <p class="muted">Welcome back. Continue your study session.</p>
+        <div class="logo">G9</div>
+        <h1 id="signinTitle">Welcome back</h1>
+        <p class="muted">Sign in to continue your Grade 9 learning sessions</p>
       </header>
-      <form class="login-form" id="loginForm" autocomplete="on">
-        <input name="email" type="email" placeholder="name@student.com" autocomplete="email" required>
-        <input name="password" type="password" placeholder="Password" autocomplete="current-password" required minlength="6">
+
+      <form id="loginForm" class="login-form" novalidate>
+        <label for="email" class="sr">Email</label>
+        <input id="email" name="email" type="email" placeholder="name@student.com" required autocomplete="email" />
+
+        <label for="password" class="sr">Password</label>
+        <input id="password" name="password" type="password" placeholder="Password" required autocomplete="current-password" minlength="6" />
+
         <div class="row between">
-          <label class="remember"><input type="checkbox" name="remember" checked> Keep me signed in</label>
-          <a class="link" id="continueAevraLink" href="app.html">Open Aevra</a>
+          <label class="remember">
+            <input type="checkbox" id="remember" name="remember" />
+            <span>Remember me</span>
+          </label>
+          <a href="#" class="link">Forgot?</a>
         </div>
-        <button class="btn-primary" type="submit">Sign in</button>
+
+        <button type="submit" class="btn-primary">Sign in</button>
+
+        <div class="divider"><span>or continue with</span></div>
+
+        <!-- centered socials with inline SVG icons (Google only) -->
+        <div class="socials" style="display:flex;gap:12px;justify-content:center;">
+          <button type="button" class="btn-social" data-provider="google" aria-label="Continue with Google" title="Continue with Google">
+            <!-- Google "G" icon -->
+            <svg width="18" height="18" viewBox="0 0 533.5 544.3" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" style="vertical-align:middle;margin-right:10px">
+              <path fill="#4285F4" d="M533.5 278.4c0-17.5-1.5-35.3-4.6-52.4H272v99.2h146.9c-6.4 34.8-25 64.3-53.4 84.1v69h86.2c50.5-46.5 82.8-115 82.8-199.9z"/>
+              <path fill="#34A853" d="M272 544.3c72.6 0 133.6-24.1 178-65.5l-86.2-69c-24.1 16.2-55 25.8-91.8 25.8-70.6 0-130.4-47.6-151.8-111.4h-89.6v69.9C74.9 483.2 167.9 544.3 272 544.3z"/>
+              <path fill="#FBBC05" d="M120.2 325.2c-9.6-28.7-9.6-59.5 0-88.2V167.1h-89.6C6.6 211.8 0 241.6 0 272s6.6 60.2 30.6 104.9l89.6-51.7z"/>
+              <path fill="#EA4335" d="M272 108.7c39 0 74.1 13.4 101.7 39.6l76.3-76.3C405.1 27.8 345.1 0 272 0 167.9 0 74.9 61.1 30.6 163.8l89.6 51.7C141.6 156.3 201.4 108.7 272 108.7z"/>
+            </svg>
+            <span>Google</span>
+          </button>
+        </div>
+
+        <p class="small muted">New here? <a href="signup.html?return=index.html">Create account</a> · <a href="index.html">Back to landing</a> · <a id="continueAevraAILink" class="continue-tutor-link" href="app.html">Continue to Aevra AI</a></p>
       </form>
-      <div class="divider">or</div>
-      <button class="btn-social" type="button" data-provider="google">Continue with Google</button>
-      <p class="small">New here? <a class="continue-aevra-link" href="signup.html">Create an account</a></p>
-      <div class="toast" id="toast" hidden></div>
+
+      <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
     </section>
   </main>
+
+  <!-- Firebase SDK and initialization (replace placeholders with your Firebase project config) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="firebase_runtime_config.js"></script>
-  <script src="login.js?v=20260313glass1"></script>
+
+  <script src="login.js" defer></script>
 </body>
 </html>

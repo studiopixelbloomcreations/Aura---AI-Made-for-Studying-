@@ -1,4 +1,3 @@
-const { env } = require("../core/env");
 const { app, BrowserWindow, ipcMain, dialog, shell, session } = require("electron");
 const path = require("path");
 const fs = require("fs");
@@ -8,7 +7,7 @@ const { autoUpdater } = require("electron-updater");
 const { LiveEvolutionManager } = require("./live_evolution_manager");
 const { CloudRepoMirror } = require("./cloud_repo_mirror");
 
-const DEFAULT_START_URL = "https://aevrav1.netlify.app/";
+const DEFAULT_START_URL = "https://tutorv1.netlify.app/";
 
 let mainWindow = null;
 let updateNoticeShown = false;
@@ -52,14 +51,14 @@ function pushAudit(store, item) {
 }
 
 function getStartTarget() {
-  const envUrl = String(env("APP_START_URL") || "").trim();
+  const envUrl = String(process.env.APP_START_URL || "").trim();
   if (envUrl) return { type: "url", value: envUrl };
   return { type: "url", value: DEFAULT_START_URL };
 }
 
 function resolveRepoRoot() {
   const candidates = [];
-  const envRoot = String(env("AEVRA_REPO_ROOT") || "").trim();
+  const envRoot = String(process.env.TUTOR_REPO_ROOT || "").trim();
   if (envRoot) candidates.push(envRoot);
 
   // Common local dev locations.
@@ -111,8 +110,8 @@ function createWindow() {
       /github\.com\/login/i.test(target) ||
       /auth/i.test(target) ||
       /puter\.com/i.test(target) ||
-      /aevrav1\.netlify\.app/i.test(target) ||
-      /g9-aevra\.firebaseapp\.com/i.test(target);
+      /tutorv1\.netlify\.app/i.test(target) ||
+      /g9-tutor\.firebaseapp\.com/i.test(target);
 
     if (isHttp && isTrusted) {
       return {
@@ -155,7 +154,7 @@ function createWindow() {
       defaultId: 0,
       cancelId: 0,
       title: "App not responding",
-      message: "Aevra desktop is not responding.",
+      message: "Aevra AI desktop is not responding.",
       detail: "Choose Reload if it stays frozen for more than a few seconds.",
       noLink: true,
     }).then((r) => {
@@ -225,7 +224,7 @@ function setupAutoUpdater() {
 }
 
 function promptCreatorApproval(title, detail) {
-  const autoApprove = String(env("DESKTOP_REQUIRE_APPROVAL") || "false").trim().toLowerCase() !== "true";
+  const autoApprove = String(process.env.DESKTOP_REQUIRE_APPROVAL || "false").trim().toLowerCase() !== "true";
   if (autoApprove) {
     return Promise.resolve(true);
   }
@@ -308,7 +307,7 @@ ipcMain.handle("assistant:evolution_capabilities", async () => {
     stages: ["generate", "inspect", "security_check", "deploy"],
     supports_local_repo_deploy: true,
     supports_cloud_repo_push: true,
-    default_model: String(env("PI_LIVE_MODEL") || "gemini-3-pro-preview"),
+    default_model: String(process.env.PI_LIVE_MODEL || "gemini-3-pro-preview"),
     repo_root: repoRoot,
   };
 });

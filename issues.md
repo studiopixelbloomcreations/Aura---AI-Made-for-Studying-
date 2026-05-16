@@ -1,25 +1,29 @@
 # System Diagnostic Issues Report
 
-All critical errors have been resolved. The system passes Playwright tests with Exit Code 0.
+All critical errors have been resolved. The system passes the local Playwright visual suite when the configured services are available.
 
-## SECTION 1 — Critical errors
-*(None. VIS initializes successfully.)*
+## Section 1 - Critical Errors
 
-## SECTION 2 — Broken functionality
-*(None. All test endpoints mocked correctly.)*
+None currently known.
 
-## SECTION 3 — Performance problems
-*(None. Puter.js loads asynchronously. VIS verification: ~307ms.)*
+## Section 2 - Broken Functionality
 
-## SECTION 4 — Security risks
-*(None. Biometric profiles encrypted in localStorage.)*
+None currently known. Test endpoints are covered by deterministic local handlers.
 
-## SECTION 5 — Resolved issues log
+## Section 3 - Performance Problems
+
+None currently known. Puter.js loads asynchronously and the NCS/Harmony panel uses event-driven updates.
+
+## Section 4 - Security Risks
+
+Production schema now includes RLS policies for Aevra AI identity, memory, NCS, harmony, personality, exam, and analytics tables.
+
+## Section 5 - Resolved Issues Log
 
 | ID | Description | Fix |
 |---|---|---|
-| FUNC-03 | Missing endpoints caused test 404s | Added mock routes in test server |
+| FUNC-03 | Missing endpoints caused test 404s | Added deterministic routes in test server |
 | PERF-03 | Puter WebSocket hangs in test/offline | Conditional Puter.js loading |
-| SEC-01 | Biometric profiles in plaintext localStorage | AES encryption applied |
-| FUNC-04 | `document.write` parser-blocking warning | Replaced with async `createElement('script')` |
-| FUNC-05 | `human.js` WebGL backend crash (dual instances) | `ensureHumanReady()` reuses shared `window.__visHuman` instance |
+| SEC-01 | Biometric profiles in client storage | Migrated production identity path to voice profiles in Supabase |
+| FUNC-04 | document.write parser-blocking warning | Replaced with async script loading |
+| FUNC-05 | Visual recognition runtime conflict | Camera path disabled in favor of VAIS |

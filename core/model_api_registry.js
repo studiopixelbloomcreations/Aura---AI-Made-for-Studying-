@@ -11,6 +11,8 @@ function parseModelApiKeys(raw) {
   }
 }
 
+const { getProviderConfig } = require("./config_loader");
+
 function getModelApiRegistry() {
   return parseModelApiKeys(env("PI_MODEL_API_KEYS_JSON") || "");
 }
@@ -21,6 +23,8 @@ function getModelApiKey(provider) {
   if (entry && typeof entry === "object" && entry.apiKey) {
     return String(entry.apiKey).trim();
   }
+  const master = getProviderConfig(provider);
+  if (master && master.apiKey) return String(master.apiKey).trim();
   const envMap = {
     openrouter: "OPENROUTER_API_KEY",
     grok: "GROK_API_KEY",
@@ -37,10 +41,10 @@ function getModelApiKey(provider) {
 }
 
 function getProviderAvailability() {
-  const providers = ["openrouter", "grok", "groq", "mistral", "huggingface", "deepseek"];
+  const providers = ["openrouter", "grok", "groq", "mistral", "huggingface", "deepseek", "puter"];
   const out = {};
   providers.forEach((provider) => {
-    out[provider] = !!getModelApiKey(provider);
+    out[provider] = provider === "puter" ? true : !!getModelApiKey(provider);
   });
   return out;
 }

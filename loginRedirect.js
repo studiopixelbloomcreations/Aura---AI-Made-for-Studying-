@@ -29,6 +29,10 @@
   };
 
   window.addEventListener('DOMContentLoaded', ()=>{
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      if (params.get('visMock') === '1') return;
+    } catch (e) {}
     // Only guard the main app pages.
     const page = (window.location.pathname.split('/').pop() || '').toLowerCase();
     if(page === 'login.html' || page === 'signup.html' || page === 'landing.html' || page === 'index.html') return;

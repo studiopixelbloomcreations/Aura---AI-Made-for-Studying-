@@ -9,7 +9,7 @@
   const STT_RECORD_MS = 8000;
   const PI_BATCH_WAIT_MS = 10000;
   const PI_BATCH_MAX_MESSAGES = 10;
-  const WAKE_WORD_RE = /\b(hey\s+aevra|aevra)\b/i;
+  const WAKE_WORD_RE = /\b(hey\s+aevra(?:\s+ai)?|aevra(?:\s+ai)?)\b/i;
   const PI_MODEL_KEY = "pi_model";
   const PI_MODEL_DEFAULT = "gemini-3-pro-preview";
   const PI_TTS_VOICE_KEY = (window.PuterVoiceCatalog && window.PuterVoiceCatalog.storageKey) ? String(window.PuterVoiceCatalog.storageKey) : "g9_tts_voice";
@@ -57,6 +57,14 @@
   const VIS_ENROLL_MAX_AVG_DISTANCE = 0.24;
   function isOffline() {
     return window.__OFFLINE_MODE__ === true || navigator.onLine === false;
+  }
+
+  function isVisMockMode() {
+    try {
+      return new URLSearchParams(window.location.search || "").get("visMock") === "1";
+    } catch (e) {
+      return false;
+    }
   }
 
   function getAuthIdentity() {
@@ -220,7 +228,7 @@
   let wakeWordArmed = false;
   let wakeWordRestartTimer = null;
   let idleTimer = null;
-  let aevraAudio = null;
+  let tutorAudio = null;
   let assistantState = "idle";
   let knownFacts = {};
   let convoHistory = [];
@@ -399,7 +407,7 @@
     <div class="pi-header">
       <div class="pi-title-wrap">
         <div class="pi-section">Personal Intelligence</div>
-        <div class="pi-name">Aevra</div>
+        <div class="pi-name">Aevra AI</div>
       </div>
       <div class="pi-top-status">
         <span class="pi-top-dot"></span>
@@ -433,7 +441,7 @@
       </section>
       <section class="pi-voice-mode" data-pi-mode="voice">
         <div class="pi-orb-wrap">
-          <button class="pi-orb idle" type="button" aria-label="Activate Aevra">
+          <button class="pi-orb idle" type="button" aria-label="Activate Aevra AI">
             <span class="pi-orb-shell"></span>
             <span class="pi-orb-core"></span>
             <span class="pi-orb-glint"></span>
@@ -799,9 +807,6 @@
       const action = String(btn.getAttribute("data-vis-personalize") || "").trim().toLowerCase();
       if (action === "submit") {
         submitVisPersonalize();
-      } else if (action === "defer") {
-        closeVisPersonalize();
-        setAssistantStateForVisOffline("Personalization deferred");
       }
     });
   }
@@ -1052,6 +1057,7 @@
   function openVisPersonalize(profile) {
     if (!visPersonalizeEl) return;
     if (visPersonalizeOpen) return;
+    if (isVisMockMode()) return;
     visPersonalizeOpen = true;
     visPersonalizeState = {
       loading: false,
@@ -1104,7 +1110,6 @@
       '<form class="pi-vis-personalize-form" autocomplete="off">' +
         rows +
         '<div class="pi-vis-personalize-actions">' +
-          '<button type="button" class="pi-vis-btn pi-vis-btn-secondary" data-vis-personalize="defer">Later</button>' +
           '<button type="button" class="pi-vis-btn" data-vis-personalize="submit">Create Agent</button>' +
         "</div>" +
       "</form>";
@@ -1290,10 +1295,6 @@
   function ensureVisPersonalAgent(profile, reason) {
     if (!profile) return;
     if (hasVisPersonalAgent(profile)) return;
-    if (String(reason || "") === "auth_bootstrap") {
-      pushVisDebug("Personalization available after auth bootstrap; keeping chat available.");
-      return;
-    }
     if (hasRecentPersonalizationCompletion(profile)) {
       pushVisDebug("Skipping personalization reopen after recent completion (" + String(reason || "recent_completion") + ").");
       return;
@@ -1333,7 +1334,7 @@
       visPersonalizeState.loading = false;
       renderVisPersonalize();
       pushVisDebug("Personal Intelligence creation failed: " + String((error && error.message) || error));
-      addLog("assistant", "Aevra: Personal Intelligence setup is not ready yet. Please try again.");
+      addLog("assistant", "Aevra AI: Personal Intelligence setup is not ready yet. Please try again.");
     });
   }
 
@@ -1367,6 +1368,14 @@
     const statusEl = visTestEl ? visTestEl.querySelector(".pi-vis-test-status") : null;
     const retryBtn = visTestEl ? visTestEl.querySelector('[data-vis-test="retry"]') : null;
     const activateBtn = visTestEl ? visTestEl.querySelector('[data-vis-test="activate"]') : null;
+    if (VIS_CAMERA_DISABLED) {
+      if (statusEl) statusEl.textContent = "Voice identity mode is active. Press Continue to start personalization.";
+      if (retryBtn) retryBtn.hidden = true;
+      if (activateBtn) activateBtn.hidden = false;
+      visVerificationBusy = false;
+      visAllowTestingStage = false;
+      return;
+    }
     const targetUser = String((profile && profile.user_identity && profile.user_identity.username) || "");
     if (retryBtn) retryBtn.hidden = true;
     if (activateBtn) activateBtn.hidden = true;
@@ -1503,7 +1512,7 @@
       '<div class="pi-vis-personal-welcome" role="dialog" aria-modal="true" aria-label="Personal Intelligence ready">' +
         '<div class="pi-vis-personal-welcome-kicker">Personal Intelligence Ready</div>' +
         '<h2 class="pi-vis-personal-welcome-title">Hi ' + escapeHtml(label) + '</h2>' +
-        '<p class="pi-vis-personal-welcome-subtitle">This is your own personal assistant by Aevra. Your personalized agent is ready to help you.</p>' +
+        '<p class="pi-vis-personal-welcome-subtitle">This is your own personal assistant by Aevra AI. Your personalized agent is ready to help you.</p>' +
         '<div class="pi-vis-personal-welcome-meta">Unique ID: ' + escapeHtml(String(uniqueId || "linked to your account")) + '</div>' +
         '<button type="button" class="pi-vis-personal-welcome-button">Continue</button>' +
         '<div class="pi-vis-personal-welcome-timer">This message closes automatically in 20 seconds.</div>' +
@@ -2327,11 +2336,11 @@
     if (low && !visLightingLow) {
       visLightingLow = true;
       visLightingWarnAt = Date.now();
-      addLog("assistant", "Aevra: Lighting too low for facial recognition.");
+      addLog("assistant", "Aevra AI: Lighting too low for facial recognition.");
       pushVisDebug("Lighting too low for facial recognition.");
     } else if (!low && visLightingLow) {
       visLightingLow = false;
-      addLog("assistant", "Aevra: Lighting improved. Recognition stabilizing.");
+      addLog("assistant", "Aevra AI: Lighting improved. Recognition stabilizing.");
       pushVisDebug("Lighting improved for facial recognition.");
     }
   }
@@ -2483,7 +2492,7 @@
     row.className = "pi-log-row " + (role === "user" ? "user" : "assistant");
     const content = String(text || "")
       .replace(/^You:\s*/i, "")
-      .replace(/^Aevra:\s*/i, "");
+      .replace(/^Aevra AI:\s*/i, "");
     row.textContent = content;
     logEl.appendChild(row);
     logEl.scrollTop = logEl.scrollHeight;
@@ -2543,9 +2552,9 @@
   async function triggerFromWakeWord(transcript) {
     const heard = String(transcript || "").trim();
     if (heard) {
-      addLog("assistant", "Aevra: Wake word detected (" + heard + ").");
+      addLog("assistant", "Aevra AI: Wake word detected (" + heard + ").");
     } else {
-      addLog("assistant", "Aevra: Wake word detected.");
+      addLog("assistant", "Aevra AI: Wake word detected.");
     }
     await primeAudioPlayback();
     if (!enabled) setEnabled(true);
@@ -2594,7 +2603,7 @@
     }
     try {
       wakeRecognition.start();
-      addLog("assistant", "Aevra: Wake mode active. Say 'Hey Aevra'.");
+      addLog("assistant", "Aevra AI: Wake mode active. Say 'Hey Aevra AI' or 'Aevra AI'.");
     } catch (e) {
       dbg("wake word start failed", e && e.message);
     }
@@ -2962,7 +2971,7 @@
       if (sampled.length) {
         rows.push("Long-term conversation traces:");
         sampled.forEach(function (m) {
-          const who = m.role === "assistant" ? "Aevra" : "User";
+          const who = m.role === "assistant" ? "Aevra AI" : "User";
           rows.push("- " + who + ": " + String(m.content || "").replace(/\s+/g, " ").slice(0, 140));
         });
       }
@@ -3009,7 +3018,7 @@
   function buildRemainingSpeakTextFromCurrentPlayback() {
     const full = String((visSpeechState && visSpeechState.text) || "").trim();
     if (!full) return "";
-    const audio = aevraAudio;
+    const audio = tutorAudio;
     if (!audio) return full;
     const duration = Number(audio.duration || 0);
     const current = Number(audio.currentTime || 0);
@@ -3042,9 +3051,9 @@
     if (visSpeechState.active) {
       captureSpeechStateIntoPendingResponse();
     }
-    if (aevraAudio && !aevraAudio.paused) {
+    if (tutorAudio && !tutorAudio.paused) {
       try {
-        aevraAudio.pause();
+        tutorAudio.pause();
         visPausedAudioByOffline = true;
       } catch (e) {}
     }
@@ -3070,9 +3079,9 @@
   async function resumeFromVisOnline() {
     visLastOfflineReason = "";
     setVisOfflineState(false, "Online - " + String(visLastKnownUserLabel || "Unknown"));
-    if (visPausedAudioByOffline && aevraAudio) {
+    if (visPausedAudioByOffline && tutorAudio) {
       try {
-        await aevraAudio.play();
+        await tutorAudio.play();
       } catch (e) {}
     }
     visPausedAudioByOffline = false;
@@ -3083,9 +3092,9 @@
       const pending = visPendingResponse;
       visPendingResponse = null;
       hideTypingIndicator();
-      addLog("assistant", "Aevra: " + String(pending.answer || ""));
+      addLog("assistant", "Aevra AI: " + String(pending.answer || ""));
       pushHistory("assistant", String(pending.answer || ""));
-      await playAevraTTS(String(pending.speakText || pending.answer || ""));
+      await playAevraAITTS(String(pending.speakText || pending.answer || ""));
       if (pendingPiMessages.length) flushPiBatch("resume_pending_user_messages");
     } else {
       setAssistantState("listening", "Listening");
@@ -3334,7 +3343,7 @@
     const currentFile = visActiveProfile && visActiveProfile.file_name ? String(visActiveProfile.file_name) : "";
     if (currentFile && currentFile !== nextFile && visSpeechState.active) {
       captureSpeechStateIntoPendingResponse();
-      stopAevraAudio();
+      stopAevraAIAudio();
       visPausedAudioByOffline = false;
       visSpeechState = { active: false, text: "", started_at_ms: 0, provider: "" };
     }
@@ -3545,7 +3554,7 @@
           }),
           mode: "personalized_activation",
           memory_context: buildLongTermMemoryContext(),
-          system_prompt: buildAevraSystemPrompt("personalized_activation", localStorage.getItem("g9_language") || "English", localStorage.getItem("g9_subject") || "General", knownFacts),
+          system_prompt: buildAevraAISystemPrompt("personalized_activation", localStorage.getItem("g9_language") || "English", localStorage.getItem("g9_subject") || "General", knownFacts),
           user_id: String((profile && profile.user_identity && profile.user_identity.username) || "").trim(),
           unique_id: expectedUniqueId,
           personalization_prompt: String((profile && profile.personal_intelligence_agent && profile.personal_intelligence_agent.personalization_prompt) || "").trim(),
@@ -3947,7 +3956,7 @@
       renderVisSetup();
     } catch (error) {
       pushVisDebug("Enrollment failed: " + String((error && error.message) || error));
-      addLog("assistant", "Aevra: Visual setup could not finish yet. Please try the scan again.");
+      addLog("assistant", "Aevra AI: Visual setup could not finish yet. Please try the scan again.");
       visSetupState.step = 5;
       visSetupState.retrievalReady = false;
       visSetupState.retrievalMessage = "";
@@ -4090,7 +4099,7 @@
       visSetupState.step = 3;
       try { renderVisSetup(); } catch (e) { pushVisDebug("scan fail render failed: " + String((e && e.message) || e)); }
       pushVisDebug("Face scan captured 0 valid frames.");
-      addLog("assistant", "Aevra: Setup scan failed. Keep face in frame and retry.");
+      addLog("assistant", "Aevra AI: Setup scan failed. Keep face in frame and retry.");
       return;
     }
     pushVisDebug("Scan completed with face-api.js registration frames: " + String(frames.length));
@@ -4589,14 +4598,14 @@
     }, IDLE_TIMEOUT_MS);
   }
 
-  function stopAevraAudio() {
+  function stopAevraAIAudio() {
     try {
-      if (aevraAudio) {
-        aevraAudio.pause();
-        aevraAudio.src = "";
+      if (tutorAudio) {
+        tutorAudio.pause();
+        tutorAudio.src = "";
       }
     } catch (e) {}
-    aevraAudio = null;
+    tutorAudio = null;
     visSpeechState = { active: false, text: "", started_at_ms: 0, provider: "" };
   }
 
@@ -5007,7 +5016,7 @@
     );
   }
 
-  function buildAevraSystemPrompt(mode, language, subject, facts) {
+  function buildAevraAISystemPrompt(mode, language, subject, facts) {
     const knownFactsLine = "Known user facts: " + (Object.keys(facts || {}).length ? JSON.stringify(facts) : "none");
     const namingLine = [
       "Naming policy:",
@@ -5017,7 +5026,7 @@
     const behaviorCfg = visBehaviorConfig && typeof visBehaviorConfig === "object" ? visBehaviorConfig : {};
     const personalization = visPersonalizationProfile && typeof visPersonalizationProfile === "object" ? visPersonalizationProfile : {};
     const corePersona =
-      "You are Aevra, a personal intelligence system and trusted companion, strategist, and creative partner. " +
+      "You are Aevra AI, a personal intelligence system and trusted companion, strategist, and creative partner. " +
       "Your purpose is to increase knowledge, sharpen decision-making, and amplify creativity while maintaining clarity, precision, and authenticity. " +
       "Speak in " + language + ". For learning topics, support the student in " + subject + ".";
 
@@ -5162,6 +5171,7 @@
 
   async function ensureMicAnalyser() {
     if (micAnalyser) return;
+    if (isVisMockMode()) return;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
     const ctx = ensureAudioContext();
     if (!ctx) return;
@@ -5377,7 +5387,7 @@
     tabBtn.setAttribute("aria-pressed", enabled ? "true" : "false");
     if (!enabled) {
       clearIdleTimer();
-      stopAevraAudio();
+      stopAevraAIAudio();
       stopSpeakerAnalyser();
       stopMicAnalyser();
       stopServerRecorder();
@@ -5705,15 +5715,15 @@
       }
       dbg("local evolution result", out);
       if (out && out.skipped) {
-        addLog("assistant", "Aevra: Fact already exists. Skipped duplicate update.");
+        addLog("assistant", "Aevra AI: Fact already exists. Skipped duplicate update.");
       } else if (out && out.ok) {
-        addLog("assistant", "Aevra: Local evolution updated Fact Evolution.json");
+        addLog("assistant", "Aevra AI: Local evolution updated Fact Evolution.json");
       } else {
-        addLog("assistant", "Aevra: Local evolution did not write code (" + String((out && (out.error || out.stage)) || "unknown") + ").");
+        addLog("assistant", "Aevra AI: Local evolution did not write code (" + String((out && (out.error || out.stage)) || "unknown") + ").");
       }
     } catch (e) {
       dbg("local evolution failed", e && e.message);
-      addLog("assistant", "Aevra: Local evolution failed (" + String((e && e.message) || "unknown") + ").");
+      addLog("assistant", "Aevra AI: Local evolution failed (" + String((e && e.message) || "unknown") + ").");
     } finally {
       autoLocalEvolutionBusy = false;
     }
@@ -5737,7 +5747,7 @@
     }
   }
 
-  async function playAevraTTS(text) {
+  async function playAevraAITTS(text) {
     const cleanedText = String(text || "").replace(/\s+/g, " ").trim();
     if (!cleanedText) {
       setAssistantState("idle", "Idle");
@@ -5752,7 +5762,7 @@
       scheduleVisProfileSave();
       return { ok: false, queued: true, provider: "pending" };
     }
-    stopAevraAudio();
+    stopAevraAIAudio();
     try {
       await primeAudioPlayback();
       visSpeechState = {
@@ -5766,20 +5776,20 @@
       const normalized = normalizePuterTtsSource(out);
       if (!normalized || !normalized.src) throw new Error("PUTER_EMPTY_AUDIO");
       const url = normalized.src;
-      aevraAudio = new Audio(url);
-      aevraAudio.__revoke = !!normalized.revoke;
-      aevraAudio.preload = "auto";
-      aevraAudio.playsInline = true;
-      aevraAudio.volume = 1;
+      tutorAudio = new Audio(url);
+      tutorAudio.__revoke = !!normalized.revoke;
+      tutorAudio.preload = "auto";
+      tutorAudio.playsInline = true;
+      tutorAudio.volume = 1;
       stopSpeakerAnalyser();
-      connectSpeakerAnalyserForAudioElement(aevraAudio);
+      connectSpeakerAnalyserForAudioElement(tutorAudio);
       await withTimeout(new Promise(function (resolve, reject) {
         let settled = false;
         const cleanupStartHandlers = function () {
-          aevraAudio.onplay = null;
-          aevraAudio.onerror = null;
+          tutorAudio.onplay = null;
+          tutorAudio.onerror = null;
         };
-        aevraAudio.onplay = function () {
+        tutorAudio.onplay = function () {
           if (settled) return;
           settled = true;
           cleanupStartHandlers();
@@ -5788,19 +5798,19 @@
           setAssistantState("speaking", "Speaking");
           resolve(true);
         };
-        aevraAudio.onended = function () {
+        tutorAudio.onended = function () {
           visSpeechState = { active: false, text: "", started_at_ms: 0, provider: "" };
           setAssistantState("listening", "Listening");
           armIdleTimer();
-          try { if (aevraAudio && aevraAudio.__revoke) URL.revokeObjectURL(url); } catch (e) {}
+          try { if (tutorAudio && tutorAudio.__revoke) URL.revokeObjectURL(url); } catch (e) {}
         };
-        aevraAudio.onerror = function () {
+        tutorAudio.onerror = function () {
           if (settled) return;
           settled = true;
           cleanupStartHandlers();
           reject(new Error("AUDIO_ELEMENT_ERROR"));
         };
-        aevraAudio.play().catch(function (playErr) {
+        tutorAudio.play().catch(function (playErr) {
           if (settled) return;
           settled = true;
           cleanupStartHandlers();
@@ -5810,14 +5820,14 @@
       return { ok: true, provider: "puter_tts" };
     } catch (e) {
       dbg("Puter TTS failed, fallback to browser TTS", e && e.message);
-      addLog("assistant", "Aevra: Voice engine fallback (" + String((e && e.message) || "TTS error") + ").");
+      addLog("assistant", "Aevra AI: Voice engine fallback (" + String((e && e.message) || "TTS error") + ").");
       try {
         await speakWithBrowserFallback(cleanedText);
         return { ok: true, provider: "browser_tts_fallback", fallback_from: String((e && e.message) || "unknown") };
       } catch (e2) {
         const blocked = String((e2 && e2.message) || "").toLowerCase();
         if (blocked.includes("not allowed") || blocked.includes("user agent")) {
-          addLog("assistant", "Aevra: Audio playback is blocked. Tap the orb once, then try again.");
+          addLog("assistant", "Aevra AI: Audio playback is blocked. Tap the orb once, then try again.");
         }
         setAssistantState("idle", "Idle");
         return {
@@ -5829,7 +5839,7 @@
       }
     }
   }
-  async function runAevraResponseForText(text) {
+  async function runAevraAIResponseForText(text) {
     const t = String(text || "").trim();
     if (!t || !enabled || !visCanOperateAI()) return;
     setAssistantState("thinking", "Thinking");
@@ -5867,7 +5877,7 @@
             known_facts: knownFacts,
             mode: mode,
             memory_context: buildLongTermMemoryContext(),
-            system_prompt: buildAevraSystemPrompt(mode, language, subject, knownFacts),
+            system_prompt: buildAevraAISystemPrompt(mode, language, subject, knownFacts),
             user_id: agentContext.user_id,
             unique_id: agentContext.unique_id,
             profile_file: agentContext.profile_file,
@@ -5883,7 +5893,7 @@
           return;
         }
         hideTypingIndicator();
-        addLog("assistant", "Aevra: " + actionAnswer);
+        addLog("assistant", "Aevra AI: " + actionAnswer);
         pushHistory("assistant", actionAnswer);
         if (actionData && actionData.learned_facts) mergeKnownFacts(actionData.learned_facts);
         if (actionData && actionData.memory_updates) mergeKnownFacts(actionData.memory_updates);
@@ -5897,7 +5907,7 @@
           ai_provider: actionData && actionData.ai_provider ? actionData.ai_provider : "local_action",
         });
         dbg("AI provider:", "local_action", "ok:", true);
-        await playAevraTTS(actionSpeakText);
+        await playAevraAITTS(actionSpeakText);
         return;
       }
 
@@ -5914,7 +5924,7 @@
           known_facts: knownFacts,
           mode: detectSupportMode(t),
           memory_context: buildLongTermMemoryContext(),
-          system_prompt: buildAevraSystemPrompt(detectSupportMode(t), localStorage.getItem("g9_language") || "English", localStorage.getItem("g9_subject") || "General", knownFacts),
+          system_prompt: buildAevraAISystemPrompt(detectSupportMode(t), localStorage.getItem("g9_language") || "English", localStorage.getItem("g9_subject") || "General", knownFacts),
           user_id: agentContext.user_id,
           unique_id: agentContext.unique_id,
           profile_file: agentContext.profile_file,
@@ -5931,7 +5941,7 @@
           agent: agentContext,
           ai_provider: data && data.ai_provider ? data.ai_provider : "",
         });
-        addLog("assistant", "Aevra: Harmony error: " + String((data && data.ai_error) || "Harmony is unavailable right now."));
+        addLog("assistant", "Aevra AI: Harmony error: " + String((data && data.ai_error) || "Harmony is unavailable right now."));
         setAssistantState("idle", "Idle");
         renderEvolutionStatus(data);
         return;
@@ -5945,7 +5955,7 @@
           agent: agentContext,
           ai_provider: data && data.ai_provider ? data.ai_provider : "",
         });
-        addLog("assistant", "Aevra: Harmony returned no response.");
+        addLog("assistant", "Aevra AI: Harmony returned no response.");
         setAssistantState("idle", "Idle");
         renderEvolutionStatus(data);
         return;
@@ -5958,7 +5968,7 @@
         return;
       }
       hideTypingIndicator();
-      addLog("assistant", "Aevra: " + answer);
+      addLog("assistant", "Aevra AI: " + answer);
       pushHistory("assistant", answer);
       if (data && data.learned_facts) mergeKnownFacts(data.learned_facts);
       if (data && data.memory_updates) mergeKnownFacts(data.memory_updates);
@@ -5972,7 +5982,7 @@
         ai_provider: data && data.ai_provider ? data.ai_provider : "",
       });
       dbg("AI provider:", data && data.ai_provider ? data.ai_provider : "agent_harmony", "ok:", true);
-      await playAevraTTS(speakText);
+      await playAevraAITTS(speakText);
     } catch (e) {
       hideTypingIndicator();
       emitVisHarmonyDebug({
@@ -5982,7 +5992,7 @@
         agent: getPiAgentRequestContext(),
         ai_provider: "",
       });
-      addLog("assistant", "Aevra: Request failed. Please try again.");
+      addLog("assistant", "Aevra AI: Request failed. Please try again.");
       setAssistantState("idle", "Idle");
     } finally {
       hideTypingIndicator();
@@ -6005,9 +6015,9 @@
 
     try {
       if (batch.length > 1) {
-        addLog("assistant", "Aevra: Processing " + String(batch.length) + " queued messages together.");
+        addLog("assistant", "Aevra AI: Processing " + String(batch.length) + " queued messages together.");
       }
-      await runAevraResponseForText(combined);
+      await runAevraAIResponseForText(combined);
     } finally {
       pendingPiFlushBusy = false;
       const needsAgain = pendingPiFlushAgain;
@@ -6020,7 +6030,7 @@
     }
   }
 
-  async function askAevraText(text) {
+  async function askAevraAIText(text) {
     const t = String(text || "").trim();
     if (!t || !enabled || !visCanOperateAI()) return;
     addLog("user", "You: " + t);
@@ -6037,17 +6047,37 @@
     armIdleTimer();
   }
 
+  async function verifyVoiceIdentityFromText(text) {
+    const phrase = String(text || "").trim();
+    if (!phrase) return null;
+    try {
+      const body = JSON.stringify({ action: "match", transcript: phrase });
+      const res = await (window.Api && window.Api.apiFetch
+        ? window.Api.apiFetch("/voice/identity", { method: "POST", headers: { "Content-Type": "application/json" }, body })
+        : fetch("/voice/identity", { method: "POST", headers: { "Content-Type": "application/json" }, body }));
+      const data = await res.json().catch(function () { return {}; });
+      if (data && data.ok && data.match && data.match.matched) {
+        visLastKnownUserLabel = String((data.match.profile && (data.match.profile.display_name || data.match.profile.user_id)) || "Verified");
+        visOffline = false;
+        updateTopStatusLabel("Voice verified");
+      }
+      return data && data.match ? data.match : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   async function startServerListening() {
     if (!enabled || !visCanOperateAI()) return;
     const host = String(location.hostname || "").toLowerCase();
     const isLocal = host === "localhost" || host === "127.0.0.1";
     if (!window.isSecureContext && !isLocal) {
-      addLog("assistant", "Aevra: Microphone needs HTTPS on iPhone/Chrome. Open the secure site URL and try again.");
+      addLog("assistant", "Aevra AI: Microphone needs HTTPS on iPhone/Chrome. Open the secure site URL and try again.");
       setAssistantState("idle", "Idle");
       return;
     }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === "undefined") {
-      addLog("assistant", "Aevra: Voice recognition is not supported in this environment.");
+      addLog("assistant", "Aevra AI: Voice recognition is not supported in this environment.");
       setAssistantState("idle", "Idle");
       return;
     }
@@ -6087,19 +6117,20 @@
           setAssistantState("thinking", "Thinking");
           const text = await transcribeAudioBlob(blob);
           if (text) {
+            await verifyVoiceIdentityFromText(text);
             if (!visCanOperateAI()) {
               pendingPiMessages.push({ text: String(text), at: Date.now(), source: "stt_paused_resume" });
               scheduleVisProfileSave();
-              setAssistantStateForVisOffline("Offline - no face");
+              setAssistantStateForVisOffline("Offline - voice identity pending");
               return;
             }
-            await askAevraText(text);
+            await askAevraAIText(text);
           } else {
             setAssistantState("idle", "Idle");
           }
         } catch (e) {
           dbg("server STT failed", e && e.message);
-          addLog("assistant", "Aevra: Voice server not responding (STT).");
+          addLog("assistant", "Aevra AI: Voice server not responding (STT).");
           setAssistantState("idle", "Idle");
         }
       };
@@ -6114,9 +6145,9 @@
       dbg("server listening getUserMedia failed", e && e.message);
       const em = String((e && e.message) || "").toLowerCase();
       if ((e && e.name === "NotAllowedError") || em.includes("denied") || em.includes("not allowed")) {
-        addLog("assistant", "Aevra: Microphone permission denied. In iPhone Settings > Chrome > Microphone, allow access.");
+        addLog("assistant", "Aevra AI: Microphone permission denied. In iPhone Settings > Chrome > Microphone, allow access.");
       } else {
-        addLog("assistant", "Aevra: Microphone access is blocked.");
+        addLog("assistant", "Aevra AI: Microphone access is blocked.");
       }
       stopServerRecorder();
       setAssistantState("idle", "Idle");
@@ -6142,7 +6173,7 @@
       };
       recognition.onresult = function (ev) {
         const text = ev && ev.results && ev.results[0] && ev.results[0][0] ? ev.results[0][0].transcript : "";
-        if (text) askAevraText(String(text));
+        if (text) askAevraAIText(String(text));
       };
       recognition.onerror = function (ev) {
         dbg("recognition error", ev && ev.error);
@@ -6169,11 +6200,11 @@
 
   async function executeAssistantAction(action) {
     if (!action || !action.type) return;
-    const confirmText = "Aevra wants to run: " + action.type.replace(/_/g, " ") + ". Continue?";
+    const confirmText = "Aevra AI wants to run: " + action.type.replace(/_/g, " ") + ". Continue?";
     if (shouldConfirmAction(action)) {
       const ok = window.confirm(confirmText);
       if (!ok) {
-        addLog("assistant", "Aevra: Action cancelled.");
+        addLog("assistant", "Aevra AI: Action cancelled.");
         return;
       }
     }
@@ -6183,7 +6214,7 @@
         const desktopResult = await window.DesktopAssistant.executeAction(action);
         if (desktopResult && desktopResult.ok) return;
         if (desktopResult && desktopResult.denied) {
-          addLog("assistant", "Aevra: Creator denied desktop action.");
+          addLog("assistant", "Aevra AI: Creator denied desktop action.");
           return;
         }
       }
@@ -6198,7 +6229,7 @@
       const url = action.oauth_url || "https://open.spotify.com/";
       window.open(String(url), "_blank", "noopener,noreferrer");
       mergeKnownFacts({ spotify_connected: true });
-      addLog("assistant", "Aevra: Spotify connection initiated.");
+      addLog("assistant", "Aevra AI: Spotify connection initiated.");
       return;
     }
 
@@ -6212,11 +6243,11 @@
       try {
         if (hiddenFileInput) {
           hiddenFileInput.click();
-          addLog("assistant", "Aevra: File picker opened.");
+          addLog("assistant", "Aevra AI: File picker opened.");
           return;
         }
       } catch (e) {}
-      addLog("assistant", "Aevra: Could not open file picker in this browser.");
+      addLog("assistant", "Aevra AI: Could not open file picker in this browser.");
       return;
     }
   }
@@ -6238,7 +6269,7 @@
       await primeAudioPlayback();
       setUIMode("voice");
       if (!visCanOperateAI()) {
-        addLog("assistant", "Aevra: Sign in to continue with Personal Intelligence.");
+        addLog("assistant", "Aevra AI: Sign in to continue with Personal Intelligence.");
         return;
       }
       startListening();
@@ -6255,7 +6286,7 @@
       if (!v) return;
       textInputEl.value = "";
       setUIMode("text");
-      askAevraText(v);
+      askAevraAIText(v);
     });
     textInputEl.addEventListener("keydown", function (ev) {
       if (!ev || ev.key !== "Enter") return;
@@ -6263,7 +6294,7 @@
       const v = String(textInputEl.value || "").trim();
       if (!v) return;
       textInputEl.value = "";
-      askAevraText(v);
+      askAevraAIText(v);
     });
   }
 
@@ -6273,7 +6304,7 @@
       setUIMode("voice");
       if (!enabled) setEnabled(true);
       if (!visCanOperateAI()) {
-        addLog("assistant", "Aevra: Waiting for your signed-in profile before voice mode.");
+        addLog("assistant", "Aevra AI: Waiting for your signed-in profile before voice mode.");
         return;
       }
       startListening();
@@ -6293,8 +6324,8 @@
           return;
         }
         if (action === "mute") {
-          stopAevraAudio();
-          addLog("assistant", "Aevra: Voice output muted.");
+          stopAevraAIAudio();
+          addLog("assistant", "Aevra AI: Voice output muted.");
           return;
         }
       });
@@ -6365,7 +6396,7 @@
     });
   }
   setUIMode("voice");
-  setEnabled(false);
+  setEnabled(true);
   initVisualIntelligenceSystem().catch(function (e) {
     dbg("VIS init failed", e && e.message);
     setAssistantStateForVisOffline("Offline - VIS init failed");

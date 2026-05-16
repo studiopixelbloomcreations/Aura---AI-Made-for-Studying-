@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from typing import Dict, List, Optional, Any
 from urllib.parse import quote_plus
@@ -7,7 +8,6 @@ from urllib.parse import quote_plus
 import requests
 from groq import Groq
 
-from env_utils import env
 from user_personalization_router import store as personalization_store
 
 
@@ -69,8 +69,8 @@ def _ensure_integration_state(email_key: str) -> Dict[str, Any]:
 
 
 def _google_search_snippets(query: str, max_results: int = 3) -> List[Dict[str, str]]:
-    api_key = str(env("GOOGLE_SEARCH_API_KEY", "")).strip()
-    cx = str(env("GOOGLE_SEARCH_CX", "")).strip()
+    api_key = os.environ.get("GOOGLE_SEARCH_API_KEY", "").strip()
+    cx = os.environ.get("GOOGLE_SEARCH_CX", "").strip()
     if not api_key or not cx:
         return []
 
@@ -106,7 +106,7 @@ def _google_search_snippets(query: str, max_results: int = 3) -> List[Dict[str, 
 
 def _detect_task_action(user_msg: str, integrations: Dict[str, Any], known_facts: Dict[str, str]) -> Optional[Dict[str, Any]]:
     text = (user_msg or "").strip().lower()
-    spotify_auth_url = str(env("SPOTIFY_AUTH_URL", "")).strip()
+    spotify_auth_url = os.environ.get("SPOTIFY_AUTH_URL", "").strip()
 
     if "connect spotify" in text or "link spotify" in text:
         return {
@@ -180,8 +180,8 @@ def _fallback_conversation_response(user_msg: str, action: Optional[Dict[str, An
 
     msg = (user_msg or "").strip()
     low = msg.lower()
-    if any(g in low for g in ["hi", "hello", "hey aevra", "how are you"]):
-        return "Hey, I am Aevra. I am here with you. We can chat, plan your day, or handle tasks like directions and music."
+    if any(g in low for g in ["hi", "hello", "hey tutor", "how are you"]):
+        return "Hey, I am Aevra AI. I am here with you. We can chat, plan your day, or handle tasks like directions and music."
     if "homework" in low or "study" in low or "exam" in low:
         return "Absolutely. Tell me the subject and exact question, and I will teach it step by step like a friendly teacher."
     if web_context:
@@ -190,7 +190,7 @@ def _fallback_conversation_response(user_msg: str, action: Optional[Dict[str, An
     return "I am here and listening. Tell me what you want to do, and I will help you right away."
 
 
-def ask_aevra_personal_agent(
+def ask_tutor_personal_agent(
     message: str,
     email: Optional[str],
     language: Optional[str],
@@ -234,7 +234,7 @@ def ask_aevra_personal_agent(
     chat_title = (title or "Perosnla IIntelligence").strip()
 
     system_prompt = (
-        "You are Aevra, the personal assistant for the Perosnla IIntelligence section. "
+        "You are Aevra AI, the personal assistant for the Perosnla IIntelligence section. "
         "Be a warm Siri-like helper and a sweet teacher for homework/study support. "
         "Use the user's stored profile, progress, and preferences when relevant. "
         "If Google context is present, use it carefully and include short source links. "
@@ -260,7 +260,7 @@ def ask_aevra_personal_agent(
     prompt_parts.append("User message:\n" + user_msg)
     user_prompt = "\n\n".join(prompt_parts)
 
-    client = Groq(api_key=env("GROQ_API_KEY"))
+    client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
     # For strong command intents, use deterministic assistant response first.
     if action and action.get("message"):
         answer = str(action.get("message"))
@@ -297,7 +297,7 @@ def get_personal_assistant_status(email: Optional[str]) -> Dict[str, Any]:
     state = _ensure_integration_state(email_key)
     return {
         "email": email_key,
-        "assistant_name": "Aevra",
+        "assistant_name": "Aevra AI",
         "section_name": "Perosnla IIntelligence",
         "integration_state": state,
         "known_facts": assistant_user_facts.get(email_key, {}),
@@ -330,22 +330,22 @@ def set_home_address(email: Optional[str], address: str) -> Dict[str, Any]:
 
 
 def create_openai_realtime_session(email: Optional[str]) -> Dict[str, Any]:
-    api_key = str(env("OPENAI_API_KEY", "")).strip()
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
     if not api_key:
         return {
             "ok": False,
             "error": "OPENAI_API_KEY is missing on backend environment",
         }
 
-    model = str(env("OPENAI_REALTIME_MODEL", "gpt-realtime")).strip() or "gpt-realtime"
-    voice = str(env("OPENAI_REALTIME_VOICE", "alloy")).strip() or "alloy"
+    model = os.environ.get("OPENAI_REALTIME_MODEL", "gpt-realtime").strip() or "gpt-realtime"
+    voice = os.environ.get("OPENAI_REALTIME_VOICE", "alloy").strip() or "alloy"
 
     email_key = _email_key(email)
     state = _ensure_integration_state(email_key)
     home = state.get("home_address") or ""
 
     instructions = (
-        "You are Aevra, a warm personal assistant. "
+        "You are Aevra AI, a warm personal assistant. "
         "Keep a natural conversational tone, like a real friendly human assistant. "
         "Help with everyday tasks and study support. "
         "If asked for directions home and home address is known, mention that maps can be opened. "

@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $startupDir = [Environment]::GetFolderPath("Startup")
-$launcherPath = Join-Path $startupDir "AevraCloudSyncMonitor.cmd"
+$launcherPath = Join-Path $startupDir "AevraAICloudSyncMonitor.cmd"
 $runnerPath = Join-Path $repoRoot "cloud_sync\run_monitor.js"
 
 $cmd = @"

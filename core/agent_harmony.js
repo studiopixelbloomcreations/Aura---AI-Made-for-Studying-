@@ -1,4 +1,5 @@
 const { getProviderAvailability } = require("./model_api_registry");
+const { detectSystemState, buildCognitiveBlueprint, compileCognitivePrompt } = require("./ncs_engine");
 
 const MODEL_PRIORITY = {
   casual: ["grok"],
@@ -21,7 +22,9 @@ function buildCouncilPrompt(query, analysis, personalizationPrompt = "") {
 }
 
 function preferredModelsFor(analysis = {}) {
-  return MODEL_PRIORITY[String(analysis.type || "casual")] || ["grok"];
+  const preferred = MODEL_PRIORITY[String(analysis.type || "casual")] || ["grok"];
+  const availability = getProviderAvailability();
+  return preferred.concat(Object.keys(availability).filter((name) => availability[name] && !preferred.includes(name)));
 }
 
 async function tryAdapter(modelName, context, adapters) {
@@ -48,10 +51,13 @@ async function tryAdapter(modelName, context, adapters) {
 }
 
 async function coordinateQuery(analysis, options = {}) {
-  const preferred = preferredModelsFor(analysis);
+  const preferred = preferredModelsFor(analysis).filter((name) => name !== "puter");
   const adapters = options.adapters || {};
   const attempts = [];
   const successes = [];
+  const blueprint = options.cognitiveBlueprint || {};
+  const ncsPrompt = options.ncsPrompt || compileCognitivePrompt(blueprint);
+  const modelRoles = blueprint.model_roles || {};
 
   for (const modelName of preferred) {
     const result = await tryAdapter(modelName, {
@@ -59,6 +65,8 @@ async function coordinateQuery(analysis, options = {}) {
       analysis,
       seed_answer: options.seedAnswer || "",
       personalization_prompt: options.personalizationPrompt || "",
+      ncs_prompt: ncsPrompt,
+      model_role: modelRoles[modelName] || "reasoning",
       council_prompt: buildCouncilPrompt(analysis.text, analysis, options.personalizationPrompt || ""),
     }, adapters);
 
@@ -84,6 +92,7 @@ async function coordinateQuery(analysis, options = {}) {
         "You are part of an AI council.",
         "Combine the strongest ideas into one final answer.",
         "Return a unified final response only.",
+        ncsPrompt,
         options.personalizationPrompt || "",
         `Original query: ${analysis.text}`,
         "",
@@ -114,9 +123,23 @@ async function coordinateQuery(analysis, options = {}) {
 async function coordinateAgentHarmony(observatoryOutput, options = {}) {
   const queries = observatoryOutput && Array.isArray(observatoryOutput.queries) ? observatoryOutput.queries : [];
   const query_plans = [];
+  const ncsContext = {
+    userMessage: queries.map((query) => query.text).join("\n"),
+    observatoryOutput,
+    activeModules: options.activeModules || ["observatory", "harmony", "memory_graph", "personality_engine"],
+    recentCalls: options.recentCalls || [],
+    metadata: Object.assign({}, options.metadata || {}, { providerAvailability: getProviderAvailability() }),
+    sessionData: options.sessionData || {},
+  };
+  const systemState = options.systemState || detectSystemState(ncsContext);
+  const cognitiveBlueprint = options.cognitiveBlueprint || buildCognitiveBlueprint(ncsContext, systemState);
+  const ncsPrompt = options.ncsPrompt || compileCognitivePrompt(cognitiveBlueprint);
 
   for (const query of queries) {
-    const coordinated = await coordinateQuery(query, options);
+    const coordinated = await coordinateQuery(query, Object.assign({}, options, {
+      cognitiveBlueprint,
+      ncsPrompt,
+    }));
     query_plans.push({
       query_id: query.id,
       query: query.text,
@@ -142,6 +165,11 @@ async function coordinateAgentHarmony(observatoryOutput, options = {}) {
     model_used: primary.model_used,
     fallback_used: query_plans.some((item) => item.fallback_used),
     provider_availability: getProviderAvailability(),
+    ncs: {
+      system_state: systemState,
+      cognitive_blueprint: cognitiveBlueprint,
+      prompt_preview: ncsPrompt.slice(0, 600),
+    },
     query_plans,
   };
 }

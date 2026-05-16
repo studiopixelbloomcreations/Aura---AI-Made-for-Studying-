@@ -1,87 +1,51 @@
 {
   "url": "http://127.0.0.1:8080/app.html?visMock=1",
   "browser": "chromium",
-  "metrics": {
-    "timings": {
-      "camera_start_time_ms": 413.5,
-      "verification_start_ms": 1527.2000000029802,
-      "face_detection_last_ms": 111.60000000149012,
-      "backend_roundtrip_ms": 111.60000000149012,
-      "total_verification_time_ms": 1299
-    },
-    "counters": {
-      "polls": 3
-    },
-    "events": [
-      {
-        "type": "vis_start",
-        "data": null,
-        "at": 1775144194652
-      },
-      {
-        "type": "timing:camera_start_time_ms",
-        "data": {
-          "value": 413.5
-        },
-        "at": 1775144195065
-      },
-      {
-        "type": "timing:face_detection_last_ms",
-        "data": {
-          "value": 79.70000000298023
-        },
-        "at": 1775144195767
-      },
-      {
-        "type": "timing:face_detection_last_ms",
-        "data": {
-          "value": 42.899999998509884
-        },
-        "at": 1775144196330
-      },
-      {
-        "type": "timing:face_detection_last_ms",
-        "data": {
-          "value": 111.60000000149012
-        },
-        "at": 1775144196960
-      },
-      {
-        "type": "timing:total_verification_time_ms",
-        "data": {
-          "value": 1299
-        },
-        "at": 1775144196986
-      }
-    ]
-  },
+  "panelText": "\n      \n          Aevra NCS Live\n        \n          Collapse\n          Detach\n          Close\n        \n      \n      \n        \n          Observatory\n          Typetutorial\n          Complexitymedium\n          Queries1\n        \n        \n          Neural Command System\n          Workflowidle\n          Confidence0%\n          Manipulation-\n        \n        \n          Harmony\n          Model Selectedmistral\n          Models Usedmistral\n          FallbackNo\n          Fusionverified single\n          No routing chain yet.\n        \n        \n          Verification\n          Agent-\n          Unique ID-\n          VerifiedNo\n        \n        \n          Memory\n          Retrieved-\n        \n        \n          Status\n          Complete\n        \n      \n    ",
+  "mediaCalls": [],
+  "forbiddenRequests": [],
   "consoleLogs": [
     {
       "type": "log",
-      "text": "[PersonalIntelligence] enabled: true"
-    },
-    {
-      "type": "log",
-      "text": "[PersonalIntelligence] cloud memory auth listener failed Firebase: Error (auth/invalid-api-key)."
-    },
-    {
-      "type": "log",
-      "text": "[PersonalIntelligence] VIS index loaded (repo) 0"
+      "text": "[PersonalIntelligence] VIS camera runtime disabled; using auth identity only"
     },
     {
       "type": "log",
       "text": "Progress boot: starting initialization..."
     },
     {
-      "type": "error",
-      "text": "Firebase runtime config error: FirebaseError: Firebase: Error (auth/invalid-api-key).\n    at z (https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js:1:22612)\n    at B (https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js:1:22763)\n    at new _i (https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js:1:123692)\n    at INTERNAL.registerComponent.N.setServiceProps.ActionCodeInfo.Operation.EMAIL_SIGNIN [as instanceFactory] (https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js:1:131328)\n    at y.getOrInitializeService (https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js:1:10211)\n    at y.getImmediate (https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js:1:8211)\n    at Oe._getService (https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js:1:26502)\n    at r.type.a.<computed> [as auth] (https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js:1:27642)\n    at Object.e [as auth] (https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js:1:27509)\n    at http://127.0.0.1:8080/firebase_runtime_config.js:64:45"
+      "type": "log",
+      "text": "%c ____  _   _ _____ _____ ____       _ ____  \n|  _ \\| | | |_   _| ____|  _ \\     | / ___| \n| |_) | | | | | | |  _| | |_) | _  | \\___ \\ \n|  __/| |_| | | | | |___|  _ < | |_| |___) |\n|_|    \\___/  |_| |_____|_| \\_(_)___/|____/  color: #000fd8; font-weight: bold; font-size: 14px; font-family: monospace;"
     },
     {
       "type": "log",
-      "text": "[TEST] Forcing startVIS manually"
+      "text": "%cSubmit this app to the Puter App Store:\n%chttps://apps.puter.com/ color: rgb(0, 57, 137); font-size: 18px; font-weight: bold; color: #3b82f6; font-size: 18px; font-weight: bold; text-decoration: underline;"
+    },
+    {
+      "type": "log",
+      "text": "%cTo disable this message: %cputer.quiet = true color: #94a3b8; font-size: 11px; color: #94a3b8; font-size: 11px; font-style: italic;"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "log",
+      "text": "[PersonalIntelligence] cloud memory disabled: firebase app not initialized"
     }
   ],
   "pageErrors": [],
-  "requestFailures": [],
-  "responses404": []
+  "requestFailures": []
 }

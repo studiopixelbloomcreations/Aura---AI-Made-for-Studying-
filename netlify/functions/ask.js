@@ -1,5 +1,7 @@
-const { env } = require("../../core/env");
 const axios = require("axios");
+const { getProviderConfig } = require("../../core/config_loader");
+const { analyzeInput } = require("../../core/observatory");
+const { detectSystemState, buildCognitiveBlueprint, compileCognitivePrompt, updateCognitivePerformance } = require("../../core/ncs_engine");
 
 function json(statusCode, obj) {
   return {
@@ -18,9 +20,10 @@ exports.handler = async function handler(event) {
   if (event.httpMethod === "OPTIONS") return json(200, { ok: true });
   if (event.httpMethod !== "POST") return json(405, { error: "Method not allowed" });
 
-  const GROQ_API_KEY = env("GROQ_API_KEY");
+  const groqConfig = getProviderConfig("groq");
+  const GROQ_API_KEY = groqConfig.apiKey || process.env.GROQ_API_KEY;
   if (!GROQ_API_KEY) {
-    return json(500, { error: "Missing GROQ_API_KEY in Netlify environment variables" });
+    return json(500, { error: "Missing Groq API key in AEVRA_MASTER_CONFIG or Netlify environment variables" });
   }
 
   let payload;
@@ -71,16 +74,28 @@ exports.handler = async function handler(event) {
     .filter(m => m && (m.role === 'user' || m.role === 'assistant') && m.content)
     .slice(-20)
     .map(m => ({ role: m.role, content: String(m.content).slice(0, 1200) }));
+  const observatory = analyzeInput(student_question);
+  const ncsContext = {
+    userMessage: student_question,
+    observatoryOutput: observatory,
+    activeModules: ["observatory", "ncs", "grade9_tutor", "points", "memory_context"],
+    recentCalls: ["ask"],
+    metadata: { subject, language, off_syllabus: overrideOutOfSyllabus },
+    sessionData: { history: cleanedHistory },
+  };
+  const ncsState = detectSystemState(ncsContext);
+  const ncsBlueprint = buildCognitiveBlueprint(ncsContext, ncsState);
+  const ncsPrompt = compileCognitivePrompt(ncsBlueprint);
 
   try {
     const response = await axios.post(
-      "https://api.groq.com/openai/v1/chat/completions",
+      `${String(groqConfig.baseUrl || "https://api.groq.com/openai/v1").replace(/\/$/, "")}/chat/completions`,
       {
-        model: "llama-3.1-8b-instant",
+        model: groqConfig.model || "llama-3.1-8b-instant",
         messages: [
           {
             role: "system",
-            content: `You are 'Aevra AI' — a very sweet, friendly, charming Grade 9 teacher in Sri Lanka. Your teaching must be strictly aligned to the official 2024 Sri Lankan Grade 9 print textbooks. Speak in ${language}.
+            content: `${ncsPrompt}` + `\n\nYou are Aevra AI, a very sweet, friendly, charming Grade 9 teacher in Sri Lanka. Your teaching must be strictly aligned to the official 2024 Sri Lankan Grade 9 print textbooks. Speak in ${language}.
 
 Scope rules (VERY IMPORTANT):
 - You MUST stay strictly within the Grade 9 Sri Lankan syllabus by default.
@@ -147,7 +162,28 @@ Points rule (VERY IMPORTANT):
       finalAnswer = finalAnswer + "\n\nAWARD_POINTS: 0";
     }
 
-    return json(200, { answer: finalAnswer, off_syllabus: !!offSyllabusHeuristic });
+    try {
+      await updateCognitivePerformance({
+        user_id: "main_chat",
+        system_type: ncsState.systemType,
+        confidence: ncsState.confidence,
+        model_used: groqConfig.model || "llama-3.1-8b-instant",
+        routing_success: true,
+        response_quality: 0.8,
+        metadata: { subject, language, off_syllabus: !!offSyllabusHeuristic },
+      });
+    } catch (e) {}
+
+    return json(200, {
+      answer: finalAnswer,
+      off_syllabus: !!offSyllabusHeuristic,
+      observatory,
+      ncs: {
+        system_state: ncsState,
+        cognitive_blueprint: ncsBlueprint,
+        prompt_preview: ncsPrompt.slice(0, 600),
+      },
+    });
   } catch (e) {
     return json(500, { error: "AI request failed" });
   }

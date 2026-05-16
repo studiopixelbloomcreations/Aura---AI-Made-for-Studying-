@@ -732,6 +732,12 @@ body {
   font-weight: 800
 }
 
+.aevra-logo {
+  object-fit: cover;
+  padding: 0;
+  background: transparent;
+}
+
 .brand-title {
   font-size: 24px;
   margin: 0;
@@ -2238,13 +2244,13 @@ body {
   background: rgba(255, 255, 255, 0.1);
 }
 
-.aevra-brand {
+.tutor-brand {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.aevra-logo {
+.tutor-logo {
   width: 48px;
   height: 48px;
   border-radius: 12px;
@@ -2258,20 +2264,20 @@ body {
   box-shadow: 0 8px 24px rgba(99, 102, 241, 0.2);
 }
 
-.aevra-info {
+.tutor-info {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.aevra-name {
+.tutor-name {
   font-size: 18px;
   font-weight: 700;
   color: var(--accent1);
   margin: 0;
 }
 
-.aevra-description {
+.tutor-description {
   font-size: 12px;
   color: var(--muted);
 }
@@ -4559,7 +4565,7 @@ body {
 
 /* === End smoothing tweaks === */
 
-/* Personal Intelligence visual assistant (Aevra) */
+/* Personal Intelligence visual assistant (Aevra AI) */
 .pi-panel {
   --pi-energy: 0.08;
   --pi-pulse: 0.18;

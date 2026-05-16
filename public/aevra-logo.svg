@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Aevra AI</title>
+  <desc id="desc">Premium liquid glass Aevra AI gradient mark.</desc>
+  <defs>
+    <linearGradient id="aevraGradient" x1="86" y1="420" x2="426" y2="76" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7c3cff"/>
+      <stop offset=".46" stop-color="#b25cff"/>
+      <stop offset="1" stop-color="#18e7ff"/>
+    </linearGradient>
+    <radialGradient id="glassGlow" cx="35%" cy="22%" r="72%">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".9"/>
+      <stop offset=".42" stop-color="#ffffff" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="22" stdDeviation="28" flood-color="#4c1d95" flood-opacity=".32"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="#070717"/>
+  <path filter="url(#softShadow)" d="M256 66c104.9 0 190 85.1 190 190s-85.1 190-190 190S66 360.9 66 256 151.1 66 256 66Z" fill="url(#aevraGradient)"/>
+  <path d="M256 91c91.1 0 165 73.9 165 165s-73.9 165-165 165S91 347.1 91 256 164.9 91 256 91Z" fill="url(#glassGlow)" opacity=".78"/>
+  <path d="M160 348 239 150h35l78 198h-44l-14-39h-76l-14 39h-44Zm70-73h52l-26-72-26 72Z" fill="#f8fbff"/>
+  <path d="M148 364h216" stroke="#9ff6ff" stroke-width="18" stroke-linecap="round" opacity=".86"/>
+  <path d="M154 126c52-35 123-43 183-17" stroke="#ffffff" stroke-width="18" stroke-linecap="round" opacity=".34"/>
+</svg>

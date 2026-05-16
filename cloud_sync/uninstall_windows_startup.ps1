@@ -1,4 +1,4 @@
 $ErrorActionPreference = "Stop"
-$taskName = "AevraCloudRepoMonitor"
+$taskName = "AevraAICloudRepoMonitor"
 Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
 Write-Host "Removed startup task: $taskName"

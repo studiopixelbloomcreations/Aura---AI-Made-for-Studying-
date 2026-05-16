@@ -1,85 +1,66 @@
-(function (global) {
+(function () {
   "use strict";
 
-  const MODELS = [
-    "groq:llama-3.1-70b-versatile",
-    "groq:mixtral-8x7b-32768",
-    "openrouter:openai/gpt-4o-mini",
-    "mistral:mistral-small-latest",
-    "huggingface:meta-llama/Llama-3.1-8B-Instruct",
-    "deepseek:deepseek-chat",
-    "puter:claude-3-5-sonnet",
-  ];
-  const status = MODELS.map((model) => ({ model, status: "ok" }));
+  const state = {
+    active: false,
+    workflow: "idle",
+    models: [],
+    confidence: 0,
+    routing: [],
+    ncs: null,
+    memory: [],
+    fusion: "idle",
+    updated_at: "",
+  };
 
-  function analyzeIntent(message) {
-    const text = String(message || "").toLowerCase();
-    if (/\b(exam|past paper|term test|quiz me|marks?)\b/.test(text)) return "exam_prep";
-    if (/\b(sad|stressed|overwhelmed|anxious|worried|tired)\b/.test(text)) return "emotional_support";
-    if (/\b(research|compare|sources|deep dive|investigate)\b/.test(text)) return "deep_research";
-    if ((text.match(/\?/g) || []).length > 1 || /\b(first|second|third).+\?/.test(text)) return "multi_question";
-    if (/\b(explain|teach|step by step|tutorial|show me how)\b/.test(text)) return "tutorial";
-    return "simple_qa";
+  function clone(value) {
+    try { return JSON.parse(JSON.stringify(value)); } catch (e) { return value; }
   }
 
-  function selectModel(intent, userConfig) {
-    if (intent === "deep_research" || intent === "multi_question") return MODELS[1];
-    if (intent === "emotional_support") return MODELS[0];
-    if (userConfig && userConfig.model === "advanced") return MODELS[1];
-    return MODELS[0];
-  }
-
-  async function sendToModel(model, messages, systemPrompt) {
-    const payload = { model, messages, systemPrompt };
-    if (model.startsWith("puter:") && global.puter && global.puter.ai) {
-      const prompt = [systemPrompt].concat((messages || []).map((m) => m.content)).filter(Boolean).join("\n\n");
-      return global.puter.ai.chat(prompt, { model: model.split(":")[1] });
-    }
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch("/harmony/ask", {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-aevra-csrf": sessionStorage.getItem("aevra_csrf") || "browser" },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
+  function summarizeModels(harmony) {
+    const plans = harmony && Array.isArray(harmony.query_plans) ? harmony.query_plans : [];
+    const seen = new Set();
+    plans.forEach(function (plan) {
+      (Array.isArray(plan.attempts) ? plan.attempts : []).forEach(function (attempt) {
+        if (attempt && attempt.model) seen.add(String(attempt.model));
+      });
+      if (plan && plan.model_used) seen.add(String(plan.model_used));
     });
-    clearTimeout(timer);
-    const data = await res.json().catch(() => ({}));
-    const body = data.data || data;
-    if (!res.ok || data.success === false || data.error) {
-      const row = status.find((s) => s.model === model);
-      if (row) row.status = res.status === 429 ? "rate_limited" : "error";
-      throw new Error(data.error || "Model request failed");
-    }
-    return body.response || body.answer || "";
+    if (harmony && harmony.model_used) seen.add(String(harmony.model_used));
+    return Array.from(seen);
   }
 
-  async function harmonize(userMessage, userProfile) {
-    const intent = analyzeIntent(userMessage);
-    const systemPrompt = `You are Aevra, a warm and intelligent AI study companion designed for students. Adapt to ${userProfile && userProfile.displayName ? userProfile.displayName : "the student"} and answer with the ${intent} intent in mind.`;
-    const messages = [{ role: "user", content: userMessage }];
-    const preferred = selectModel(intent, userProfile && userProfile.ai_behavior_configuration);
-    const ordered = [preferred].concat(MODELS.filter((m) => m !== preferred));
-    let lastError = null;
-    for (const model of ordered) {
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          const response = await sendToModel(model, messages, systemPrompt);
-          const row = status.find((s) => s.model === model);
-          if (row) row.status = "ok";
-          return response;
-        } catch (error) {
-          lastError = error;
-          if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 200));
-        }
-      }
-    }
-    throw lastError || new Error("All Aevra models are unavailable.");
+  function ingest(detail) {
+    const d = detail && typeof detail === "object" ? detail : {};
+    const harmony = d.agent_harmony || d.harmony || {};
+    const ncs = d.ncs || harmony.ncs || null;
+    const systemState = ncs && (ncs.system_state || ncs.systemState) || {};
+    state.active = true;
+    state.workflow = String(systemState.systemType || (d.observatory && d.observatory.type) || "conversation");
+    state.confidence = Number(systemState.confidence || 0);
+    state.models = summarizeModels(harmony);
+    state.routing = (Array.isArray(harmony.query_plans) ? harmony.query_plans : []).map(function (plan) {
+      return {
+        query_id: plan.query_id,
+        type: plan.type,
+        complexity: plan.complexity,
+        model_used: plan.model_used,
+        fallback_used: !!plan.fallback_used,
+      };
+    });
+    state.ncs = clone(ncs);
+    state.memory = Object.keys((d.learned_facts || d.memory_updates || {})).slice(0, 12);
+    state.fusion = state.models.length > 1 ? "response_fusion" : "single_model_verified";
+    state.updated_at = new Date().toISOString();
+    window.dispatchEvent(new CustomEvent("aevra:harmony-state", { detail: clone(state) }));
   }
 
-  function getModelStatus() {
-    return status.slice();
-  }
+  window.AevraHarmonySystem = {
+    ingest,
+    getState: function () { return clone(state); },
+  };
 
-  global.AevraHarmonySystem = { analyzeIntent, selectModel, sendToModel, harmonize, getModelStatus };
-})(window);
+  window.addEventListener("pi:harmony-debug", function (event) {
+    ingest(event && event.detail || {});
+  });
+})();
