@@ -1,24 +1,31 @@
--- Supabase migration to create the LUMEN (Lifelong User Memory Evolution Network) storage bucket
+-- LUMEN (Lifelong User Memory Evolution Network) - Identity Archive Table
+-- This table stores unique per-user identity files that the AI continuously learns and updates.
 
--- Create the lumen_archives bucket if it does not exist
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('lumen_archives', 'lumen_archives', false)
-ON CONFLICT (id) DO NOTHING;
+CREATE TABLE IF NOT EXISTS lumen_archives (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  email TEXT NOT NULL,
+  unique_id TEXT NOT NULL,
+  file_key TEXT GENERATED ALWAYS AS (email || '_' || unique_id) STORED UNIQUE,
+  facts JSONB NOT NULL DEFAULT '{}'::jsonb,
+  base_profile JSONB NOT NULL DEFAULT '{}'::jsonb,
+  system_name TEXT NOT NULL DEFAULT 'LUMEN (Lifelong User Memory Evolution Network)',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
--- Enable RLS for the storage.objects table if not already enabled
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+-- Index for fast lookups by email + unique_id
+CREATE INDEX IF NOT EXISTS idx_lumen_email_uid ON lumen_archives (email, unique_id);
 
--- Allow authenticated users to insert files into the lumen_archives bucket
-CREATE POLICY "Allow authenticated uploads to lumen_archives"
-  ON storage.objects FOR INSERT
-  WITH CHECK (bucket_id = 'lumen_archives' AND auth.role() = 'authenticated');
+-- Enable Row Level Security
+ALTER TABLE lumen_archives ENABLE ROW LEVEL SECURITY;
 
--- Allow authenticated users to update their files in the lumen_archives bucket
-CREATE POLICY "Allow authenticated updates to lumen_archives"
-  ON storage.objects FOR UPDATE
-  USING (bucket_id = 'lumen_archives' AND auth.role() = 'authenticated');
+-- Allow service-role full access (used by Netlify functions)
+CREATE POLICY "Service role full access on lumen_archives"
+  ON lumen_archives FOR ALL
+  USING (true)
+  WITH CHECK (true);
 
--- Allow authenticated users to read files in the lumen_archives bucket
-CREATE POLICY "Allow authenticated reads from lumen_archives"
-  ON storage.objects FOR SELECT
-  USING (bucket_id = 'lumen_archives' AND auth.role() = 'authenticated');
+-- Allow authenticated users to read their own archive
+CREATE POLICY "Authenticated users read own lumen archive"
+  ON lumen_archives FOR SELECT
+  USING (auth.jwt() ->> 'email' = email);
