@@ -8,6 +8,21 @@ const distDir = path.join(baseDir, "dist");
 const auraUiDir = path.join(repoRoot, "gemini_clone_ui");
 const auraDistDir = path.join(auraUiDir, "dist");
 
+function runNpm(args) {
+  if (process.platform === "win32") {
+    execFileSync("cmd.exe", ["/d", "/s", "/c", `npm ${args.join(" ")}`], {
+      cwd: auraUiDir,
+      stdio: "inherit",
+    });
+    return;
+  }
+
+  execFileSync("npm", args, {
+    cwd: auraUiDir,
+    stdio: "inherit",
+  });
+}
+
 function cleanDir(target) {
   fs.rmSync(target, { recursive: true, force: true });
   fs.mkdirSync(target, { recursive: true });
@@ -15,17 +30,11 @@ function cleanDir(target) {
 
 cleanDir(distDir);
 
-if (process.platform === "win32") {
-  execFileSync("cmd.exe", ["/d", "/s", "/c", "npm run build"], {
-    cwd: auraUiDir,
-    stdio: "inherit",
-  });
-} else {
-  execFileSync("npm", ["run", "build"], {
-    cwd: auraUiDir,
-    stdio: "inherit",
-  });
+if (!fs.existsSync(path.join(auraUiDir, "node_modules", ".bin", process.platform === "win32" ? "tsc.cmd" : "tsc"))) {
+  runNpm(["ci", "--include=dev"]);
 }
+
+runNpm(["run", "build"]);
 
 fs.cpSync(auraDistDir, distDir, { recursive: true });
 
