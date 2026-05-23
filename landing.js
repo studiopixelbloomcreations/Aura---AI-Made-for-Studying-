@@ -1,7 +1,7 @@
 (function () {
   var TOKEN_KEY = 'g9_token';
   var TOKEN_EXP_KEY = 'g9_token_exp';
-  var THEME_KEY = 'aura_landing_theme';
+  var THEME_KEY = 'tutor_landing_theme';
   var systemQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 
   function isTokenValid() {
@@ -16,12 +16,12 @@
     }
   }
 
-  function launchAura() {
+  function launchAevraAI() {
     if (isTokenValid()) {
-      window.location.href = 'aura-live.html';
+      window.location.href = 'app.html';
       return;
     }
-    window.location.href = 'login.html?return=aura-live.html';
+    window.location.href = 'login.html?return=app.html';
   }
 
   function getSystemTheme() {
@@ -222,12 +222,12 @@
     initParticleField();
 
     var launchButtons = [
-      document.getElementById('launchAuraBtn'),
-      document.getElementById('launchAuraBtn2')
+      document.getElementById('launchAevraAIBtn'),
+      document.getElementById('launchAevraAIBtn2')
     ];
     document.querySelectorAll('.launch-now').forEach(function (btn) { launchButtons.push(btn); });
     launchButtons.forEach(function (btn) {
-      if (btn) btn.addEventListener('click', launchAura);
+      if (btn) btn.addEventListener('click', launchAevraAI);
     });
 
     var themeBtn = document.getElementById('themeToggle');

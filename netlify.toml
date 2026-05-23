@@ -12,16 +12,6 @@
   to = "/landing.html"
   status = 302
 
-[[redirects]]
-  from = "/aura-live"
-  to = "/aura-live.html"
-  status = 200
-
-[[redirects]]
-  from = "/personal-intelligence"
-  to = "/aura-live.html"
-  status = 302
-
 
 # API redirect to Netlify Functions
 [[redirects]]

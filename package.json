@@ -1,15 +1,15 @@
 {
-  "name": "grade9-ai-aura",
+  "name": "aevra-ai",
   "private": true,
   "version": "1.0.0",
-  "description": "Aura Live (Netlify frontend + functions)",
-  "author": "Aura Live Team",
+  "description": "Aevra AI (Netlify frontend + functions)",
+  "author": "Aevra AI Team",
   "main": "desktop/main.js",
   "scripts": {
     "desktop": "electron .",
-    "desktop:url": "electron .",
+    "desktop:url": "set APP_START_URL=https://aevra-ai.netlify.app/&& electron .",
     "cloud-sync:watch": "node cloud_sync/run_monitor.js",
-    "cloud-sync:watch:fast": "node cloud_sync/run_monitor.js",
+    "cloud-sync:watch:fast": "set CLOUD_SYNC_POLL_MS=500&& node cloud_sync/run_monitor.js",
     "desktop:build": "electron-builder --win nsis",
     "desktop:publish": "electron-builder --win nsis --publish always",
     "test:evolution": "node netlify/functions/personal_intelligence_evolution/evolution.test.js",
@@ -37,8 +37,8 @@
     "playwright": "^1.58.2"
   },
   "build": {
-    "appId": "com.aura.live",
-    "productName": "Aura Live Desktop",
+    "appId": "com.aevra.personalintelligence",
+    "productName": "Aevra AI Desktop",
     "asar": true,
     "files": [
       "desktop/**/*",
@@ -58,7 +58,7 @@
       "target": [
         "nsis"
       ],
-      "artifactName": "Aura-Live-Desktop-${version}-Setup.${ext}"
+      "artifactName": "Aevra-AI-Desktop-${version}-Setup.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -68,11 +68,11 @@
       {
         "provider": "github",
         "owner": "studiopixelbloomcreations",
-        "repo": "Aura-Live"
+        "repo": "Aevra---AI-Made-for-Studying-"
       }
     ],
     "releaseInfo": {
-      "releaseName": "Aura Live Desktop v${version}"
+      "releaseName": "Aevra AI Desktop v${version}"
     }
   }
 }
