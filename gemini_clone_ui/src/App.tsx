@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Gemini } from './components/gemini'
 import { Sidebar } from './components/sidebar'
 import { AuraLive } from './components/aura-live'
@@ -6,7 +6,7 @@ import { StudyCenter } from './components/study-center'
 import { ExamCenter } from './components/exam-center'
 import { AuraLogo } from './components/icons/aura-logo'
 import { AssistantRuntimeProvider, useLocalRuntime } from "@assistant-ui/react"
-import { askBackend, API_BASE_URL, getAuraIdentity } from './lib/api'
+import { askBackend, API_BASE_URL, getAuraIdentity, type AuraIdentity } from './lib/api'
 import { useAppStore } from './store/useAppStore'
 import {
   Sparkles,
@@ -31,7 +31,160 @@ import {
   DropdownMenuTrigger,
 } from "@/components/shared/dropdown-menu"
 
+type GateStage = "landing" | "login" | "checking" | "onboarding" | "loading" | "ready";
+
+type BasicAnswers = {
+  preferred_name: string;
+  grade: string;
+  school: string;
+  preferred_language: string;
+  favorite_subjects: string;
+  hard_subjects: string;
+  learning_style: string;
+  preferred_tone: string;
+  main_goal: string;
+};
+
+const BASIC_QUESTIONS: Array<{
+  id: keyof BasicAnswers;
+  label: string;
+  kind?: "select";
+  options?: string[];
+  placeholder?: string;
+}> = [
+  { id: "preferred_name", label: "What should Aura call you?", placeholder: "Your name" },
+  { id: "grade", label: "What grade are you in?", placeholder: "Grade 9" },
+  { id: "school", label: "What school do you go to?", placeholder: "School name" },
+  { id: "preferred_language", label: "Which language should Aura prefer?", kind: "select", options: ["English", "Sinhala", "English and Sinhala"] },
+  { id: "favorite_subjects", label: "Favorite subjects?", placeholder: "Science, ICT, Math" },
+  { id: "hard_subjects", label: "Subjects that feel hard right now?", placeholder: "Algebra, chemistry..." },
+  { id: "learning_style", label: "How do you learn best?", kind: "select", options: ["Step by step", "Examples first", "Fast and direct", "Quiz me"] },
+  { id: "preferred_tone", label: "What kind of Aura should help you?", kind: "select", options: ["Warm and calm", "Energetic", "Strict and focused", "Funny but useful"] },
+  { id: "main_goal", label: "What is your main learning goal?", placeholder: "Improve marks, understand science..." },
+];
+
+function uniqueIdFromProfile(profile: any) {
+  return String(profile?.unique_id || profile?.unique_identifier || profile?.user_config?.unique_id || "").trim();
+}
+
+function basicAnswersReady(profile: any) {
+  const answers = profile?.personalization_data?.onboarding_answers;
+  return !!(answers?.preferred_name && Object.keys(answers || {}).length >= 5);
+}
+
+function saveIdentity(identity: AuraIdentity) {
+  localStorage.setItem("aura_identity", JSON.stringify(identity));
+  localStorage.setItem("aura_email", identity.email || "");
+  localStorage.setItem("aura_name", identity.name || "");
+  (window as any).Auth = {
+    getUser: () => ({
+      uid: identity.user_id,
+      user_id: identity.user_id,
+      email: identity.email,
+      name: identity.name,
+      photoURL: identity.avatar,
+      avatar: identity.avatar,
+    }),
+  };
+}
+
+function profileFileFor(identity: AuraIdentity, profile: any) {
+  const safe = String(identity.user_id || identity.email || "user").replace(/[^a-zA-Z0-9._-]+/g, "_");
+  return String(profile?.profile_file || profile?.file_name || `${safe}.piuser.json`);
+}
+
+async function readProfile(identity: AuraIdentity) {
+  const res = await fetch(`${API_BASE_URL}/personal-intelligence/config?user_id=${encodeURIComponent(identity.user_id)}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error || `Profile check failed (${res.status})`);
+  return data?.profile || data?.data?.profile || null;
+}
+
+async function createProfile(identity: AuraIdentity, answers: BasicAnswers) {
+  const res = await fetch(`${API_BASE_URL}/personal-intelligence/config`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      identity,
+      user: identity,
+      user_id: identity.user_id,
+      email: identity.email,
+      name: identity.name,
+      avatar: identity.avatar,
+      answers,
+      onboarding_answers: answers,
+      personalization_answers: answers,
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data?.success === false) throw new Error(data?.error || `Profile creation failed (${res.status})`);
+  return data?.profile || data?.data?.profile || null;
+}
+
+async function waitForUniqueProfile(identity: AuraIdentity, seedProfile: any) {
+  let profile = seedProfile;
+  for (let i = 0; i < 28; i += 1) {
+    const uniqueId = uniqueIdFromProfile(profile);
+    if (profile && uniqueId) {
+      return {
+        profile,
+        unique_id: uniqueId,
+        profile_file: profileFileFor(identity, profile),
+      };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    profile = await readProfile(identity).catch(() => null);
+  }
+  throw new Error("Aura did not receive the unique id/profile file yet.");
+}
+
+function loadScriptOnce(src: string, key: string) {
+  if ((window as any)[key]) return Promise.resolve(true);
+  const existing = document.querySelector(`script[data-aura-loader="${key}"]`) as HTMLScriptElement | null;
+  if (existing) {
+    return new Promise((resolve, reject) => {
+      existing.addEventListener("load", () => resolve(true), { once: true });
+      existing.addEventListener("error", reject, { once: true });
+    });
+  }
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.defer = true;
+    script.setAttribute("data-aura-loader", key);
+    script.addEventListener("load", () => resolve(true), { once: true });
+    script.addEventListener("error", reject, { once: true });
+    document.head.appendChild(script);
+  });
+}
+
+async function ensureFirebaseAuthRuntime() {
+  await loadScriptOnce("https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js", "firebase-app");
+  await loadScriptOnce("https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js", "firebase-auth");
+  await loadScriptOnce("/firebase_runtime_config.js", "firebase-runtime-config");
+  return (window as any).FirebaseRuntimeConfig?.ensureInitialized?.();
+}
+
 export default function App() {
+  const [gateStage, setGateStage] = useState<GateStage>("landing")
+  const [gateIdentity, setGateIdentity] = useState<AuraIdentity | null>(null)
+  const [gateError, setGateError] = useState("")
+  const [gateStatus, setGateStatus] = useState("Checking your Aura identity...")
+  const [basicAnswers, setBasicAnswers] = useState<BasicAnswers>({
+    preferred_name: "",
+    grade: "Grade 9",
+    school: "",
+    preferred_language: "English",
+    favorite_subjects: "",
+    hard_subjects: "",
+    learning_style: "Step by step",
+    preferred_tone: "Warm and calm",
+    main_goal: "",
+  })
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const {
@@ -44,8 +197,110 @@ export default function App() {
     activeTab,
     setActiveTab,
   } = useAppStore()
-  const identity = getAuraIdentity()
+  const identity = gateIdentity || getAuraIdentity()
   const profileInitial = (identity.name || identity.email || "Aura").slice(0, 1).toUpperCase()
+  useEffect(() => {
+    const stored = (() => {
+      try {
+        return JSON.parse(localStorage.getItem("aura_identity") || "null");
+      } catch {
+        return null;
+      }
+    })();
+    if (stored?.user_id && stored?.email) {
+      const identity = { user_id: stored.user_id, email: stored.email, name: stored.name || "Student", avatar: stored.avatar || "" };
+      setGateIdentity(identity);
+      saveIdentity(identity);
+      verifyStrictProfile(identity);
+    }
+  }, []);
+
+  const launchLogin = async () => {
+    setGateError("");
+    setGateStage("login");
+  };
+
+  const signInWithGoogle = async () => {
+    setGateError("");
+    setGateStatus("Connecting your Google account...");
+    try {
+      const runtime = await ensureFirebaseAuthRuntime();
+      const firebase = runtime?.firebase || (window as any).firebase;
+      const auth = runtime?.auth || firebase?.auth?.();
+      if (!firebase || !auth) throw new Error("Firebase auth is not ready. Check /public-config and authorized domains.");
+      await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => undefined);
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.addScope("email");
+      const result = await auth.signInWithPopup(provider);
+      const user = result?.user || auth.currentUser;
+      if (!user?.uid || !user?.email) throw new Error("Google did not return account details.");
+      const nextIdentity: AuraIdentity = {
+        user_id: String(user.uid),
+        email: String(user.email || ""),
+        name: String(user.displayName || user.email || "Student"),
+        avatar: String(user.photoURL || ""),
+      };
+      saveIdentity(nextIdentity);
+      setGateIdentity(nextIdentity);
+      await verifyStrictProfile(nextIdentity);
+    } catch (error: any) {
+      setGateError(error?.message || "Google sign in failed.");
+      setGateStage("login");
+    }
+  };
+
+  const verifyStrictProfile = async (identity: AuraIdentity) => {
+    setGateStage("checking");
+    setGateStatus("Checking for your unique Aura profile...");
+    setGateError("");
+    const profile = await readProfile(identity).catch(() => null);
+    const uniqueId = uniqueIdFromProfile(profile);
+    if (profile && uniqueId && basicAnswersReady(profile)) {
+      const strictProfile = await waitForUniqueProfile(identity, profile);
+      localStorage.setItem(`aura_onboarding_ready:${identity.user_id}`, JSON.stringify(strictProfile));
+      setGateStage("ready");
+      return;
+    }
+    setBasicAnswers((prev) => ({
+      ...prev,
+      preferred_name: prev.preferred_name || identity.name.split(" ")[0] || "",
+    }));
+    setGateStage("onboarding");
+  };
+
+  const submitBasicOnboarding = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!gateIdentity) return;
+    setGateStage("loading");
+    setGateStatus("Sending your basic profile through Harmony...");
+    setGateError("");
+    try {
+      const profile = await createProfile(gateIdentity, {
+        ...basicAnswers,
+        preferred_name: basicAnswers.preferred_name || gateIdentity.name.split(" ")[0] || "Student",
+      });
+      setGateStatus("Waiting for the actual unique id and LUMEN profile file...");
+      const strictProfile = await waitForUniqueProfile(gateIdentity, profile);
+      localStorage.setItem(`aura_onboarding_ready:${gateIdentity.user_id}`, JSON.stringify(strictProfile));
+      setGateStatus("Your unique Aura intelligence is ready.");
+      setGateStage("ready");
+    } catch (error: any) {
+      setGateError(error?.message || "Aura setup could not finish.");
+      setGateStage("onboarding");
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      const auth = (window as any).FirebaseRuntimeConfig?.getAuth?.() || (window as any).firebase?.auth?.();
+      await auth?.signOut?.();
+    } catch {}
+    localStorage.removeItem("aura_identity");
+    localStorage.removeItem("aura_email");
+    localStorage.removeItem("aura_name");
+    setGateIdentity(null);
+    setGateStage("landing");
+  };
 
   // Find active chat details
   const activeChat = chats.find(c => c.id === activeChatId) || { id: "New Chat", title: "New Chat", preview: "", time: "" }
@@ -111,6 +366,100 @@ export default function App() {
       default: return isChatStarted ? activeChat.title : "";
     }
   };
+
+  const gateScreen = useMemo(() => {
+    if (gateStage === "ready") return null;
+    if (gateStage === "landing") {
+      return (
+        <div className="min-h-screen bg-white dark:bg-[#0e0e0f] text-[#1f1f1f] dark:text-[#e3e3e3] flex flex-col">
+          <header className="h-16 px-6 flex items-center justify-between border-b border-black/5 dark:border-white/5">
+            <div className="flex items-center gap-2">
+              <AuraLogo className="size-8" />
+              <span className="text-xl font-semibold">Aura</span>
+            </div>
+            <button onClick={launchLogin} className="h-10 px-5 rounded-full bg-[#d3e3fd] text-[#0b57d0] text-sm font-bold">Log in</button>
+          </header>
+          <main className="flex-1 flex items-center px-6 py-12">
+            <div className="mx-auto max-w-5xl grid md:grid-cols-[1.1fr_0.9fr] gap-10 items-center">
+              <div className="space-y-6">
+                <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 dark:bg-blue-950/30 px-4 py-2 text-xs font-bold text-blue-600 dark:text-blue-300">
+                  <Sparkles className="size-4" /> Grade 9 Personal Intelligence
+                </div>
+                <h1 className="text-5xl md:text-7xl font-medium tracking-tight leading-none bg-gradient-to-r from-[#4285f4] via-[#9b72cb] to-[#d96570] text-transparent bg-clip-text">
+                  Aura AI
+                </h1>
+                <p className="text-lg text-[#5f6368] dark:text-[#bdc1c6] leading-8 max-w-2xl">
+                  A personal study AI that remembers your learning style, routes every answer through Harmony, and builds a private intelligence profile for your Google account.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <button onClick={launchLogin} className="h-12 px-6 rounded-full bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/20">
+                    Start with Google
+                  </button>
+                  <button onClick={launchLogin} className="h-12 px-6 rounded-full border border-[#dadce0] dark:border-[#2d2f31] font-bold">
+                    Continue to Aura
+                  </button>
+                </div>
+              </div>
+              <div className="rounded-[28px] border border-[#dadce0]/70 dark:border-[#2d2f31] bg-[#f8fafd] dark:bg-[#1e1f20] p-6 shadow-2xl">
+                <img src="/aura-logo.png" alt="Aura AI" className="w-full rounded-2xl object-contain bg-white/60 dark:bg-black/20 p-8" />
+              </div>
+            </div>
+          </main>
+        </div>
+      );
+    }
+    if (gateStage === "login") {
+      return (
+        <GateShell title="Log in to continue" subtitle="Aura must bind your unique intelligence to your Google account before the UI opens.">
+          <button onClick={signInWithGoogle} className="w-full h-12 rounded-full bg-blue-600 text-white font-bold">Continue with Google</button>
+          <button onClick={() => setGateStage("landing")} className="w-full h-11 rounded-full border border-[#dadce0] dark:border-[#2d2f31] text-sm font-bold">Back</button>
+          {gateError && <p className="text-xs text-red-500">{gateError}</p>}
+        </GateShell>
+      );
+    }
+    if (gateStage === "checking" || gateStage === "loading") {
+      return (
+        <GateShell title="Preparing your Aura" subtitle={gateStatus}>
+          <div className="h-1.5 rounded-full bg-black/5 dark:bg-white/10 overflow-hidden">
+            <div className="h-full w-1/2 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-progress-glow" />
+          </div>
+          <p className="text-xs text-[#70757a] dark:text-[#9aa0a6]">This screen will not continue until the unique id and profile file are retrieved.</p>
+        </GateShell>
+      );
+    }
+    return (
+      <GateShell title="Personalize Aura" subtitle="Answer these once so Harmony can create the first version of your private profile.">
+        <form onSubmit={submitBasicOnboarding} className="grid gap-3">
+          {BASIC_QUESTIONS.map((question) => (
+            <label key={question.id} className="grid gap-1.5 text-xs font-bold text-[#5f6368] dark:text-[#bdc1c6]">
+              <span>{question.label}</span>
+              {question.kind === "select" ? (
+                <select
+                  value={basicAnswers[question.id]}
+                  onChange={(e) => setBasicAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))}
+                  className="h-10 rounded-xl border border-[#dadce0] dark:border-[#2d2f31] bg-[#f8fafd] dark:bg-[#0f0f10] px-3 text-sm text-foreground"
+                >
+                  {(question.options || []).map((option) => <option key={option} value={option}>{option}</option>)}
+                </select>
+              ) : (
+                <input
+                  required={question.id === "preferred_name"}
+                  value={basicAnswers[question.id]}
+                  placeholder={question.placeholder}
+                  onChange={(e) => setBasicAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))}
+                  className="h-10 rounded-xl border border-[#dadce0] dark:border-[#2d2f31] bg-[#f8fafd] dark:bg-[#0f0f10] px-3 text-sm text-foreground"
+                />
+              )}
+            </label>
+          ))}
+          <button type="submit" className="mt-2 h-12 rounded-full bg-blue-600 text-white font-bold">Continue</button>
+          {gateError && <p className="text-xs text-red-500">{gateError}</p>}
+        </form>
+      </GateShell>
+    );
+  }, [gateStage, gateStatus, gateError, basicAnswers, gateIdentity]);
+
+  if (gateScreen) return gateScreen;
 
   return (
     <div className="h-screen w-full flex bg-white dark:bg-[#0e0e0f] font-sans overflow-hidden relative">
@@ -266,18 +615,21 @@ export default function App() {
               </h3>
 
               {/* Manage Aura Account button */}
-              <button className="bg-transparent border border-[#747775] hover:bg-[#0b57d0]/5 dark:border-[#8e918f] dark:hover:bg-white/5 text-[#0b57d0] dark:text-blue-400 font-bold text-xs py-2 px-6 rounded-full transition-all">
+              <button
+                onClick={() => window.open("https://myaccount.google.com/", "_blank", "noopener")}
+                className="bg-transparent border border-[#747775] hover:bg-[#0b57d0]/5 dark:border-[#8e918f] dark:hover:bg-white/5 text-[#0b57d0] dark:text-blue-400 font-bold text-xs py-2 px-6 rounded-full transition-all"
+              >
                 Manage your Google Account
               </button>
             </div>
 
             {/* Add account / Sign out capsule container */}
             <div className="bg-white dark:bg-[#1e1f20] rounded-2xl flex border border-[#dadce0]/50 dark:border-[#2d2f31]/50 overflow-hidden shadow-sm">
-              <button className="hover:bg-black/5 dark:hover:bg-white/5 flex-1 py-3 text-xs font-bold flex items-center justify-center gap-2 border-r border-[#dadce0]/50 dark:border-[#2d2f31]/50 text-[#444746] dark:text-[#c4c7c5]">
+              <button onClick={signInWithGoogle} className="hover:bg-black/5 dark:hover:bg-white/5 flex-1 py-3 text-xs font-bold flex items-center justify-center gap-2 border-r border-[#dadce0]/50 dark:border-[#2d2f31]/50 text-[#444746] dark:text-[#c4c7c5]">
                 <Plus className="size-4 text-muted-foreground" />
                 <span>Add account</span>
               </button>
-              <button className="hover:bg-black/5 dark:hover:bg-white/5 flex-1 py-3 text-xs font-bold flex items-center justify-center gap-2 text-[#444746] dark:text-[#c4c7c5]">
+              <button onClick={signOut} className="hover:bg-black/5 dark:hover:bg-white/5 flex-1 py-3 text-xs font-bold flex items-center justify-center gap-2 text-[#444746] dark:text-[#c4c7c5]">
                 <LogOut className="size-4 text-muted-foreground" />
                 <span>Sign out</span>
               </button>
@@ -295,4 +647,21 @@ export default function App() {
       {isLiveOpen && <AuraLive />}
     </div>
   )
+}
+
+function GateShell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-white dark:bg-[#0e0e0f] text-[#1f1f1f] dark:text-[#e3e3e3] flex items-center justify-center p-5">
+      <div className="w-full max-w-[560px] rounded-[28px] border border-[#dadce0]/70 dark:border-[#2d2f31] bg-white dark:bg-[#1e1f20] shadow-2xl p-6 space-y-5">
+        <div className="flex items-center gap-3">
+          <AuraLogo className="size-9" />
+          <div>
+            <h1 className="text-xl font-bold">{title}</h1>
+            <p className="text-sm text-[#70757a] dark:text-[#9aa0a6] leading-6">{subtitle}</p>
+          </div>
+        </div>
+        <div className="space-y-3">{children}</div>
+      </div>
+    </div>
+  );
 }

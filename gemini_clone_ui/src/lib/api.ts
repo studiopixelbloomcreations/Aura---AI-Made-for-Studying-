@@ -19,15 +19,21 @@ export function getAuraIdentity(): AuraIdentity {
   const authUser = (window as any).Auth && typeof (window as any).Auth.getUser === "function"
     ? (window as any).Auth.getUser()
     : null;
-  const email = String(authUser?.email || localStorage.getItem("aura_email") || "guest@student.com").trim();
-  const name = String(authUser?.name || authUser?.displayName || localStorage.getItem("aura_name") || "Studio Pixel").trim();
-  const userId = String(authUser?.uid || authUser?.user_id || email || "guest@student.com").trim();
+  let stored: any = null;
+  try {
+    stored = JSON.parse(localStorage.getItem("aura_identity") || "null");
+  } catch {
+    stored = null;
+  }
+  const email = String(authUser?.email || stored?.email || localStorage.getItem("aura_email") || "").trim();
+  const name = String(authUser?.name || authUser?.displayName || stored?.name || localStorage.getItem("aura_name") || "Student").trim();
+  const userId = String(authUser?.uid || authUser?.user_id || stored?.user_id || email || "").trim();
   return {
-    user_id: userId,
+    user_id: userId || "guest@student.com",
     email,
     name,
-    avatar: String(authUser?.photoURL || authUser?.avatar || "").trim(),
-    guest: !authUser,
+    avatar: String(authUser?.photoURL || authUser?.avatar || stored?.avatar || "").trim(),
+    guest: !authUser && !stored,
   };
 }
 

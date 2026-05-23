@@ -38,5 +38,6 @@ if (!fs.existsSync(path.join(auraUiDir, "node_modules", ".bin", process.platform
 runNpm(["run", "build"]);
 
 fs.cpSync(auraDistDir, distDir, { recursive: true });
+fs.cpSync(path.join(repoRoot, "firebase_runtime_config.js"), path.join(distDir, "firebase_runtime_config.js"));
 
 console.log("Netlify Aura UI bundle prepared at", distDir);
