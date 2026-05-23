@@ -52,6 +52,6 @@
   }
 
   const api = { getState, set, setCurrentUser, setSession, setAiMode, setLoading, setError, subscribe };
-  global.AevraState = api;
+  global.AuraState = api;
   if (typeof module !== "undefined") module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

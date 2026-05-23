@@ -2,7 +2,7 @@
   "use strict";
 
   const TRAINING_PHRASES = [
-    "Hey Aevra, help me study",
+    "Hey Aura, help me study",
     "I need help with mathematics",
     "Explain photosynthesis to me",
     "What is the quadratic formula",
@@ -11,10 +11,10 @@
     "Show me my progress today",
     "Help me understand Newton's laws",
     "I am ready to learn something new",
-    "Aevra, let's start a study session",
+    "Aura, let's start a study session",
   ];
 
-  class AevraOnboardingEngine {
+  class AuraOnboardingEngine {
     constructor() {
       this.index = 0;
       this.cancelled = false;
@@ -70,5 +70,5 @@
     });
   }
 
-  global.AevraOnboardingEngine = { AevraOnboardingEngine, TRAINING_PHRASES };
+  global.AuraOnboardingEngine = { AuraOnboardingEngine, TRAINING_PHRASES };
 })(window);

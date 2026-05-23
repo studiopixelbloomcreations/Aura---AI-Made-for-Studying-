@@ -1,9 +1,9 @@
 {
-  "name": "aevra-ai",
+  "name": "aura-ai",
   "private": true,
   "version": "1.0.0",
-  "description": "Aevra AI (Netlify frontend + functions)",
-  "author": "Aevra AI Team",
+  "description": "Aura AI (Netlify frontend + functions)",
+  "author": "Aura AI Team",
   "main": "desktop/main.js",
   "scripts": {
     "desktop": "electron .",
@@ -37,8 +37,8 @@
     "playwright": "^1.58.2"
   },
   "build": {
-    "appId": "com.aevra.personalintelligence",
-    "productName": "Aevra AI Desktop",
+    "appId": "com.aura.personalintelligence",
+    "productName": "Aura AI Desktop",
     "asar": true,
     "files": [
       "desktop/**/*",
@@ -58,7 +58,7 @@
       "target": [
         "nsis"
       ],
-      "artifactName": "Aevra-AI-Desktop-${version}-Setup.${ext}"
+      "artifactName": "Aura-AI-Desktop-${version}-Setup.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -68,11 +68,11 @@
       {
         "provider": "github",
         "owner": "studiopixelbloomcreations",
-        "repo": "Aevra---AI-Made-for-Studying-"
+        "repo": "Aura---AI-Made-for-Studying-"
       }
     ],
     "releaseInfo": {
-      "releaseName": "Aevra AI Desktop v${version}"
+      "releaseName": "Aura AI Desktop v${version}"
     }
   }
 }

@@ -55,5 +55,5 @@
     return session;
   }
 
-  global.AevraSessionManager = { getSession, setSession, clearSession, isExpired, touch, REVERIFY_MS };
+  global.AuraSessionManager = { getSession, setSession, clearSession, isExpired, touch, REVERIFY_MS };
 })(window);

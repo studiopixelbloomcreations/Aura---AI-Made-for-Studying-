@@ -3,16 +3,16 @@
 const { getConfigSection } = require("./config_loader");
 
 const ONBOARDING_PHRASES = [
-  "Hey Aevra, this is my voice.",
-  "Aevra, help me study with focus.",
+  "Hey Aura, this is my voice.",
+  "Aura, help me study with focus.",
   "My learning should feel personal.",
   "I want clear explanations and practice.",
   "Please remember my study patterns.",
-  "Aevra, verify me by my voice.",
+  "Aura, verify me by my voice.",
   "I am ready for adaptive learning.",
   "Use my voice to load my profile.",
   "Keep my identity secure.",
-  "Aevra AI is my study partner.",
+  "Aura AI is my study partner.",
 ];
 
 function embeddingFromText(text) {

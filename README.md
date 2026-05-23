@@ -1,6 +1,6 @@
-# Aevra AI - Local Test and Deployment
+# Aura AI - Local Test and Deployment
 
-Aevra AI is a glass UI study intelligence platform with Netlify functions, FastAPI support modules, Supabase-backed personalization, Harmony model routing, and the Neural Command System.
+Aura AI is a glass UI study intelligence platform with Netlify functions, FastAPI support modules, Supabase-backed personalization, Harmony model routing, and the Neural Command System.
 
 ## Run Locally
 

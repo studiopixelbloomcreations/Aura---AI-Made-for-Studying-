@@ -102,8 +102,8 @@
 
   async function ensurePuterReady(interactive){
     if(window.__VIS_TEST_USE_MOCK || navigator.onLine === false) return;
-    if((!window.puter || !window.puter.ai) && window.AevraVoicePuter && typeof window.AevraVoicePuter.load === 'function'){
-      await window.AevraVoicePuter.load();
+    if((!window.puter || !window.puter.ai) && window.AuraVoicePuter && typeof window.AuraVoicePuter.load === 'function'){
+      await window.AuraVoicePuter.load();
     }
     if(!window.puter || !window.puter.ai) throw new Error('PUTER_NOT_LOADED');
     if(!window.puter.auth || !window.puter.auth.isSignedIn || !window.puter.auth.signIn) return;

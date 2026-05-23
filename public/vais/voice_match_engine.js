@@ -37,5 +37,5 @@
     }
   }
 
-  global.AevraVoiceMatchEngine = VoiceMatchEngine;
+  global.AuraVoiceMatchEngine = VoiceMatchEngine;
 })(window);

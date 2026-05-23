@@ -23,7 +23,7 @@
     panel.hidden = true;
     panel.innerHTML = `
       <div class="pi-harmony-head">
-          <div class="pi-harmony-title">Aevra NCS Live</div>
+          <div class="pi-harmony-title">Aura NCS Live</div>
         <div class="pi-harmony-actions">
           <button type="button" data-harmony-action="collapse">Collapse</button>
           <button type="button" data-harmony-action="detach">Detach</button>

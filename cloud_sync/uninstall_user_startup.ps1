@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $startupDir = [Environment]::GetFolderPath("Startup")
-$launcherPath = Join-Path $startupDir "AevraAICloudSyncMonitor.cmd"
+$launcherPath = Join-Path $startupDir "AuraAICloudSyncMonitor.cmd"
 
 if (Test-Path $launcherPath) {
   Remove-Item -Path $launcherPath -Force

@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -22,6 +22,7 @@ class PersonalAssistantAskRequest(BaseModel):
     subject: Optional[str] = "General"
     title: Optional[str] = "Perosnla IIntelligence"
     history: Optional[List[Dict[str, str]]] = None
+    context: Optional[Dict[str, Any]] = None
 
 
 class ConnectServicePayload(BaseModel):
@@ -47,6 +48,7 @@ async def personal_assistant_ask(req: PersonalAssistantAskRequest):
         subject=req.subject,
         title=req.title,
         history=req.history,
+        context=req.context,
     )
 
 

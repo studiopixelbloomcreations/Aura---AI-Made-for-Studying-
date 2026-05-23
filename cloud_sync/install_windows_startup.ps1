@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$taskName = "AevraAICloudRepoMonitor"
+$taskName = "AuraAICloudRepoMonitor"
 $nodeCmd = "node"
 $scriptPath = Join-Path $repoRoot "cloud_sync\run_monitor.js"
 $workDir = $repoRoot
@@ -14,5 +14,5 @@ try {
   Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
 } catch {}
 
-Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Description "Continuously sync local repo from cloud changes for Aevra AI." | Out-Null
+Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Description "Continuously sync local repo from cloud changes for Aura AI." | Out-Null
 Write-Host "Installed startup task: $taskName"

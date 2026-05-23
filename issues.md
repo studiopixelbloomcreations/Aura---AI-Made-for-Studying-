@@ -16,7 +16,7 @@ None currently known. Puter.js loads asynchronously and the NCS/Harmony panel us
 
 ## Section 4 - Security Risks
 
-Production schema now includes RLS policies for Aevra AI identity, memory, NCS, harmony, personality, exam, and analytics tables.
+Production schema now includes RLS policies for Aura AI identity, memory, NCS, harmony, personality, exam, and analytics tables.
 
 ## Section 5 - Resolved Issues Log
 

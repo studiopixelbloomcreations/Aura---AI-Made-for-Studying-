@@ -1,18 +1,18 @@
 (function (global) {
   "use strict";
 
-  class AevraIdentityEngine {
+  class AuraIdentityEngine {
     constructor() {
       this.identifiedCallbacks = [];
       this.onboardingCallbacks = [];
-      this.matchEngine = new global.AevraVoiceMatchEngine();
+      this.matchEngine = new global.AuraVoiceMatchEngine();
     }
 
     onUserIdentified(callback) { if (typeof callback === "function") this.identifiedCallbacks.push(callback); }
     onboardingRequired(callback) { if (typeof callback === "function") this.onboardingCallbacks.push(callback); }
 
     async initialize() {
-      const session = global.AevraSessionManager && global.AevraSessionManager.getSession();
+      const session = global.AuraSessionManager && global.AuraSessionManager.getSession();
       if (session) {
         this._identified(session);
         return session;
@@ -21,11 +21,11 @@
     }
 
     async identifyFromAudio(audioBlob) {
-      const data = await global.AevraVoiceEmbeddingEngine.recognizeAudioBlob(audioBlob);
+      const data = await global.AuraVoiceEmbeddingEngine.recognizeAudioBlob(audioBlob);
       if (data.matched && data.userId) {
         const profile = { userId: data.userId, displayName: data.displayName || "Student", voiceConfidence: data.confidence };
-        global.AevraSessionManager.setSession(profile);
-        if (global.AevraState) global.AevraState.setCurrentUser(profile);
+        global.AuraSessionManager.setSession(profile);
+        if (global.AuraState) global.AuraState.setCurrentUser(profile);
         this._identified(profile);
         return profile;
       }
@@ -37,5 +37,5 @@
     _identified(profile) { this.identifiedCallbacks.forEach((callback) => callback(profile)); }
   }
 
-  global.AevraIdentityEngine = AevraIdentityEngine;
+  global.AuraIdentityEngine = AuraIdentityEngine;
 })(window);

@@ -12,5 +12,5 @@
     controller.addEventListener(type, (event) => callback(event.detail));
   }
 
-  global.AevraVisController = { init, on };
+  global.AuraVisController = { init, on };
 })(window);

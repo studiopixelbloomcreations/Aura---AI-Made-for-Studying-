@@ -1,84 +1,32 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 
 const baseDir = process.cwd();
 const repoRoot = path.resolve(baseDir, "..");
 const distDir = path.join(baseDir, "dist");
-
-const rootFilesToCopy = [
-  "account.js",
-  "api.js",
-  "app.html",
-  "auth.js",
-  "badges.js",
-  "chat.js",
-  "core/logger.js",
-  "core/state_manager.js",
-  "firebase_runtime_config.js",
-  "gamification.js",
-  "gamification_sync.js",
-  "googleSync.js",
-  "googlef11f1400b8d2bbab.html",
-  "index.html",
-  "index_v2.html",
-  "landing.css",
-  "landing.html",
-  "landing.js",
-  "login.css",
-  "login.html",
-  "login.js",
-  "loginRedirect.js",
-  "mic.js",
-  "personal_intelligence_ui.js",
-  "personalization_sync.js",
-  "points.js",
-  "profile.js",
-  "progress.js",
-  "puter_voice_catalog.js",
-  "reset.js",
-  "robots.txt",
-  "script.js",
-  "settings.js",
-  "service_worker.js",
-  "signup.html",
-  "signup.js",
-  "sitemap.xml",
-  "styles.css",
-  "timer.js",
-  "upload.js",
-  "voice_multimodal_ui.js",
-  "vis_controller.js",
-];
-
-const rootDirsToCopy = [
-  "ExamModeToggle",
-  "public",
-  "ui",
-];
+const auraUiDir = path.join(repoRoot, "gemini_clone_ui");
+const auraDistDir = path.join(auraUiDir, "dist");
 
 function cleanDir(target) {
   fs.rmSync(target, { recursive: true, force: true });
   fs.mkdirSync(target, { recursive: true });
 }
 
-function copyFileRelative(relativePath) {
-  const source = path.join(repoRoot, relativePath);
-  if (!fs.existsSync(source)) return;
-  const target = path.join(distDir, relativePath);
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.copyFileSync(source, target);
-}
-
-function copyDirRelative(relativePath) {
-  const source = path.join(repoRoot, relativePath);
-  if (!fs.existsSync(source)) return;
-  const target = path.join(distDir, relativePath);
-  fs.cpSync(source, target, { recursive: true });
-}
-
 cleanDir(distDir);
 
-for (const file of rootFilesToCopy) copyFileRelative(file);
-for (const dir of rootDirsToCopy) copyDirRelative(dir);
+if (process.platform === "win32") {
+  execFileSync("cmd.exe", ["/d", "/s", "/c", "npm run build"], {
+    cwd: auraUiDir,
+    stdio: "inherit",
+  });
+} else {
+  execFileSync("npm", ["run", "build"], {
+    cwd: auraUiDir,
+    stdio: "inherit",
+  });
+}
 
-console.log("Netlify frontend bundle prepared at", distDir);
+fs.cpSync(auraDistDir, distDir, { recursive: true });
+
+console.log("Netlify Aura UI bundle prepared at", distDir);

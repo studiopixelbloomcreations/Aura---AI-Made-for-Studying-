@@ -32,5 +32,5 @@
     }
   }
 
-  global.AevraConfidenceEngine = { ConfidenceEngine, HIGH, MEDIUM, LOW };
+  global.AuraConfidenceEngine = { ConfidenceEngine, HIGH, MEDIUM, LOW };
 })(window);

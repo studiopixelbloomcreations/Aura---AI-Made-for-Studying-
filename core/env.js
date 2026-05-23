@@ -77,6 +77,6 @@ function allowedOrigin() {
 
 if (typeof module !== "undefined") module.exports = { ENV, env, validateEnv, allowedOrigin };
 if (typeof window !== "undefined") {
-  window.AevraEnv = { ENV, env, validateEnv, allowedOrigin };
+  window.AuraEnv = { ENV, env, validateEnv, allowedOrigin };
   validateEnv();
 }

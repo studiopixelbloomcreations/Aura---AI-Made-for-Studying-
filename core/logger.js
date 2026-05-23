@@ -17,7 +17,7 @@ function write(level, type, payload) {
       rows.push(row);
       sessionStorage.setItem(key, JSON.stringify(rows));
     } catch (error) {}
-    if (level === "error") console.error("[Aevra]", row);
+    if (level === "error") console.error("[Aura]", row);
     return row;
   }
   const line = JSON.stringify(row);
@@ -36,4 +36,4 @@ const logger = {
 };
 
 if (typeof module !== "undefined") module.exports = logger;
-if (typeof window !== "undefined") window.AevraLogger = logger;
+if (typeof window !== "undefined") window.AuraLogger = logger;

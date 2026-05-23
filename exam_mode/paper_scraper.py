@@ -9,7 +9,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
-USER_AGENT = "Aevra AI-ExamMode/2.0"
+USER_AGENT = "Aura AI-ExamMode/2.0"
 REQUEST_TIMEOUT = 30
 MAX_SUBJECT_PAGES = 20
 MAX_TERM_PAGES = 30

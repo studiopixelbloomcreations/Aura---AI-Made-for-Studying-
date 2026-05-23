@@ -3,10 +3,10 @@
 
   function buildSystemPrompt(profile, config) {
     const c = config || {};
-    return `You are Aevra, an AI study assistant. The user's name is ${profile.displayName || profile.name || "Student"}. Use a ${c.tone || "friendly"} tone. Humor level: ${c.humor_level || c.humor || 5}/10. Be ${c.verbosity || "medium"} in your responses. Teaching style: ${c.teaching_style || c.style || "socratic"}. The user is a Grade ${profile.grade || 9} student.`;
+    return `You are Aura, an AI study assistant. The user's name is ${profile.displayName || profile.name || "Student"}. Use a ${c.tone || "friendly"} tone. Humor level: ${c.humor_level || c.humor || 5}/10. Be ${c.verbosity || "medium"} in your responses. Teaching style: ${c.teaching_style || c.style || "socratic"}. The user is a Grade ${profile.grade || 9} student.`;
   }
 
-  class AevraAIRouter {
+  class AuraAIRouter {
     constructor() {
       this.profile = {};
       this.config = {};
@@ -32,10 +32,10 @@
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || "Aevra could not answer right now.");
+      if (!res.ok || data.error) throw new Error(data.error || "Aura could not answer right now.");
       return data.response || data.answer || "";
     }
   }
 
-  global.AevraAIRouter = { AevraAIRouter, buildSystemPrompt };
+  global.AuraAIRouter = { AuraAIRouter, buildSystemPrompt };
 })(window);

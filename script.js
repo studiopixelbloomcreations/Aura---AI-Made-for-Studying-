@@ -751,7 +751,7 @@
     if(piBrainToggle){
       piBrainToggle.classList.toggle('active', state.piChatMode);
       piBrainToggle.setAttribute('aria-pressed', state.piChatMode ? 'true' : 'false');
-      piBrainToggle.title = state.piChatMode ? 'Personal Intelligence brain active' : 'Main Aevra AI brain active';
+      piBrainToggle.title = state.piChatMode ? 'Personal Intelligence brain active' : 'Main Aura AI brain active';
     }
     if(inputBox){
       inputBox.placeholder = state.piChatMode
@@ -1413,7 +1413,7 @@
   if (piBrainToggle) {
     piBrainToggle.addEventListener('click', () => {
       setPiChatMode(!state.piChatMode);
-      toast(state.piChatMode ? 'Personal Intelligence text mode enabled' : 'Main Aevra AI mode enabled');
+      toast(state.piChatMode ? 'Personal Intelligence text mode enabled' : 'Main Aura AI mode enabled');
     });
   }
 

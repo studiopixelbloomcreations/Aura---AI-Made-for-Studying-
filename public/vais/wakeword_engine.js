@@ -1,7 +1,7 @@
 (function (global) {
   "use strict";
 
-  class AevraWakewordEngine {
+  class AuraWakewordEngine {
     constructor(options) {
       this.options = options || {};
       this.callbacks = [];
@@ -53,7 +53,7 @@
     }
 
     _fire(source) {
-      this.callbacks.forEach((callback) => callback({ phrase: "Hey Aevra", source }));
+      this.callbacks.forEach((callback) => callback({ phrase: "Hey Aura", source }));
     }
 
     _ensureIndicator() {
@@ -63,11 +63,11 @@
       this.indicator.type = "button";
       this.indicator.className = "aevra-wake-indicator";
       this.indicator.setAttribute("data-aevra-wake-indicator", "true");
-      this.indicator.setAttribute("aria-label", "Aevra voice wake word listener");
+      this.indicator.setAttribute("aria-label", "Aura voice wake word listener");
       this.indicator.textContent = "Voice";
       document.body.appendChild(this.indicator);
     }
   }
 
-  global.AevraWakewordEngine = AevraWakewordEngine;
+  global.AuraWakewordEngine = AuraWakewordEngine;
 })(window);

@@ -1,6 +1,6 @@
 {
   "name": "functions",
-  "description": "Cloud Functions for Aevra AI",
+  "description": "Cloud Functions for Aura AI",
   "scripts": {
     "lint": "eslint .",
     "serve": "firebase emulators:start --only functions",

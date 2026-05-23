@@ -63,5 +63,5 @@
     return weak.length ? `The student may need more support with: ${weak.slice(0, 5).join(", ")}.` : "No weak areas are known yet.";
   }
 
-  global.AevraMemoryGraph = { addNode, addRelationship, queryRelated, getWeakAreas, getStudyGraph, summarizeForPrompt };
+  global.AuraMemoryGraph = { addNode, addRelationship, queryRelated, getWeakAreas, getStudyGraph, summarizeForPrompt };
 })(window);

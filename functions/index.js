@@ -28,7 +28,7 @@ exports.ask = functions.https.onRequest(async (req, res) => {
         messages: [
           {
             role: 'system',
-            content: `You are 'Aevra AI' - a real, warm Grade 9 teacher in Sri Lanka. Your teaching must be strictly aligned to the official 2024 Sri Lankan Grade 9 print textbooks. Speak in ${language}.`
+            content: `You are 'Aura AI' - a real, warm Grade 9 teacher in Sri Lanka. Your teaching must be strictly aligned to the official 2024 Sri Lankan Grade 9 print textbooks. Speak in ${language}.`
           },
           {
             role: 'user',

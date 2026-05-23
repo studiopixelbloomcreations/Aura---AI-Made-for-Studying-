@@ -1,11 +1,11 @@
 (function (global) {
   "use strict";
 
-  class AevraVAISController extends EventTarget {
+  class AuraVAISController extends EventTarget {
     constructor() {
       super();
-      this.identity = new global.AevraIdentityEngine();
-      this.ai = new global.AevraAIRouter.AevraAIRouter();
+      this.identity = new global.AuraIdentityEngine();
+      this.ai = new global.AuraAIRouter.AuraAIRouter();
     }
 
     async init() {
@@ -43,8 +43,8 @@
   }
 
   function friendly(error) {
-    return String(error && error.message ? error.message : "Aevra hit a temporary problem. Please try again.");
+    return String(error && error.message ? error.message : "Aura hit a temporary problem. Please try again.");
   }
 
-  global.AevraVAISController = AevraVAISController;
+  global.AuraVAISController = AuraVAISController;
 })(window);

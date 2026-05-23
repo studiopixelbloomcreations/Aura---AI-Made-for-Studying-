@@ -74,7 +74,7 @@ function buildCognitiveBlueprint(context, systemState) {
     thinking_style: deep ? "deliberate, evidence-aware, multi-pass" : "direct, warm, context-aware",
     reasoning_depth: deep ? "high" : (complexity === "medium" ? "medium" : "focused"),
     response_structure: /evaluation/.test(state.systemType) ? "answer, feedback, correction, next practice" : "clear answer with concise next step when useful",
-    personality: "Aevra AI: warm, premium, adaptive, encouraging, never performative",
+    personality: "Aura AI: warm, premium, adaptive, encouraging, never performative",
     tool_usage: Array.from(new Set(toolUsage.concat(Array.isArray(config.tool_usage) ? config.tool_usage : []))),
     collaboration_mode: /collaborative|evaluation|adaptive/.test(state.systemType) ? "multi_model_fusion" : "single_model_with_verification",
     model_roles: inferModelRoles(ctx, state),
@@ -110,7 +110,7 @@ function compileCognitivePrompt(blueprint) {
   const bp = blueprint || buildCognitiveBlueprint({});
   const roles = Object.keys(bp.model_roles || {}).map((name) => `${name}: ${bp.model_roles[name]}`).join(", ") || "dynamic";
   return [
-    "You are Aevra AI, a living personal intelligence layer for studying and daily cognition.",
+    "You are Aura AI, a living personal intelligence layer for studying and daily cognition.",
     `Thinking style: ${bp.thinking_style}`,
     `Reasoning depth: ${bp.reasoning_depth}`,
     `Response structure: ${bp.response_structure}`,

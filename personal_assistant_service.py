@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import re
 from typing import Dict, List, Optional, Any
 from urllib.parse import quote_plus
@@ -8,6 +7,7 @@ from urllib.parse import quote_plus
 import requests
 from groq import Groq
 
+from env_utils import env
 from user_personalization_router import store as personalization_store
 
 
@@ -69,8 +69,8 @@ def _ensure_integration_state(email_key: str) -> Dict[str, Any]:
 
 
 def _google_search_snippets(query: str, max_results: int = 3) -> List[Dict[str, str]]:
-    api_key = os.environ.get("GOOGLE_SEARCH_API_KEY", "").strip()
-    cx = os.environ.get("GOOGLE_SEARCH_CX", "").strip()
+    api_key = str(env("GOOGLE_SEARCH_API_KEY", "")).strip()
+    cx = str(env("GOOGLE_SEARCH_CX", "")).strip()
     if not api_key or not cx:
         return []
 
@@ -106,7 +106,22 @@ def _google_search_snippets(query: str, max_results: int = 3) -> List[Dict[str, 
 
 def _detect_task_action(user_msg: str, integrations: Dict[str, Any], known_facts: Dict[str, str]) -> Optional[Dict[str, Any]]:
     text = (user_msg or "").strip().lower()
-    spotify_auth_url = os.environ.get("SPOTIFY_AUTH_URL", "").strip()
+    spotify_auth_url = str(env("SPOTIFY_AUTH_URL", "")).strip()
+
+    # Neural Command System intent classification
+    if any(q in text for q in ["test me", "quiz me", "give me a quiz", "exam", "take a test", "start exam"]):
+        return {
+            "type": "navigate_tab",
+            "tab": "exams",
+            "message": "I am taking you to the Exam Center right now. Let's test your knowledge and see how prepared you are!",
+        }
+
+    if any(q in text for q in ["study dashboard", "view study", "study center", "my plans", "study plan", "flashcards", "view cards", "readiness", "mastery"]):
+        return {
+            "type": "navigate_tab",
+            "tab": "study",
+            "message": "Opening your Study Center. Here you can view your readiness metrics, study plans, flashcards, and notes!",
+        }
 
     if "connect spotify" in text or "link spotify" in text:
         return {
@@ -180,8 +195,8 @@ def _fallback_conversation_response(user_msg: str, action: Optional[Dict[str, An
 
     msg = (user_msg or "").strip()
     low = msg.lower()
-    if any(g in low for g in ["hi", "hello", "hey tutor", "how are you"]):
-        return "Hey, I am Aevra AI. I am here with you. We can chat, plan your day, or handle tasks like directions and music."
+    if any(g in low for g in ["hi", "hello", "hey aevra", "how are you"]):
+        return "Hey, I am Aura. I am here with you. We can chat, plan your day, or handle tasks like directions and music."
     if "homework" in low or "study" in low or "exam" in low:
         return "Absolutely. Tell me the subject and exact question, and I will teach it step by step like a friendly teacher."
     if web_context:
@@ -190,13 +205,84 @@ def _fallback_conversation_response(user_msg: str, action: Optional[Dict[str, An
     return "I am here and listening. Tell me what you want to do, and I will help you right away."
 
 
-def ask_tutor_personal_agent(
+def orchestrate_model_completion(client: Groq, system_prompt: str, user_prompt: str, user_msg: str, subject: Optional[str]) -> Dict[str, Any]:
+    text = (user_msg or "").lower()
+    subject_str = (subject or "General").lower()
+    
+    # Classify complexity and route to models (Agent Harmony)
+    is_deep_reasoning = (
+        any(x in text for x in ["solve", "equation", "formula", "explain why", "prove", "theory", "calculate", "derivation"]) or
+        subject_str in ["math", "maths", "mathematics", "science"]
+    )
+    is_summary = any(x in text for x in ["summarize", "summary", "flashcards", "study plan", "digest", "notes", "bullet points"])
+
+    # Determine priority list of models based on intent
+    models_to_try = []
+    reasoning_process = ""
+    
+    if is_deep_reasoning:
+        models_to_try = ["llama-3.3-70b-versatile", "llama3-70b-8192", "mixtral-8x7b-32768", "llama3-8b-8192", "moonshotai/kimi-k2-instruct-0905"]
+        reasoning_process = "Deep logical reasoning required. Routing to Llama 70B model..."
+    elif is_summary:
+        models_to_try = ["mixtral-8x7b-32768", "llama-3.3-70b-versatile", "llama3-8b-8192", "moonshotai/kimi-k2-instruct-0905"]
+        reasoning_process = "Structuring/Summarization task. Routing to Mixtral 8x7B..."
+    else:
+        models_to_try = ["llama3-8b-8192", "gemma2-9b-it", "llama-3.3-70b-versatile", "moonshotai/kimi-k2-instruct-0905"]
+        reasoning_process = "General assistant request. Routing to Llama 8B model..."
+
+    errors = []
+    for model_name in models_to_try:
+        try:
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"[Harmony Orchestrator: {reasoning_process}]\n\n{user_prompt}"},
+                ],
+                temperature=0.6,
+            )
+            answer = (response.choices[0].message.content or "").strip()
+            confidence = 0.97 if "70b" in model_name else (0.94 if "mixtral" in model_name else 0.89)
+            return {
+                "answer": answer,
+                "model_used": model_name,
+                "confidence_score": confidence,
+                "orchestration_route": reasoning_process,
+            }
+        except Exception as e:
+            errors.append(f"{model_name}: {str(e)}")
+            continue
+
+    # Final fallback to kimi-k2 if Groq fails
+    try:
+        response = client.chat.completions.create(
+            model="moonshotai/kimi-k2-instruct-0905",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.6,
+        )
+        answer = (response.choices[0].message.content or "").strip()
+        return {
+            "answer": answer,
+            "model_used": "moonshotai/kimi-k2-instruct-0905",
+            "confidence_score": 0.85,
+            "orchestration_route": "Fallback to kimi-k2 model",
+        }
+    except Exception as e:
+        errors.append(f"kimi-k2: {str(e)}")
+        raise RuntimeError(f"All orchestrated models failed. Errors: {', '.join(errors)}")
+
+
+def ask_aevra_personal_agent(
     message: str,
     email: Optional[str],
     language: Optional[str],
     subject: Optional[str],
     title: Optional[str],
     history: Optional[List[Dict[str, str]]] = None,
+    context: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, object]:
     user_msg = (message or "").strip()
     if not user_msg:
@@ -222,7 +308,7 @@ def ask_tutor_personal_agent(
 
     action = _detect_task_action(user_msg, integrations, assistant_user_facts[email_key])
     should_search = True
-    if action and action.get("type") in {"play_spotify_liked", "connect_spotify", "directions_home", "save_home_address"}:
+    if action and action.get("type") in {"play_spotify_liked", "connect_spotify", "directions_home", "save_home_address", "navigate_tab"}:
         should_search = False
     web_context = _google_search_snippets(user_msg, max_results=3) if should_search else []
 
@@ -234,7 +320,7 @@ def ask_tutor_personal_agent(
     chat_title = (title or "Perosnla IIntelligence").strip()
 
     system_prompt = (
-        "You are Aevra AI, the personal assistant for the Perosnla IIntelligence section. "
+        "You are Aura, the personal assistant for the Perosnla IIntelligence section. "
         "Be a warm Siri-like helper and a sweet teacher for homework/study support. "
         "Use the user's stored profile, progress, and preferences when relevant. "
         "If Google context is present, use it carefully and include short source links. "
@@ -251,6 +337,22 @@ def ask_tutor_personal_agent(
         f"Progress summary: total_questions={progress.get('total_questions', 0)}, total_correct={progress.get('total_correct', 0)}, total_score={progress.get('total_score', 0)}",
         f"Feedback summary: {feedback}",
     ]
+
+    # Task 5: Inject context into the prompt
+    if context:
+        prompt_parts.append(
+            "Live Study Context:\n"
+            f"- Active Tab: {context.get('activeTab', 'chats')}\n"
+            f"- Elapsed Time: {context.get('elapsedTime', '0s')}\n"
+            f"- Teaching Style: {context.get('teachingStyle', 'socratic')}\n"
+            f"- Response Length: {context.get('responseLength', 'balanced')}\n"
+            f"- Difficulty Level: {context.get('difficultyLevel', 3)}\n"
+            f"- Tone Adjustment: {context.get('toneAdjustment', 'encouraging')}\n"
+            f"- Memory Preference: {context.get('memoryPreference', 'deep')}\n"
+            f"- Learning Speed: {context.get('learningSpeed', 'normal')}\n"
+            f"- User Typing Speed: {context.get('typingSpeed', '45 WPM')}"
+        )
+
     if action:
         prompt_parts.append(f"Detected assistant task action: {action}")
     if history_text:
@@ -260,23 +362,27 @@ def ask_tutor_personal_agent(
     prompt_parts.append("User message:\n" + user_msg)
     user_prompt = "\n\n".join(prompt_parts)
 
-    client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+    client = Groq(api_key=env("GROQ_API_KEY"))
+    
     # For strong command intents, use deterministic assistant response first.
+    model_used = "deterministic"
+    confidence_score = 1.0
+    orchestration_route = "Deterministic Rule Engine"
+    
     if action and action.get("message"):
         answer = str(action.get("message"))
     else:
         try:
-            response = client.chat.completions.create(
-                model="moonshotai/kimi-k2-instruct-0905",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0.6,
-            )
-            answer = (response.choices[0].message.content or "").strip()
+            orchestration_result = orchestrate_model_completion(client, system_prompt, user_prompt, user_msg, subj)
+            answer = orchestration_result["answer"]
+            model_used = orchestration_result["model_used"]
+            confidence_score = orchestration_result["confidence_score"]
+            orchestration_route = orchestration_result["orchestration_route"]
         except Exception as e:
             answer = _fallback_conversation_response(user_msg, action, web_context)
+            model_used = "local-fallback"
+            confidence_score = 0.5
+            orchestration_route = f"Error during orchestration: {str(e)}. Falled back to pre-defined responses."
 
     assistant_memory[email_key].append({"role": "user", "content": user_msg})
     assistant_memory[email_key].append({"role": "assistant", "content": answer})
@@ -289,6 +395,11 @@ def ask_tutor_personal_agent(
         "learned_facts": learned,
         "action": action,
         "integration_state": integrations,
+        "harmony_metadata": {
+            "model_used": model_used,
+            "confidence_score": confidence_score,
+            "orchestration_route": orchestration_route
+        }
     }
 
 
@@ -297,7 +408,7 @@ def get_personal_assistant_status(email: Optional[str]) -> Dict[str, Any]:
     state = _ensure_integration_state(email_key)
     return {
         "email": email_key,
-        "assistant_name": "Aevra AI",
+        "assistant_name": "Aura",
         "section_name": "Perosnla IIntelligence",
         "integration_state": state,
         "known_facts": assistant_user_facts.get(email_key, {}),
@@ -330,22 +441,22 @@ def set_home_address(email: Optional[str], address: str) -> Dict[str, Any]:
 
 
 def create_openai_realtime_session(email: Optional[str]) -> Dict[str, Any]:
-    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    api_key = str(env("OPENAI_API_KEY", "")).strip()
     if not api_key:
         return {
             "ok": False,
             "error": "OPENAI_API_KEY is missing on backend environment",
         }
 
-    model = os.environ.get("OPENAI_REALTIME_MODEL", "gpt-realtime").strip() or "gpt-realtime"
-    voice = os.environ.get("OPENAI_REALTIME_VOICE", "alloy").strip() or "alloy"
+    model = str(env("OPENAI_REALTIME_MODEL", "gpt-realtime")).strip() or "gpt-realtime"
+    voice = str(env("OPENAI_REALTIME_VOICE", "alloy")).strip() or "alloy"
 
     email_key = _email_key(email)
     state = _ensure_integration_state(email_key)
     home = state.get("home_address") or ""
 
     instructions = (
-        "You are Aevra AI, a warm personal assistant. "
+        "You are Aura, a warm personal assistant. "
         "Keep a natural conversational tone, like a real friendly human assistant. "
         "Help with everyday tasks and study support. "
         "If asked for directions home and home address is known, mention that maps can be opened. "

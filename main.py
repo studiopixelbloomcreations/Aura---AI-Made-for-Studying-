@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -9,16 +9,39 @@ import os
 import difflib
 import re
 import importlib.util
+import requests
+
+try:
+    from slowapi import Limiter
+    from slowapi.util import get_remote_address
+    from slowapi.middleware import SlowAPIMiddleware
+except Exception:
+    Limiter = None
+    get_remote_address = None
+    SlowAPIMiddleware = None
 
 from user_personalization_router import router as personalization_router
 from gamification_router import router as gamification_router
 from exam_mode.exam_routes import router as exam_mode_router
 from personal_assistant_router import router as personal_assistant_router
+from env_utils import env, allowed_origins
+from logging_utils import log_event
 
 # Initialize Groq client
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+client = Groq(api_key=env("GROQ_API_KEY"))
 
 app = FastAPI()
+if Limiter and get_remote_address:
+    limiter = Limiter(key_func=get_remote_address)
+    app.state.limiter = limiter
+    app.add_middleware(SlowAPIMiddleware)
+else:
+    class _NoopLimiter:
+        def limit(self, _rule):
+            def deco(fn):
+                return fn
+            return deco
+    limiter = _NoopLimiter()
 
 app.include_router(personalization_router)
 app.include_router(gamification_router)
@@ -47,7 +70,7 @@ def _include_optional_upload_routers(app: FastAPI) -> None:
 
 _include_optional_upload_routers(app)
 
-_is_vercel = bool(os.environ.get("VERCEL"))
+_is_vercel = bool(env("VERCEL", ""))
 
 if not _is_vercel:
     # Serve frontend (index.html + assets) under /app
@@ -65,16 +88,12 @@ _default_allowed_origins = {
     "http://localhost:5500",
     "http://127.0.0.1:8000",
     "http://localhost:8000",
-    "https://tutorv1.netlify.app",
-    "https://tutorv6.netlify.app",
-    "https://officialtutorai.netlify.app",
+    "https://aevrav1.netlify.app",
+    "https://aevrav1.netlify.app",
+    "https://aevrav1.netlify.app",
+    "https://aevrav1.netlify.app",
 }
-_allowed_origins_env = os.environ.get("ALLOWED_ORIGINS")
-if _allowed_origins_env:
-    _configured_origins = {o.strip() for o in _allowed_origins_env.split(",") if o.strip()}
-    _allowed_origins = sorted(_default_allowed_origins | _configured_origins)
-else:
-    _allowed_origins = sorted(_default_allowed_origins)
+_allowed_origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -116,9 +135,30 @@ async def health():
 
 
 @app.get("/progress")
-async def get_progress(email: str = "guest@student.com"):
+@limiter.limit("100/minute")
+async def get_progress(request: Request, email: str = "guest@student.com"):
     data = user_progress.get(email)
     return {"email": email, "progress": data}
+
+
+@app.get("/progress/{user_id}")
+@limiter.limit("100/minute")
+async def get_progress_by_user(request: Request, user_id: str):
+    base = (env("SUPABASE_URL", "") or "").rstrip("/")
+    key = env("SUPABASE_SERVICE_KEY") or env("SUPABASE_ANON_KEY")
+    if base and key:
+        try:
+            res = requests.get(
+                f"{base}/rest/v1/gamification_data?user_id=eq.{user_id}&select=*&limit=1",
+                headers={"apikey": key, "authorization": f"Bearer {key}"},
+                timeout=60,
+            )
+            res.raise_for_status()
+            rows = res.json()
+            return {"ok": True, "user_id": user_id, "progress": rows[0] if rows else None}
+        except Exception as exc:
+            log_event("error", "progress_fetch", {"user_id": user_id, "error": str(exc)})
+    return {"ok": True, "user_id": user_id, "progress": user_progress.get(user_id)}
 
 
 @app.post("/progress")
@@ -155,7 +195,8 @@ async def check_answer(req: CheckAnswerPayload):
 
 # AI answer endpoint with memory
 @app.post("/ask")
-async def ask(req: AskRequest):
+@limiter.limit("30/minute")
+async def ask(request: Request, req: AskRequest):
     # Initialize memory buckets
     user_memory.setdefault(req.email, {})
     user_memory[req.email].setdefault(req.title, [])
@@ -163,7 +204,7 @@ async def ask(req: AskRequest):
     # Build conversation history for this topic
     history = user_memory[req.email][req.title]
     history_block = "\n".join(
-        [f"Q: {h['question']} → A: {h['answer']}" for h in history]
+        [f"Q: {h['question']} â†’ A: {h['answer']}" for h in history]
     )
 
     # Cross-topic recall
@@ -175,7 +216,7 @@ async def ask(req: AskRequest):
             ).ratio()
             if similarity > 0.6:
                 related_context.append(
-                    f"From '{topic}': Q: {entry['question']} → A: {entry['answer']}"
+                    f"From '{topic}': Q: {entry['question']} â†’ A: {entry['answer']}"
                 )
 
     # Simple off-syllabus detection (subject match against common Grade 9 subjects)
@@ -188,12 +229,11 @@ async def ask(req: AskRequest):
     if subj_key and subj_key not in allowed_subjects and subj_key != "general":
         off_syllabus = True
 
-    # System persona: Aevra AI for Grade 9 Sri Lanka (concise, used as system message)
     system_prompt = (
-        "You are 'Aevra AI' — a kind, patient Grade 9 tutor aligned to the Sri Lankan Grade 9 syllabus. "
-        "Always prioritize syllabus alignment, explain simply first then add depth, use analogies and step-by-step reasoning, "
-        "support Sinhala and English, and mark clearly when a question is off-syllabus with a short 'Scope note'. "
-        "Be encouraging and show step-by-step solutions for problems. Keep language clear and age-appropriate. "
+        "You are Aura, a warm and intelligent AI study companion designed for students. "
+        "You explain concepts clearly, adapt to each student's learning style, and make studying feel engaging rather than overwhelming. "
+        "You are encouraging, patient, and always focused on helping the student genuinely understand - not just memorize. "
+        "Your name is Aura. Always prioritize syllabus alignment, explain simply first then add depth, support Sinhala and English. "
         "\n\nProgress tracking requirement (VERY IMPORTANT): "
         "When the student answers a question you asked, you MUST evaluate whether it is correct. "
         "You MUST ALWAYS include EXACTLY ONE final line at the very end of your message in this format: 'AWARD_POINTS: N'. "
@@ -250,7 +290,7 @@ async def ask(req: AskRequest):
 @app.post("/generate_title")
 async def generate_title(req: TitleRequest):
     prompt = (
-        'Generate a short, clear topic title (2–5 words) for this Grade 9 student question: '
+        'Generate a short, clear topic title (2â€“5 words) for this Grade 9 student question: '
         f'"{req.question}". The title should describe the type of help or subject area. '
         'Return ONLY the title, no punctuation or quotes.'
     )

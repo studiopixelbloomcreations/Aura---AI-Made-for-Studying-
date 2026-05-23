@@ -5,7 +5,7 @@ function buildBrainPrompt(context) {
   const signalNames = SIGNALS.map(s => s.key).join(", ");
   
   return [
-    "You are the Neural Command System (NCS) Brain. You orchestrate the Aevra AI system.",
+    "You are the Neural Command System (NCS) Brain. You orchestrate the Aura AI system.",
     "Your job is NOT to answer the user directly. Your job is to analyze the user's message and the system context, and output a JSON decision that configures the downstream AI.",
     "",
     "## INPUT CONTEXT",

@@ -9,8 +9,8 @@
 
 [[redirects]]
   from = "/"
-  to = "/landing.html"
-  status = 302
+  to = "/index.html"
+  status = 200
 
 
 # API redirect to Netlify Functions

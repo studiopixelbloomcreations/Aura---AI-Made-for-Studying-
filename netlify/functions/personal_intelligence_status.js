@@ -18,7 +18,7 @@ exports.handler = async function handler(event) {
   const email = (event.queryStringParameters && event.queryStringParameters.email) || "guest@student.com";
   return json(200, {
     email: String(email).toLowerCase(),
-    assistant_name: "Aevra AI",
+    assistant_name: "Aura AI",
     section_name: "Personal Intelligence",
     integration_state: {
       spotify_connected: false,

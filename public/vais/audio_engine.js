@@ -1,7 +1,7 @@
 (function (global) {
   "use strict";
 
-  class AevraAudioEngine {
+  class AuraAudioEngine {
     constructor() {
       this.stream = null;
       this.recorder = null;
@@ -56,5 +56,5 @@
     }
   }
 
-  global.AevraAudioEngine = AevraAudioEngine;
+  global.AuraAudioEngine = AuraAudioEngine;
 })(window);

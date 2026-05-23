@@ -1,4 +1,4 @@
-# Aevra AI Local Issues Report
+# Aura AI Local Issues Report
 
 This file is local only and must not be committed.
 

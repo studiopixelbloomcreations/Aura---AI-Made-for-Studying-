@@ -2,7 +2,7 @@
   "use strict";
 
   async function generateEmbedding() {
-    throw new Error("Voice embeddings are generated on the Aevra backend for security and performance.");
+    throw new Error("Voice embeddings are generated on the Aura backend for security and performance.");
   }
 
   async function recognizeAudioBlob(blob) {
@@ -19,5 +19,5 @@
     return data.data || data;
   }
 
-  global.AevraVoiceEmbeddingEngine = { generateEmbedding, recognizeAudioBlob };
+  global.AuraVoiceEmbeddingEngine = { generateEmbedding, recognizeAudioBlob };
 })(window);

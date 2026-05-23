@@ -41,11 +41,11 @@ exports.handler = async function handler(event) {
     const payload = JSON.parse(event.body || "{}");
     const model = String(payload.model || "groq:llama-3.1-70b-versatile");
     const messages = Array.isArray(payload.messages) ? payload.messages : [];
-    const systemPrompt = String(payload.systemPrompt || "You are Aevra, a warm and intelligent AI study companion designed for students.");
+    const systemPrompt = String(payload.systemPrompt || "You are Aura, a warm and intelligent AI study companion designed for students.");
     if (!messages.length) return json(422, { error: "messages are required" });
     return json(200, { success: true, data: { response: await callConfiguredProvider(model, messages, systemPrompt), model }, error: null });
   } catch (error) {
     logger.error("harmony_ask", { error: String(error && error.stack || error) });
-    return json(500, { success: false, data: null, error: "Aevra Harmony is unavailable right now." });
+    return json(500, { success: false, data: null, error: "Aura Harmony is unavailable right now." });
   }
 };

@@ -16,7 +16,7 @@
     }
   }
 
-  function launchAevraAI() {
+  function launchAuraAI() {
     if (isTokenValid()) {
       window.location.href = 'app.html';
       return;
@@ -222,12 +222,12 @@
     initParticleField();
 
     var launchButtons = [
-      document.getElementById('launchAevraAIBtn'),
-      document.getElementById('launchAevraAIBtn2')
+      document.getElementById('launchAuraAIBtn'),
+      document.getElementById('launchAuraAIBtn2')
     ];
     document.querySelectorAll('.launch-now').forEach(function (btn) { launchButtons.push(btn); });
     launchButtons.forEach(function (btn) {
-      if (btn) btn.addEventListener('click', launchAevraAI);
+      if (btn) btn.addEventListener('click', launchAuraAI);
     });
 
     var themeBtn = document.getElementById('themeToggle');

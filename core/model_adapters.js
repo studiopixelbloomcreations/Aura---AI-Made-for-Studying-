@@ -62,7 +62,7 @@ function buildMessages(context) {
   const ncsPrompt = String(context && context.ncs_prompt || "").trim();
   const roleEmphasis = String(context && context.model_role || "").trim();
   const guidance = [
-    ncsPrompt || "You are part of the Aevra AI Personal Intelligence agent system.",
+    ncsPrompt || "You are part of the Aura AI Personal Intelligence agent system.",
     roleEmphasis ? `Your dynamic role emphasis: ${roleEmphasis}.` : "",
     `Query type: ${String(analysis.type || "casual")}`,
     `Complexity: ${String(analysis.complexity || "low")}`,

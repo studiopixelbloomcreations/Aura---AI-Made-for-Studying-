@@ -1,8 +1,8 @@
 {
-  "name": "grade9-ai-aevra-netlify",
+  "name": "grade9-ai-aura-netlify",
   "private": true,
   "version": "1.0.0",
-  "description": "Frontend-only Netlify bundle for Aevra AI",
+  "description": "Frontend-only Netlify bundle for Aura AI",
   "scripts": {
     "build": "node build.mjs"
   },

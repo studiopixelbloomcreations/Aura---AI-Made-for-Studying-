@@ -154,7 +154,7 @@ function createWindow() {
       defaultId: 0,
       cancelId: 0,
       title: "App not responding",
-      message: "Aevra AI desktop is not responding.",
+      message: "Aura AI desktop is not responding.",
       detail: "Choose Reload if it stays frozen for more than a few seconds.",
       noLink: true,
     }).then((r) => {

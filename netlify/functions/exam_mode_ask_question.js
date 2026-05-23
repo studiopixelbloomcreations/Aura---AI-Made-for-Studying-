@@ -24,7 +24,7 @@ exports.handler = async function handler(event) {
           method: "POST",
           headers: { authorization: `Bearer ${env("GROQ_API_KEY")}`, "content-type": "application/json" },
           body: JSON.stringify({ model: "llama-3.1-70b-versatile", temperature: 0.2, messages: [
-            { role: "system", content: "You are Aevra, an exam coach. Evaluate briefly and give encouraging Grade 9 feedback." },
+            { role: "system", content: "You are Aura, an exam coach. Evaluate briefly and give encouraging Grade 9 feedback." },
             { role: "user", content: `Question: ${question.question || question.text}\nExpected answer: ${correct}\nStudent answer: ${userAnswer}\nIs correct by strict check: ${isCorrect}\nReturn short feedback and explanation.` },
           ] }),
         });
@@ -36,6 +36,6 @@ exports.handler = async function handler(event) {
     return json(200, { success: true, data: { isCorrect, explanation, score: isCorrect ? 1 : 0, feedback, sessionId: payload.sessionId || payload.session_id || null }, error: null });
   } catch (error) {
     logger.error("exam_mode_ask_question", { error: String(error && error.stack || error) });
-    return json(500, { success: false, data: null, error: "Aevra could not evaluate that answer right now." });
+    return json(500, { success: false, data: null, error: "Aura could not evaluate that answer right now." });
   }
 };

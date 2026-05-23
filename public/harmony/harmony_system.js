@@ -55,7 +55,7 @@
     window.dispatchEvent(new CustomEvent("aevra:harmony-state", { detail: clone(state) }));
   }
 
-  window.AevraHarmonySystem = {
+  window.AuraHarmonySystem = {
     ingest,
     getState: function () { return clone(state); },
   };
