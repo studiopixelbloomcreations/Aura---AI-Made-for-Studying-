@@ -7,6 +7,7 @@ import {
   Mic,
   MicOff,
   X,
+  ClosedCaption,
 } from "lucide-react";
 
 export const AuraLive: React.FC = () => {
@@ -14,6 +15,7 @@ export const AuraLive: React.FC = () => {
   const { setIsLiveOpen, subject, language } = store;
   const [isMicActive, setIsMicActive] = useState(false);
   const [volume, setVolume] = useState(0);
+  const [captionsEnabled, setCaptionsEnabled] = useState(false);
 
   const [transcript, setTranscript] = useState("");
   const [aiResponseText, setAiResponseText] = useState("");
@@ -385,10 +387,14 @@ export const AuraLive: React.FC = () => {
           <span className="text-[12.5px] font-bold tracking-widest text-[#e3e3e3] uppercase">Live</span>
         </div>
 
-        {/* Video off camera block icon */}
+        {/* Captions toggle button */}
         <div className="flex items-center justify-end w-[120px]">
-          <div className="size-10 rounded-full bg-white/5 backdrop-blur-md flex items-center justify-center border border-white/5 text-white/70">
-            <VideoOff className="h-[18px] w-[18px]" />
+          <div className="size-10 rounded-full bg-white/5 backdrop-blur-md flex items-center justify-center border border-white/5 text-white/70 hover:bg-white/10 transition-all"
+            onClick={() => setCaptionsEnabled(!captionsEnabled)}
+            title={captionsEnabled ? "Disable Captions" : "Enable Captions"}
+          >
+            <ClosedCaption className="h-[18px] w-[18px]" 
+              style={{ opacity: captionsEnabled ? 1 : 0.7 }} />
           </div>
         </div>
       </div>
@@ -402,6 +408,13 @@ export const AuraLive: React.FC = () => {
           <p className="text-[11.5px] font-medium text-white/50">Active Subject: {subject} | Language: {language}</p>
           <p className="text-[11px] font-medium text-white/35">{connectorStatus}</p>
         </div>
+
+        {/* Captions Display */}
+        {captionsEnabled && transcript && (
+          <div className="absolute bottom-20 left-6 right-6 text-center text-white/90 bg-black/50 backdrop-blur-sm rounded-xl px-4 py-3 max-w-[80%] mx-auto">
+            <p className="text-md font-medium whitespace-pre-line">{transcript}</p>
+          </div>
+        )}
 
         {/* Voice Status & Text Content Area */}
         <div className="w-full max-w-2xl mx-auto z-10 space-y-6 pt-16">

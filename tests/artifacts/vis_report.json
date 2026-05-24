@@ -1,10 +1,26 @@
 {
   "url": "http://127.0.0.1:8080/app.html?visMock=1",
   "browser": "chromium",
-  "panelText": "\n      \n          Aevra NCS Live\n        \n          Collapse\n          Detach\n          Close\n        \n      \n      \n        \n          Observatory\n          Typetutorial\n          Complexitymedium\n          Queries1\n        \n        \n          Neural Command System\n          Workflowidle\n          Confidence0%\n          Manipulation-\n        \n        \n          Harmony\n          Model Selectedmistral\n          Models Usedmistral\n          FallbackNo\n          Fusionverified single\n          No routing chain yet.\n        \n        \n          Verification\n          Agent-\n          Unique ID-\n          VerifiedNo\n        \n        \n          Memory\n          Retrieved-\n        \n        \n          Status\n          Complete\n        \n      \n    ",
+  "panelText": "\n      \n          Aura NCS Live\n        \n          Collapse\n          Detach\n          Close\n        \n      \n      \n        \n          Observatory\n          Typetutorial\n          Complexitymedium\n          Queries1\n        \n        \n          Neural Command System\n          Workflowidle\n          Confidence0%\n          Manipulation-\n        \n        \n          Harmony\n          Model Selectedmistral\n          Models Usedmistral\n          FallbackNo\n          Fusionverified single\n          No routing chain yet.\n        \n        \n          Verification\n          Agent-\n          Unique ID-\n          VerifiedNo\n        \n        \n          Memory\n          Retrieved-\n        \n        \n          Status\n          Complete\n        \n      \n    ",
   "mediaCalls": [],
   "forbiddenRequests": [],
   "consoleLogs": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED"
+    },
     {
       "type": "error",
       "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
@@ -12,6 +28,66 @@
     {
       "type": "log",
       "text": "Progress boot: starting initialization..."
+    },
+    {
+      "type": "log",
+      "text": "Progress boot: user authenticated? false undefined"
+    },
+    {
+      "type": "log",
+      "text": "Progress boot: no authenticated user, but initializing anyway for testing..."
+    },
+    {
+      "type": "log",
+      "text": "Progress boot: calling Progress.loadLocal()"
+    },
+    {
+      "type": "log",
+      "text": "Progress boot: calling Points.init()"
+    },
+    {
+      "type": "log",
+      "text": "Progress boot: calling Timer.init()"
+    },
+    {
+      "type": "log",
+      "text": "Progress.setMinutesToday called with: 0 current minutesToday: 0"
+    },
+    {
+      "type": "log",
+      "text": "Progress boot: testing initialization complete"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "log",
+      "text": "points.js onChatContext called: {chatId: c_1779547241775, subject: General, current: Object}"
+    },
+    {
+      "type": "log",
+      "text": "points.js onChatContext called: {chatId: c_1779547241775, subject: General, current: Object}"
+    },
+    {
+      "type": "log",
+      "text": "Timer.onUserMessage called, msgCount: 0"
+    },
+    {
+      "type": "log",
+      "text": "Timer starting session tracking"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
     },
     {
       "type": "error",
@@ -31,5 +107,26 @@
     }
   ],
   "pageErrors": [],
-  "requestFailures": []
+  "requestFailures": [
+    {
+      "url": "https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js",
+      "error": "net::ERR_NETWORK_ACCESS_DENIED"
+    },
+    {
+      "url": "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js",
+      "error": "net::ERR_NETWORK_ACCESS_DENIED"
+    },
+    {
+      "url": "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js",
+      "error": "net::ERR_NETWORK_ACCESS_DENIED"
+    },
+    {
+      "url": "https://unpkg.com/lucide@latest",
+      "error": "net::ERR_NETWORK_ACCESS_DENIED"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1559827260-dc66d52bef19?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80",
+      "error": "net::ERR_NETWORK_ACCESS_DENIED"
+    }
+  ]
 }
