@@ -1,0 +1,266 @@
+<USER_REQUEST>
+# AEVRA AI — FULL MISSING FEATURE INTEGRATION PROMPT
+# FOR ANTIGRAVITY (Gemini 3.5 Flash High)
+
+ROLE
+
+You are now the lead AI platform architect, frontend engineer, UX engineer, product designer, systems engineer, backend engineer, and production integration engineer for Aura AI.
+
+You created the current UI already.
+
+Your task is NOT to redesign the application.
+
+Your task is ONLY to finish and integrate the missing functionality while preserving the existing design language completely.
+
+CURRENT TEST URL:
+
+https://e8c69f711108e7.lhr.life/
+
+STRICT RULES
+
+RULE 1:
+
+DO NOT redesign the UI.
+
+DO NOT replace the UI.
+
+DO NOT introduce a new visual language.
+
+DO NOT change layout hierarchy.
+
+DO NOT alter spacing systems.
+
+DO NOT alter existing visual styling.
+
+DO NOT create components that feel visually disconnected.
+
+Keep:
+
+existing typography
+existing spacing
+existing shadows
+existing gradients
+existing motion style
+existing glass effects
+existing component sizes
+existing visual identity
+existing responsive behavior
+
+RULE 2:
+
+Maintain Gemini-level interaction behavior and experience quality:
+
+- fluid transitions
+- smooth panel behavior
+- context-aware animations
+- responsive interactions
+- conversational continuity
+- mobile gesture behavior
+- polished loading states
+- contextual overlays
+- dynamic response transitions
+
+Do NOT create awkward animations.
+
+Everything should feel natural.
+
+RULE 3:
+
+Mobile behavior is critical.
+
+Mobile UX must feel like a premium AI application.
+
+Requirements:
+
+- gesture navigation
+- smooth panel transitions
+- adaptive keyboard handling
+- sticky interaction areas
+- touch feedback
+- smooth scrolling
+- responsive bottom sheets
+- responsive drawers
+- proper safe-area support
+- optimized mobile rendering
+
+RULE 4:
+
+DO NOT add gamification systems.
+
+DO NOT add:
+
+- streak systems
+- XP systems
+- achievements
+- reward systems
+- coins
+- badges
+- leveling systems
+- point systems
+
+ONLY productivity and intelligence systems.
+
+=====================================================
+
+BRANDI
+<truncated 2817 bytes>
+mmaries
+
+AI Generated Notes
+
+PDF analysis
+
+Document upload
+
+Weakness analysis
+
+=====================================================
+
+7. EXAM SYSTEM
+
+Features:
+
+question generation
+
+grading
+
+difficulty adaptation
+
+analytics
+
+subject filtering
+
+performance tracking
+
+weak-area detection
+
+=====================================================
+
+8. FILE SYSTEM
+
+Allow:
+
+PDF upload
+
+DOCX upload
+
+Images
+
+Text files
+
+Audio files
+
+Features:
+
+summarization
+
+question extraction
+
+notes generation
+
+explanations
+
+=====================================================
+
+9. VOICE SYSTEM
+
+Features:
+
+voice interaction
+
+voice commands
+
+voice onboarding
+
+voice identity
+
+speech-to-text
+
+text-to-speech
+
+=====================================================
+
+10. SETTINGS PAGE
+
+Create:
+
+profile settings
+
+AI settings
+
+memory settings
+
+voice settings
+
+privacy settings
+
+appearance settings
+
+notification settings
+
+=====================================================
+
+PERFORMANCE
+
+Implement:
+
+lazy loading
+
+code splitting
+
+caching
+
+optimized rendering
+
+background processing
+
+debouncing
+
+request optimization
+
+=====================================================
+
+PLACEHOLDER ELIMINATION
+
+Remove:
+
+TODO
+
+placeholder
+
+fake logic
+
+demo responses
+
+mock systems
+
+unfinished functions
+
+temporary code
+
+Replace with production implementations.
+
+=====================================================
+
+FINAL OUTPUT
+
+After implementation return:
+
+1. Existing systems detected
+2. Systems completed
+3. Files modified
+4. Files created
+5. Placeholder logic removed
+6. Features available for testing
+7. Exact testing checklist
+8. Known limitations
+9. Deployment checklist
+
+END
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-20T20:07:46+05:30.
+</ADDITIONAL_METADATA>
+<USER_SETTINGS_CHANGE>
+The user changed setting `Model Selection` from  to Gemini 3.5 Flash (High). No need to comment on this change if the user doesn't ask about it. If reporting what model you are, please use a human readable name instead of the exact string.
+</USER_SETTINGS_CHANGE>
