@@ -2,56 +2,120 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Create account - Aura AI</title>
-  <link rel="icon" href="public/aura-icon.png" type="image/png">
-  <link rel="stylesheet" href="login.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Create account — AURA AI</title>
+  <meta name="description" content="Create your AURA AI account — your personal AI learning companion." />
+  <link rel="icon" href="public/aura-icon.png" type="image/png" />
+  <link rel="stylesheet" href="auth.css" />
 </head>
 <body>
-  <main class="login-root gemini-auth" role="main" aria-labelledby="signupTitle">
-    <section class="login-card gemini-auth-card">
-      <header class="card-header">
-        <img src="public/aura-logo.png" alt="Aura AI" class="auth-logo-img" />
-        <h1 id="signupTitle">Create your Aura account</h1>
-        <p class="muted">Sign up with Google, then Aura will build your unique profile.</p>
+  <main class="auth-root" role="main">
+    <div class="auth-bg" aria-hidden="true"></div>
+
+    <section class="auth-card" aria-labelledby="authTitle">
+      <header class="auth-brand">
+        <img src="public/aura-logo.png" alt="AURA AI" class="auth-logo" />
+        <h1 class="auth-title" id="authTitle">Create your account</h1>
+        <p class="auth-subtitle">Your personal AI learning companion awaits</p>
       </header>
 
-      <form id="signupForm" class="login-form" novalidate>
-        <label for="name" class="sr">Full name</label>
-        <input id="name" name="name" type="text" placeholder="Full name" autocomplete="name" />
+      <form id="signupForm" class="auth-form" novalidate autocomplete="on">
+        <div class="auth-input-wrap">
+          <input
+            id="name"
+            name="name"
+            type="text"
+            class="auth-input"
+            placeholder=" "
+            autocomplete="name"
+            required
+          />
+          <label for="name" class="auth-input-label">Full name</label>
+        </div>
 
-        <label for="email" class="sr">Email</label>
-        <input id="email" name="email" type="email" placeholder="Email" autocomplete="email" />
+        <div class="auth-input-wrap">
+          <input
+            id="email"
+            name="email"
+            type="email"
+            class="auth-input"
+            placeholder=" "
+            autocomplete="email"
+            required
+          />
+          <label for="email" class="auth-input-label">Email address</label>
+        </div>
 
-        <label for="password" class="sr">Password</label>
-        <input id="password" name="password" type="password" placeholder="Create a password" minlength="6" />
+        <div class="auth-input-wrap">
+          <input
+            id="password"
+            name="password"
+            type="password"
+            class="auth-input"
+            placeholder=" "
+            autocomplete="new-password"
+            minlength="6"
+            required
+          />
+          <label for="password" class="auth-input-label">Password</label>
+          <button type="button" class="auth-input-toggle" id="togglePassword" aria-label="Show password" tabindex="-1">
+            <svg id="eyeIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
 
-        <label for="confirm" class="sr">Confirm password</label>
-        <input id="confirm" name="confirm" type="password" placeholder="Confirm password" minlength="6" />
+        <div class="auth-input-wrap">
+          <input
+            id="confirm"
+            name="confirm"
+            type="password"
+            class="auth-input"
+            placeholder=" "
+            autocomplete="new-password"
+            minlength="6"
+            required
+          />
+          <label for="confirm" class="auth-input-label">Confirm password</label>
+        </div>
 
-        <label class="remember">
-          <input type="checkbox" id="terms" name="terms" checked />
-          <span>I agree to the terms</span>
-        </label>
-
-        <button type="button" class="btn-social gemini-google" data-provider="google">
-          <span class="google-dot">G</span>
-          <span>Continue with Google</span>
+        <button type="submit" class="auth-btn auth-btn-primary" id="submitBtn">
+          <span id="submitText">Create account</span>
+          <span class="auth-btn-spinner" id="submitSpinner" style="display:none" aria-hidden="true"></span>
         </button>
 
-        <button type="submit" class="btn-primary">Create account</button>
+        <div class="auth-divider">
+          <span class="auth-divider-text">or</span>
+        </div>
 
-        <p class="small muted">
-          Already have an account? <a href="login.html?return=app.html">Log in</a> · <a href="index.html">Back to landing</a>
-        </p>
+        <button type="button" class="auth-btn auth-btn-google" id="googleBtn">
+          <svg class="google-icon" viewBox="0 0 24 24">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+          </svg>
+          <span>Continue with Google</span>
+        </button>
       </form>
-      <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+      <div class="auth-links">
+        <a href="login.html?return=app.html" class="auth-link">Already have an account? Sign in</a>
+        <a href="index.html" class="auth-link" style="color: var(--aura-text-muted);">Back to home</a>
+      </div>
     </section>
+
+    <footer class="auth-footer">
+      <p class="auth-footer-text">AURA AI — AI Made for Studying</p>
+    </footer>
   </main>
+
+  <div id="toast" class="auth-toast" role="status" aria-live="polite"></div>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="firebase_runtime_config.js"></script>
-  <script src="signup.js" defer></script>
+  <script src="signup.js"></script>
 </body>
 </html>

@@ -17,8 +17,8 @@ services:
         path: ./styles.css
       - route: /script.js
         path: ./script.js
-      - route: /login.css
-        path: ./login.css
+      - route: /auth.css
+        path: ./auth.css
       - route: /login.js
         path: ./login.js
       - route: /signup.js

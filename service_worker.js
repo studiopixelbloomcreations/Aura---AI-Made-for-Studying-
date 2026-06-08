@@ -7,7 +7,7 @@ const STATIC_ASSETS = [
   "login.html",
   "signup.html",
   "styles.css",
-  "login.css",
+  "auth.css",
   "landing.css",
   "api.js",
   "auth.js",
