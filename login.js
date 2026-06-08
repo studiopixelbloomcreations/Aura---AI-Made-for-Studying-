@@ -273,8 +273,10 @@
 
   // ─── Google Sign In ───
   googleBtn.addEventListener('click', async () => {
-    if (isLoading) return;
+    console.log('[Login] Google button clicked, firebaseReady:', firebaseReady, 'auth:', !!auth);
+    if (isLoading) { console.log('[Login] Already loading, ignoring'); return; }
     if (!firebaseReady || !auth) {
+      console.warn('[Login] Firebase not ready yet');
       showToast('Please wait — still connecting to Firebase...', 'error');
       return;
     }
@@ -289,12 +291,21 @@
 
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.addScope('email');
+      console.log('[Login] Opening Google popup...');
       let cred = null;
       try {
         cred = await auth.signInWithPopup(provider);
+        console.log('[Login] Google popup returned user:', cred && cred.user && cred.user.email);
       } catch (popupErr) {
         const code = popupErr && popupErr.code ? String(popupErr.code) : '';
+        console.error('[Login] Google popup error:', code, popupErr.message || popupErr);
+        if (code === 'auth/unauthorized-domain') {
+          showToast('This domain is not authorized for Google sign-in. Add it to Firebase Console > Authentication > Settings > Authorized domains.', 'error');
+          setLoading(false);
+          return;
+        }
         if (code === 'auth/popup-blocked' || code === 'auth/cancelled-popup-request' || code === 'auth/popup-closed-by-user') {
+          showToast('Popup was blocked or closed. Trying redirect...', 'error');
           await auth.signInWithRedirect(provider);
           return;
         }
@@ -303,8 +314,11 @@
       const ok = await completeSignIn(cred && cred.user, 'Signed in with Google — redirecting...');
       if (!ok) showToast('Unable to complete sign-in. Please try again.', 'error');
     } catch (err) {
-      console.error('Google sign-in error:', err);
-      showToast(friendlyAuthError(err), 'error');
+      const code = err && err.code ? String(err.code) : '';
+      console.error('[Login] Google sign-in failed:', code, err.message || err);
+      showToast(code === 'auth/unauthorized-domain'
+        ? 'Domain not authorized. Add auraaiv1.vercel.app to Firebase Console > Authentication > Authorized domains.'
+        : friendlyAuthError(err), 'error');
     } finally {
       setLoading(false);
     }
