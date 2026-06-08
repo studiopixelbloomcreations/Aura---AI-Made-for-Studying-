@@ -9,6 +9,10 @@
       }
     },
     {
+      "src": "vercel-functions/public-config.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "*.html",
       "use": "@vercel/static"
     },
@@ -44,11 +48,11 @@
   "rewrites": [
     {
       "source": "/public-config",
-      "destination": "/api/public-config.js"
+      "destination": "/vercel-functions/public-config.js"
     },
     {
       "source": "/api/public-config",
-      "destination": "/api/public-config.js"
+      "destination": "/vercel-functions/public-config.js"
     },
     {
       "source": "/api/(.*)",

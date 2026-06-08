@@ -1,8 +1,8 @@
 /**
- * AURA AI — Public Config API (Vercel Serverless)
+ * AURA AI — Public Config (Vercel Serverless Function)
  * Returns ONLY safe Firebase client config. Never exposes secrets.
  *
- * Supports 3 ways to provide Firebase config:
+ * Supports 3 config sources:
  *   1. Individual env vars: FIREBASE_API_KEY, FIREBASE_AUTH_DOMAIN, etc.
  *   2. FIREBASE_CONFIG env var: JSON string with all 6 keys
  *   3. AURA_ENV env var: JSON object containing FIREBASE_CONFIG as a nested JSON string
@@ -48,11 +48,11 @@ module.exports = function handler(req, res) {
         };
       }
     } catch (e) {
-      console.error("[public-config] FIREBASE_CONFIG is not valid JSON:", e.message);
+      console.error("[public-config] FIREBASE_CONFIG parse error:", e.message);
     }
   }
 
-  // Strategy 3: AURA_ENV JSON string containing FIREBASE_CONFIG
+  // Strategy 3: AURA_ENV JSON containing FIREBASE_CONFIG
   if (!firebase && process.env.AURA_ENV) {
     try {
       const auraEnv = JSON.parse(process.env.AURA_ENV);
@@ -76,7 +76,7 @@ module.exports = function handler(req, res) {
   }
 
   if (!firebase) {
-    console.error("[public-config] Firebase config not found in any source");
+    console.error("[public-config] No Firebase config found. Set FIREBASE_API_KEY+FIREBASE_PROJECT_ID, or FIREBASE_CONFIG, or AURA_ENV.");
     return res.status(500).json({ error: "Firebase not configured" });
   }
 
