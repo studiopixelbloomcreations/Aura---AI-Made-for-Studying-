@@ -34,11 +34,11 @@ const MASTER_ENV_MAP = {
   MISTRAL_API_KEY: ["mistral", "apiKey"],
   HUGGINGFACE_API_KEY: ["huggingface", "apiKey"],
   DEEPSEEK_API_KEY: ["deepseek", "apiKey"],
+  GEMINI_API_KEY: ["gemini", "apiKey"],
   SUPABASE_URL: ["supabase", "url"],
   SUPABASE_ANON_KEY: ["supabase", "anonKey"],
   SUPABASE_SERVICE_KEY: ["supabase", "serviceRoleKey"],
   SUPABASE_SERVICE_ROLE_KEY: ["supabase", "serviceRoleKey"],
-  ELEVENLABS_API_KEY: ["elevenlabs", "apiKey"],
   ALLOWED_ORIGINS: ["security", "allowedOrigins"],
 };
 

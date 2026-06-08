@@ -260,7 +260,7 @@
             <div class="setting-item">
               <label for="piVoiceSelect">Personal Intellegence Voice</label>
               <select id="piVoiceSelect" class="select" aria-label="Select Personal Intelligence voice">
-                <option value="">Loading Puter voices...</option>
+                <option value="">Loading voices...</option>
               </select>
             </div>
             <div class="admin-settings-card" id="adminSettingsCard">
@@ -565,42 +565,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
   <script src="firebase_runtime_config.js"></script>
-  <script>
-    (function() {
-      window.puter = window.puter || {};
-      window.puter.quiet = true;
-      window.__AEVRA_LAZY_PUTER__ = true;
-      window.AuraVoicePuter = window.AuraVoicePuter || {
-        promise: null,
-        load: function () {
-          if (window.__VIS_TEST_USE_MOCK || !navigator.onLine) return Promise.resolve(false);
-          if (window.puter && window.puter.ai) return Promise.resolve(true);
-          if (this.promise) return this.promise;
-          this.promise = new Promise(function (resolve, reject) {
-            var s = document.querySelector('script[data-aevra-puter="voice"]');
-            if (!s) {
-              s = document.createElement('script');
-              s.src = 'https://js.puter.com/v2/';
-              s.async = true;
-              s.defer = true;
-              s.setAttribute('data-aevra-puter', 'voice');
-              document.head.appendChild(s);
-            }
-            s.addEventListener('load', function () {
-              try {
-                window.puter = window.puter || {};
-                window.puter.quiet = true;
-              } catch (e) {}
-              resolve(!!(window.puter && window.puter.ai));
-            }, { once: true });
-            s.addEventListener('error', function () { reject(new Error('PUTER_LOAD_FAILED')); }, { once: true });
-          });
-          return this.promise;
-        }
-      };
-    })();
-  </script>
-  <script src="puter_voice_catalog.js?v=20260303voice1"></script>
   <script src="auth.js"></script>
   <script src="onboarding_gate.js"></script>
   <script src="googleSync.js"></script>
@@ -613,7 +577,7 @@
   <script src="gamification_sync.js"></script>
   <script src="gamification.js"></script>
   <script src="badges.js"></script>
-  <script src="voice_multimodal_ui.js?v=20260516voiceputer1"></script>
+  <script src="voice_multimodal_ui.js?v=20260608gemini1"></script>
   <script src="chat.js"></script>
   <script src="mic.js"></script>
   <script src="upload.js"></script>
@@ -625,8 +589,8 @@
   <script src="ExamModeToggle/ExamModeToggle.js?v=20260402fix2"></script>
   <script src="public/harmony/harmony_system.js?v=20260516ncs1"></script>
   <script src="ui/harmony_panel.js?v=20260516ncs1"></script>
-  <script src="script.js?v=20260516voiceputer1"></script>
-  <script src="personal_intelligence_ui.js?v=20260516voiceputer1"></script>
+  <script src="script.js?v=20260608gemini1"></script>
+  <script src="personal_intelligence_ui.js?v=20260608gemini1"></script>
   <!-- AURA LIVE Scripts -->
   <script src="public/vis/vis_controller.js?v=20260608live1"></script>
   <script src="public/live/audio_processor.js?v=20260608live1"></script>

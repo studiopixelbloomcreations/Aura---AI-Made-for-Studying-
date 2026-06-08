@@ -16,7 +16,7 @@ function computeReadiness() {
     { key: "PI_SWARM_BACKOFF_BASE_MS", ok: isSet(env("PI_SWARM_BACKOFF_BASE_MS")), required: false },
     { key: "PI_CLOUD_AUTO_EVOLVE", ok: isSet(env("PI_CLOUD_AUTO_EVOLVE")), required: false },
     { key: "PI_ADMIN_TOKEN", ok: isSet(env("PI_ADMIN_TOKEN")), required: true },
-    { key: "PI_STRICT_PUTER_ONLY", ok: String(env("PI_STRICT_PUTER_ONLY") || "true").trim().toLowerCase() === "true", required: true },
+    { key: "GEMINI_API_KEY", ok: isSet(env("GEMINI_API_KEY")), required: true },
     { key: "PI_SWARM_FANOUT_URL", ok: isSet(env("PI_SWARM_FANOUT_URL")), required: false },
     { key: "PI_RESEARCH_SOURCE_FEEDS", ok: isSet(env("PI_RESEARCH_SOURCE_FEEDS")), required: false },
   ];

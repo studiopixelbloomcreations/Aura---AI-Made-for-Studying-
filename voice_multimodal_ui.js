@@ -1,4 +1,6 @@
-// voice_multimodal_ui.js
+// voice_multimodal_ui.js — Gemini Native Audio TTS + Voice STT
+// All voice output uses Gemini TTS via backend /voice/speak endpoint.
+// No Puter, no ElevenLabs, no OpenAI.
 (function () {
   try { window.__g9_voice_backend_enabled = true; } catch (e) {}
 
@@ -14,8 +16,21 @@
   const ttsVoiceSelect = qs('ttsVoiceSelect');
   const ttsTestVoice = qs('ttsTestVoice');
 
-  const TTS_VOICE_STORAGE_KEY = (window.PuterVoiceCatalog && window.PuterVoiceCatalog.storageKey) ? String(window.PuterVoiceCatalog.storageKey) : 'g9_tts_voice';
-  const PUTER_DEFAULT_VOICE_ID = (window.PuterVoiceCatalog && window.PuterVoiceCatalog.defaultId) ? String(window.PuterVoiceCatalog.defaultId) : 'openai:alloy';
+  const TTS_VOICE_STORAGE_KEY = 'g9_tts_voice';
+
+  // Gemini TTS voices (prebuilt voice catalog)
+  const GEMINI_VOICES = [
+    { id: 'Kore', label: 'Kore (Female, Warm)' },
+    { id: 'Puck', label: 'Puck (Male, Bright)' },
+    { id: 'Charon', label: 'Charon (Male, Deep)' },
+    { id: 'Fenrir', label: 'Fenrir (Male, Calm)' },
+    { id: 'Aoede', label: 'Aoede (Female, Soft)' },
+    { id: 'Leda', label: 'Leda (Female, Clear)' },
+    { id: 'Orus', label: 'Orus (Male, Warm)' },
+    { id: 'Zephyr', label: 'Zephyr (Neutral, Light)' },
+  ];
+
+  const DEFAULT_VOICE_ID = 'Kore';
 
   function appendBubble(role, text) {
     if (!messagesEl) return;
@@ -28,33 +43,27 @@
     } catch (e) {}
   }
 
-  async function initTtsVoiceSelector(){
+  async function initTttsVoiceSelector(){
     if(!ttsVoiceSelect) return;
-    const catalog = window.PuterVoiceCatalog;
-    const allVoices = catalog && Array.isArray(catalog.voices) && catalog.voices.length
-      ? catalog.voices
-      : [{ id: 'openai:alloy', label: 'OpenAI - alloy', options: { provider: 'openai', model: 'gpt-4o-mini-tts', voice: 'alloy' } }];
     const saved = (function(){
       try { return String(localStorage.getItem(TTS_VOICE_STORAGE_KEY) || ''); } catch (e) { return ''; }
     })();
     ttsVoiceSelect.innerHTML = '';
-    allVoices.forEach((v) => {
+    GEMINI_VOICES.forEach((v) => {
       const o = document.createElement('option');
-      const vid = String(v && v.id ? v.id : '');
-      if(!vid) return;
-      o.value = vid;
-      o.textContent = String((v && v.label) ? v.label : 'Voice');
+      o.value = v.id;
+      o.textContent = v.label;
       ttsVoiceSelect.appendChild(o);
     });
     const hasSaved = Array.from(ttsVoiceSelect.options).some((o) => o.value === saved);
-    ttsVoiceSelect.value = hasSaved ? saved : PUTER_DEFAULT_VOICE_ID;
+    ttsVoiceSelect.value = hasSaved ? saved : DEFAULT_VOICE_ID;
     try { localStorage.setItem(TTS_VOICE_STORAGE_KEY, ttsVoiceSelect.value); } catch (e) {}
 
     ttsVoiceSelect.addEventListener('change', ()=>{
       const v = String(ttsVoiceSelect.value || '');
       try { localStorage.setItem(TTS_VOICE_STORAGE_KEY, v); } catch (e) {}
       if(v) toast('Voice set: ' + v);
-      else toast('Voice set: Puter default');
+      else toast('Voice set: ' + DEFAULT_VOICE_ID);
     });
   }
 
@@ -82,89 +91,10 @@
   function getSelectedVoiceId(){
     try {
       const v = String(localStorage.getItem(TTS_VOICE_STORAGE_KEY) || '').trim();
-      return v || PUTER_DEFAULT_VOICE_ID;
+      return v || DEFAULT_VOICE_ID;
     } catch (e) {
-      return PUTER_DEFAULT_VOICE_ID;
+      return DEFAULT_VOICE_ID;
     }
-  }
-
-  function getSelectedPuterVoiceOptions(){
-    const catalog = window.PuterVoiceCatalog;
-    const selected = getSelectedVoiceId();
-    if (catalog && typeof catalog.getById === 'function') {
-      const hit = catalog.getById(selected);
-      if (hit && hit.options) return hit.options;
-      const fallback = catalog.getDefault && catalog.getDefault();
-      if (fallback && fallback.options) return fallback.options;
-    }
-    return { provider: 'openai', model: 'gpt-4o-mini-tts', voice: 'alloy' };
-  }
-
-  async function ensurePuterReady(interactive){
-    if(window.__VIS_TEST_USE_MOCK || navigator.onLine === false) return;
-    if((!window.puter || !window.puter.ai) && window.AuraVoicePuter && typeof window.AuraVoicePuter.load === 'function'){
-      await window.AuraVoicePuter.load();
-    }
-    if(!window.puter || !window.puter.ai) throw new Error('PUTER_NOT_LOADED');
-    if(!window.puter.auth || !window.puter.auth.isSignedIn || !window.puter.auth.signIn) return;
-    let signed = false;
-    try { signed = !!(await window.puter.auth.isSignedIn()); } catch (e) {}
-    if(!signed && interactive){
-      await window.puter.auth.signIn({ attempt_temp_user_creation: true });
-    }
-  }
-
-  function normalizePuterTtsSource(result){
-    const seen = new Set();
-    function walk(node){
-      if (!node) return null;
-      if (typeof node === 'string') {
-        const s = node.trim();
-        if (/^(blob:|data:audio|https?:\/\/)/i.test(s)) return { src: s, revoke: false };
-        return null;
-      }
-      if (node instanceof Blob) return { src: URL.createObjectURL(node), revoke: true };
-      if (typeof HTMLAudioElement !== 'undefined' && node instanceof HTMLAudioElement && node.src) {
-        return { src: String(node.src), revoke: false };
-      }
-      if (typeof node !== 'object') return null;
-      if (seen.has(node)) return null;
-      seen.add(node);
-      const directKeys = ['url', 'audio_url', 'src', 'href', 'download_url'];
-      for (let i = 0; i < directKeys.length; i += 1) {
-        const k = directKeys[i];
-        if (typeof node[k] === 'string' && node[k].trim()) {
-          const s = node[k].trim();
-          if (/^(blob:|data:audio|https?:\/\/)/i.test(s)) return { src: s, revoke: false };
-        }
-      }
-      if (typeof node.data === 'string' && /^data:audio/i.test(node.data)) return { src: node.data, revoke: false };
-      const nestedKeys = ['audio', 'data', 'result', 'output', 'message', 'content'];
-      for (let i = 0; i < nestedKeys.length; i += 1) {
-        const found = walk(node[nestedKeys[i]]);
-        if (found) return found;
-      }
-      return null;
-    }
-    return walk(result);
-  }
-
-  async function requestPuterTts(text){
-    await ensurePuterReady(true);
-    const ai = window.puter && window.puter.ai;
-    if (!ai) throw new Error('PUTER_NOT_LOADED');
-    const voiceOptions = getSelectedPuterVoiceOptions();
-    const payloadA = Object.assign({ text: String(text || '') }, voiceOptions);
-    const payloadB = Object.assign({ input: String(text || '') }, voiceOptions);
-    async function tryMethod(fn){
-      try { return await fn(String(text || ''), voiceOptions); } catch (e1) {}
-      try { return await fn(payloadA); } catch (e2) {}
-      return fn(payloadB);
-    }
-    if (typeof ai.txt2speech === 'function') return tryMethod(ai.txt2speech.bind(ai));
-    if (typeof ai.text2speech === 'function') return tryMethod(ai.text2speech.bind(ai));
-    if (typeof ai.tts === 'function') return tryMethod(ai.tts.bind(ai));
-    throw new Error('PUTER_TTS_UNAVAILABLE');
   }
 
   // --------------------
@@ -241,7 +171,6 @@
         if (inputBox) {
           inputBox.value = text;
           inputBox.focus();
-          // Ensure chat UI reacts exactly like typed input.
           try { inputBox.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
         }
       } catch (e) {
@@ -287,7 +216,7 @@
   }
 
   // --------------------
-  // Voice: TTS playback
+  // Voice: TTS playback (Gemini Native Audio)
   // --------------------
   let lastAudio = null;
 
@@ -296,6 +225,23 @@
     const nodes = messagesEl.querySelectorAll('.msg.ai');
     if (!nodes.length) return '';
     return (nodes[nodes.length - 1].textContent || '').trim();
+  }
+
+  /**
+   * Request TTS from Gemini via backend /voice/speak endpoint.
+   * Returns a blob URL for the audio.
+   */
+  async function requestGeminiTts(text) {
+    const voice = getSelectedVoiceId();
+    const res = await apiFetch('/voice/speak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text, voice: voice })
+    });
+    if (!res.ok) throw new Error('TTS_HTTP_' + res.status);
+    const blob = await res.blob();
+    if (!blob || blob.size < 100) throw new Error('TTS_EMPTY_AUDIO');
+    return URL.createObjectURL(blob);
   }
 
   async function speakText(text) {
@@ -307,29 +253,27 @@
       .replace(/\s{2,}/g, ' ')
       .trim();
 
-    // Prefer Puter TTS directly.
+    if (!cleaned) throw new Error('NO_TEXT');
+
+    // Primary: Gemini Native Audio TTS via backend
     try {
-      const result = await requestPuterTts(cleaned);
-      const normalized = normalizePuterTtsSource(result);
-      if(!normalized || !normalized.src) throw new Error('PUTER_EMPTY_AUDIO');
-      const url = normalized.src;
+      const url = await requestGeminiTts(cleaned);
 
       if (lastAudio) {
         try { lastAudio.pause(); } catch (e) {}
-        try { if (lastAudio.__revoke && lastAudio.__url) URL.revokeObjectURL(lastAudio.__url); } catch (e) {}
+        try { if (lastAudio.__url) URL.revokeObjectURL(lastAudio.__url); } catch (e) {}
       }
 
       const audio = new Audio(url);
       audio.__url = url;
-      audio.__revoke = !!normalized.revoke;
       lastAudio = audio;
       await audio.play();
       return;
     } catch (e) {
-      // fall through to browser TTS
+      console.warn('[TTS] Gemini TTS failed, falling back to browser:', e.message);
     }
 
-    // Fallback: browser SpeechSynthesis (works on Netlify)
+    // Fallback: browser SpeechSynthesis (always available)
     if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
       throw new Error('NO_TTS');
     }
@@ -354,54 +298,21 @@
       }
     }
 
-    function getSavedVoiceName(){
-      try {
-        return String(localStorage.getItem(TTS_VOICE_STORAGE_KEY) || '');
-      } catch (e) {
-        return '';
-      }
-    }
-
-    function setSavedVoiceName(name){
-      try {
-        localStorage.setItem(TTS_VOICE_STORAGE_KEY, String(name || ''));
-      } catch (e) {}
-    }
-
-    function findVoiceByName(voices, name){
-      const n = String(name || '').trim();
-      if(!n) return null;
-      const vs = Array.isArray(voices) ? voices : [];
-      const exact = vs.find(v => String(v.name || '') === n);
-      if(exact) return exact;
-      const loose = vs.find(v => String(v.name || '').toLowerCase() === n.toLowerCase());
-      return loose || null;
-    }
-
     function pickBestVoice(voices){
       const vs = Array.isArray(voices) ? voices : [];
       const langPref = (String(navigator.language || 'en-US'));
       const isEnglish = /^en/i.test(langPref);
       const preferredLangs = isEnglish ? ['en-US','en-GB','en'] : [langPref, 'en-US', 'en'];
 
-      const goodName = (name)=>/online|natural|neural|premium|enhanced|google|microsoft|aria|jenny|guy|sara|sabrina|sonia|samantha|zira|susan/i.test(String(name||''));
-      const badName = (name)=>/robot|compact|basic/i.test(String(name||''));
-
       const scored = vs.map(v=>{
         const name = String(v.name || '');
         const lang = String(v.lang || '');
         let score = 0;
         if(preferredLangs.some(l => lang.toLowerCase().startsWith(l.toLowerCase()))) score += 50;
-        // Strongly prefer high quality voices when available (Edge "Online (Natural)", Google voices, etc)
         if(/online\s*\(natural\)/i.test(name)) score += 100;
         if(/natural/i.test(name)) score += 60;
         if(/neural/i.test(name)) score += 50;
-        if(/microsoft\s+aria/i.test(name)) score += 80;
-        if(/microsoft\s+jenny/i.test(name)) score += 80;
-        if(/google/i.test(name)) score += 40;
-        if(goodName(name)) score += 20;
-        if(!badName(name)) score += 5;
-        if(v.localService) score += 2;
+        if(!/robot|compact|basic/i.test(name)) score += 5;
         return { v, score };
       }).sort((a,b)=>b.score-a.score);
 
@@ -411,12 +322,7 @@
     function splitIntoChunks(t){
       const s = String(t || '').trim();
       if(!s) return [];
-      // sentence-ish chunks to sound more natural
-      const parts = s
-        .replace(/\s+/g, ' ')
-        .split(/(?<=[.!?])\s+/)
-        .map(x => x.trim())
-        .filter(Boolean);
+      const parts = s.replace(/\s+/g, ' ').split(/(?<=[.!?])\s+/).map(x => x.trim()).filter(Boolean);
       const chunks = [];
       let buf = '';
       for(const p of parts){
@@ -434,8 +340,7 @@
     try { window.speechSynthesis.cancel(); } catch (e) {}
 
     const voices = await waitForVoices();
-    const savedName = getSavedVoiceName();
-    const chosen = findVoiceByName(voices, savedName) || pickBestVoice(voices);
+    const chosen = pickBestVoice(voices);
     const chunks = splitIntoChunks(cleaned);
 
     for(const chunk of chunks){
@@ -451,7 +356,6 @@
         window.speechSynthesis.speak(utter);
       });
 
-      // tiny pause between sentences
       await new Promise(r => setTimeout(r, 120));
     }
   }
@@ -489,7 +393,7 @@
 
   try {
     window.addEventListener('DOMContentLoaded', () => {
-      initTtsVoiceSelector();
+      initTttsVoiceSelector();
     });
   } catch (e) {}
 

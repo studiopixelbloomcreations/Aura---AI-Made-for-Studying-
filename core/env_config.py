@@ -90,16 +90,15 @@ if _raw_firebase:
 
 # ──────────────────────────────────────────────
 # AI Provider Keys
+# NOTE: Puter, ElevenLabs, OpenAI have been removed.
+# All voice output uses Gemini Native Audio TTS.
 # ──────────────────────────────────────────────
 GROQ_API_KEY = _get("GROQ_API_KEY")
 OPENROUTER_API_KEY = _get("OPENROUTER_API_KEY")
 MISTRAL_API_KEY = _get("MISTRAL_API_KEY")
 GEMINI_API_KEY = _get("GEMINI_API_KEY")
-OPENAI_API_KEY = _get("OPENAI_API_KEY")
 DEEPSEEK_API_KEY = _get("DEEPSEEK_API_KEY")
 HUGGINGFACE_API_KEY = _get("HUGGINGFACE_API_KEY")
-PUTER_API_KEY = _get("PUTER_API_KEY")
-ELEVENLABS_API_KEY = _get("ELEVENLABS_API_KEY")
 
 
 # ──────────────────────────────────────────────

@@ -8,8 +8,7 @@ const DEFAULT_MASTER_CONFIG = {
   mistral: {},
   huggingface: {},
   deepseek: {},
-  puter: {},
-  elevenlabs: {},
+  gemini: {},
   security: {},
   features: {},
   limits: {},
@@ -24,7 +23,7 @@ const PROVIDER_ENV = {
   mistral: { apiKey: "MISTRAL_API_KEY", model: "PI_MISTRAL_MODEL", baseUrl: "PI_MISTRAL_BASE_URL" },
   huggingface: { apiKey: "HUGGINGFACE_API_KEY", model: "PI_HUGGINGFACE_MODEL", baseUrl: "PI_HUGGINGFACE_BASE_URL" },
   deepseek: { apiKey: "DEEPSEEK_API_KEY", model: "PI_DEEPSEEK_MODEL", baseUrl: "PI_DEEPSEEK_BASE_URL" },
-  elevenlabs: { apiKey: "ELEVENLABS_API_KEY" },
+  gemini: { apiKey: "GEMINI_API_KEY" },
 };
 
 function runtimeEnv() {

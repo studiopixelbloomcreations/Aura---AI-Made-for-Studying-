@@ -1,6 +1,6 @@
 // chat.js — AURA AI unified chat pipeline
 // Primary: FastAPI /ask with Firebase Bearer token
-// Fallback: Puter.js with 8s timeout
+// Voice output: Gemini Native Audio TTS
 (function(){
   function startLoadingAnimation(targetEl){
     let i = 0;
@@ -130,36 +130,19 @@
           throw new Error('Backend returned ' + resp.status);
         }
       } catch(backendErr){
-        console.warn('[Chat] Backend failed, trying Puter fallback:', backendErr.message);
-
-        // ─── FALLBACK: Puter.js with 8s timeout ───
-        try {
-          await ensurePuterReady(true);
-          const systemPrompt =
-            'You are AURA AI, a helpful study tutor for Grade 9 students. ' +
-            'Keep answers accurate, clear, and practical. ' +
-            'Current subject: ' + (state.subject || 'general') + '. ' +
-            'Respond in ' + (state.language || 'English') + '.';
-
-          const history = (chat && Array.isArray(chat.messages))
-            ? chat.messages
-                .filter(m => m && (m.role === 'user' || m.role === 'ai') && m.content && m.content !== 'Thinking…')
-                .slice(-20)
-                .map(m => ({ role: m.role === 'ai' ? 'assistant' : 'user', content: String(m.content).slice(0, 1200) }))
-            : [];
-
-          const mainModel = getMainModel();
-          const puterResp = await Promise.race([
-            window.puter.ai.chat(
-              [{ role: 'system', content: systemPrompt }].concat(history),
-              { model: mainModel }
-            ),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Puter timeout (8s)')), 8000))
-          ]);
-          answer = extractPuterText(puterResp);
-        } catch(puterErr){
-          throw new Error('Both backend and fallback failed: ' + puterErr.message);
+        console.warn('[Chat] Backend failed:', backendErr.message);
+        if(stopAnim) stopAnim();
+        // Show user-friendly error — no Puter fallback
+        const lastAi = [...chat.messages].reverse().find(m=>m.role==='ai');
+        const errMsg = 'I\'m having trouble connecting right now. Please check your internet connection and try again in a moment.';
+        if(lastAi){
+          lastAi.content = errMsg;
+        } else {
+          chat.messages.push({role:'ai',content:errMsg});
         }
+        renderActiveChat();
+        saveChats();
+        return;
       }
 
       if(!answer){
@@ -180,33 +163,6 @@
       saveChats();
 
       if(stopAnim) stopAnim();
-    }
-
-    function getMainModel(){
-      try {
-        return String(localStorage.getItem('main_model') || 'google/gemini-2.5-flash').trim() || 'google/gemini-2.5-flash';
-      } catch (e) {
-        return 'google/gemini-2.5-flash';
-      }
-    }
-
-    async function ensurePuterReady(interactive){
-      if(window.__VIS_TEST_USE_MOCK || navigator.onLine === false) return;
-      if(!window.puter || !window.puter.ai) throw new Error('PUTER_NOT_LOADED');
-      if(!window.puter.auth || !window.puter.auth.isSignedIn || !window.puter.auth.signIn) return;
-      let signed = false;
-      try { signed = !!(await window.puter.auth.isSignedIn()); } catch (e) {}
-      if(!signed && interactive){
-        await window.puter.auth.signIn({ attempt_temp_user_creation: true });
-      }
-    }
-
-    function extractPuterText(resp){
-      if(!resp) return '';
-      if(typeof resp === 'string') return resp.trim();
-      if(resp.message && typeof resp.message.content === 'string') return String(resp.message.content).trim();
-      if(typeof resp.content === 'string') return String(resp.content).trim();
-      return '';
     }
 
     // Marks update confirmation

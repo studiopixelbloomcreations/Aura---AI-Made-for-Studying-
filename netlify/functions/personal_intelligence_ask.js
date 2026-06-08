@@ -271,30 +271,8 @@ function sanitizeModelId(v) {
   return s;
 }
 
-async function puterChatReplyFromPayload(message, payload) {
-  const p = payload && typeof payload === "object" ? payload : {};
-  const puterReply = p.puter_reply && typeof p.puter_reply === "object" ? p.puter_reply : {};
-  const answer = String(puterReply.answer || "").trim();
-  const model = sanitizeModelId(puterReply.model || p.model || "gemini-3-pro-preview");
-  if (!answer) {
-    return {
-      ok: false,
-      error: "PUTER_NOT_PROVIDED",
-      answer: "",
-      speak_text: "",
-      provider: "none",
-      model,
-    };
-  }
-  return {
-    ok: true,
-    error: "",
-    answer,
-    speak_text: buildSpeakText(answer),
-    provider: `puter:${model || "gemini-3-pro-preview"}`,
-    model,
-  };
-}
+// puterChatReplyFromPayload removed — Puter is no longer used.
+// All AI responses are generated via Gemini/Agent Harmony pipeline.
 
 exports.handler = async function handler(event) {
   if (event.httpMethod === "OPTIONS") return json(200, { ok: true });
@@ -437,7 +415,7 @@ exports.handler = async function handler(event) {
   if (action && action.home_address) actionUpdates.home_address = String(action.home_address);
   const mergedKnownFacts = mergeKnownFacts(combinedKnownFacts, actionUpdates);
   const seedAnswer = cloudEvolveOnly
-    ? String(((payload && payload.puter_reply && payload.puter_reply.answer) || "Cloud evolution sync accepted.")).trim()
+    ? String(((payload && payload.client_reply && payload.client_reply.answer) || "Cloud evolution sync accepted.")).trim()
     : (action && action.message ? String(action.message) : "");
   const harmony = await coordinateAgentHarmony(observatory, {
     seedAnswer,
@@ -457,7 +435,7 @@ exports.handler = async function handler(event) {
   const speakText = cloudEvolveOnly
     ? buildSpeakText(answer)
     : (action && action.message ? buildSpeakText(action.message) : buildSpeakText(answer));
-  const aiProvider = cloudEvolveOnly ? "puter_client" : (action ? "local_action" : `agent_harmony:${String(harmony.model_used || "fallback")}`);
+  const aiProvider = cloudEvolveOnly ? "gemini_native" : (action ? "local_action" : `agent_harmony:${String(harmony.model_used || "fallback")}`);
   const aiOk = cloudEvolveOnly ? true : (action ? true : !!String(answer || "").trim());
   const aiError = cloudEvolveOnly ? "" : (action ? "" : deriveHarmonyError(harmony, answer));
   const harmonyFailed = !action && !cloudEvolveOnly && !queryPlansHaveHarmonySuccess(harmony);
@@ -522,8 +500,6 @@ exports.handler = async function handler(event) {
         message,
         known_facts: mergedKnownFacts,
         memory_updates: memoryUpdates,
-        puter_generated_code: payload && payload.puter_generated_code,
-        puter_model: payload && payload.puter_model,
         schema_candidates: payload && payload.schema_candidates,
       });
     }

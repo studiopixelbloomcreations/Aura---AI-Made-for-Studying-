@@ -6,7 +6,6 @@ from pydantic import BaseModel
 from personal_assistant_service import (
     ask_aevra_personal_agent,
     connect_service,
-    create_openai_realtime_session,
     get_personal_assistant_status,
     set_home_address,
 )
@@ -33,10 +32,6 @@ class ConnectServicePayload(BaseModel):
 class HomeAddressPayload(BaseModel):
     email: Optional[str] = "guest@student.com"
     address: str
-
-
-class RealtimeSessionPayload(BaseModel):
-    email: Optional[str] = "guest@student.com"
 
 
 @router.post("/ask")
@@ -67,6 +62,5 @@ async def personal_assistant_set_home(req: HomeAddressPayload):
     return set_home_address(email=req.email, address=req.address)
 
 
-@router.post("/realtime/session")
-async def personal_assistant_realtime_session(req: RealtimeSessionPayload):
-    return create_openai_realtime_session(email=req.email)
+# Realtime voice sessions use AURA LIVE (Gemini Native Audio)
+# See /aura-live/ws endpoint instead of OpenAI realtime

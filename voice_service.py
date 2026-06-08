@@ -1,14 +1,28 @@
+"""Voice service — TTS powered by Gemini Native Audio, STT via Google Speech.
+
+All voice output uses the Gemini 2.5 Flash TTS API (low-latency, high-quality).
+No Puter, no ElevenLabs, no OpenAI.
+"""
 import os
 import shutil
 import subprocess
 import uuid
+import base64
 from dataclasses import dataclass
 from typing import Optional
 
+import requests
+
 from env_utils import env
+from logging_utils import log_event
 
 TEMP_DIR = env("TMPDIR") or env("TEMP") or "/tmp"
 TEMP_DIR = os.path.join(TEMP_DIR, "tmp_media")
+
+# Gemini TTS config
+GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts"
+GEMINI_TTS_VOICE = "Kore"
+GEMINI_TTS_SAMPLE_RATE = 24000
 
 
 @dataclass
@@ -40,10 +54,6 @@ def save_upload_bytes(data: bytes, ext: str) -> str:
 
 
 def _convert_to_wav_if_needed(audio_path: str) -> str:
-    """Convert common browser-recorded formats (webm/ogg/mp4) to wav using ffmpeg.
-
-    SpeechRecognition's AudioFile supports WAV/AIFF/FLAC. For anything else we try ffmpeg.
-    """
     ext = os.path.splitext(audio_path)[1].lower().lstrip(".")
     if ext in {"wav", "aiff", "aif", "flac"}:
         return audio_path
@@ -69,21 +79,15 @@ def _convert_to_wav_if_needed(audio_path: str) -> str:
 
 
 def speech_to_text(audio_path: str, language: str = "en-US") -> STTResult:
-    """Best-effort STT. Uses SpeechRecognition if installed.
-
-    Notes:
-    - This is intended for local testing.
-    - Default engine uses Google Web Speech via SpeechRecognition (requires internet).
-    """
+    """Best-effort STT using SpeechRecognition (Google Web Speech API)."""
     try:
         import speech_recognition as sr
-    except Exception as e:  # pragma: no cover
+    except Exception as e:
         raise RuntimeError(
             "SpeechRecognition is not installed. Install with: pip install SpeechRecognition"
         ) from e
 
     r = sr.Recognizer()
-
     audio_path = _convert_to_wav_if_needed(audio_path)
 
     try:
@@ -104,40 +108,120 @@ def speech_to_text(audio_path: str, language: str = "en-US") -> STTResult:
     return STTResult(text=text, engine="speech_recognition:google")
 
 
-def text_to_speech(text: str, voice: Optional[str] = None, rate: Optional[int] = None) -> TTSResult:
-    """Best-effort offline TTS using pyttsx3.
+def _pcm16_to_wav(pcm_bytes: bytes, sample_rate: int = 24000, channels: int = 1) -> bytes:
+    """Convert raw PCM 16-bit little-endian to WAV bytes."""
+    import struct
+    bits_per_sample = 16
+    block_align = channels * bits_per_sample // 8
+    byte_rate = sample_rate * block_align
+    data_size = len(pcm_bytes)
 
-    Returns a WAV file path.
+    header = struct.pack(
+        "<4sI4s4sIHHIIHH4sI",
+        b"RIFF",
+        36 + data_size,
+        b"WAVE",
+        b"fmt ",
+        16,
+        1,
+        channels,
+        sample_rate,
+        byte_rate,
+        block_align,
+        bits_per_sample,
+        b"data",
+        data_size,
+    )
+    return header + pcm_bytes
+
+
+def text_to_speech(
+    text: str,
+    voice: Optional[str] = None,
+    rate: Optional[int] = None,
+) -> TTSResult:
+    """TTS via Gemini 2.5 Flash Native Audio API.
+
+    Fast, high-quality speech synthesis. Returns a WAV file path.
     """
+    api_key = str(env("GEMINI_API_KEY", "")).strip()
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY is not configured for TTS.")
+
+    voice_name = (voice or str(env("GEMINI_TTS_VOICE", GEMINI_TTS_VOICE)).strip()) or GEMINI_TTS_VOICE
+    model = str(env("GEMINI_TTS_MODEL", GEMINI_TTS_MODEL)).strip() or GEMINI_TTS_MODEL
+    sample_rate = int(env("GEMINI_TTS_SAMPLE_RATE", str(GEMINI_TTS_SAMPLE_RATE)))
+    base_url = str(env("GEMINI_API_BASE", "https://generativelanguage.googleapis.com")).strip().rstrip("/")
+
+    if not text or not text.strip():
+        raise RuntimeError("Text is required for TTS.")
+
+    url = f"{base_url}/v1beta/models/{model}:generateContent"
+    payload = {
+        "contents": [{"parts": [{"text": text.strip()}]}],
+        "generationConfig": {
+            "responseModalities": ["AUDIO"],
+            "speechConfig": {
+                "voiceConfig": {
+                    "prebuiltVoiceConfig": {"voiceName": voice_name},
+                },
+            },
+        },
+    }
+
     try:
-        import pyttsx3
-    except Exception as e:  # pragma: no cover
-        raise RuntimeError("pyttsx3 is not installed. Install with: pip install pyttsx3") from e
+        resp = requests.post(
+            url,
+            headers={"Content-Type": "application/json"},
+            params={"key": api_key},
+            json=payload,
+            timeout=15,  # 15s timeout for fast response
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except requests.exceptions.Timeout:
+        raise RuntimeError("Gemini TTS timed out. Try again.")
+    except Exception as e:
+        raise RuntimeError(f"Gemini TTS request failed: {e}") from e
 
-    out_path = _unique_path("wav")
+    # Extract audio from response
+    parts = (
+        data.get("candidates", [{}])[0]
+        .get("content", {})
+        .get("parts", [])
+    )
 
-    engine = pyttsx3.init()
-    if rate is not None:
-        try:
-            engine.setProperty("rate", int(rate))
-        except Exception:
-            pass
+    inline_data = None
+    for p in parts:
+        a = p.get("inlineData") or p.get("inline_data")
+        if a and a.get("data"):
+            inline_data = a
+            break
 
-    if voice:
-        try:
-            voices = engine.getProperty("voices")
-            for v in voices:
-                # Match by id or name substring
-                if voice.lower() in str(getattr(v, "id", "")).lower() or voice.lower() in str(
-                    getattr(v, "name", "")
-                ).lower():
-                    engine.setProperty("voice", v.id)
-                    break
-        except Exception:
-            pass
+    if not inline_data or not inline_data.get("data"):
+        raise RuntimeError("Gemini TTS returned no audio data.")
 
-    # pyttsx3 saves to file asynchronously; runAndWait flushes
-    engine.save_to_file(text or "", out_path)
-    engine.runAndWait()
+    raw_audio = base64.b64decode(inline_data["data"])
+    if not raw_audio or len(raw_audio) < 32:
+        raise RuntimeError("Gemini TTS returned empty audio.")
 
-    return TTSResult(path=out_path, mime_type="audio/wav", engine="pyttsx3")
+    # Check if already WAV/MP3 or raw PCM
+    is_wav = len(raw_audio) > 12 and raw_audio[:4] == b"RIFF" and raw_audio[8:12] == b"WAVE"
+    is_mp3 = len(raw_audio) > 3 and raw_audio[:3] == b"ID3"
+
+    out_path = _unique_path("wav" if is_wav or not is_mp3 else "mp3")
+    mime = "audio/wav"
+
+    if is_wav or is_mp3:
+        with open(out_path, "wb") as f:
+            f.write(raw_audio)
+        mime = "audio/wav" if is_wav else "audio/mpeg"
+    else:
+        # Raw PCM — wrap in WAV header
+        wav_bytes = _pcm16_to_wav(raw_audio, sample_rate)
+        with open(out_path, "wb") as f:
+            f.write(wav_bytes)
+        mime = "audio/wav"
+
+    log_event("info", "gemini_tts_success", {"voice": voice_name, "bytes": len(raw_audio)})
+    return TTSResult(path=out_path, mime_type=mime, engine="gemini_native_audio")

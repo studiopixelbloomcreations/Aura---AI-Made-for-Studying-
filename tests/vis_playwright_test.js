@@ -90,20 +90,7 @@ async function run() {
         throw new Error("getUserMedia should not be called in no-camera PI flow");
       };
     }
-    window.puter = {
-      ai: {
-        chat: async function () {
-          return { message: { content: "Personalized mock answer." } };
-        },
-        listModels: async function () {
-          return [{ id: "google/gemini-2.5-flash" }];
-        },
-      },
-      auth: {
-        isSignedIn: async function () { return true; },
-        signIn: async function () { return true; },
-      },
-    };
+    window.puter = undefined; // Puter removed — Gemini TTS used instead
     window.Auth = {
       getUser: function () {
         return {
@@ -173,7 +160,6 @@ async function run() {
       }),
     });
   });
-  await context.route("**/*puter.com*", (route) => route.fulfill({ status: 200, contentType: "application/javascript", body: "" }));
   await context.route("**/*", async (route) => {
     const url = route.request().url();
     if (/\/vis\/|detect-face|process-face|recognize-user|register-user|analyze-emotion/i.test(url)) {

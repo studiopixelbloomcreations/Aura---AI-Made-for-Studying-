@@ -112,7 +112,7 @@ async function runPCOSCycle(envelope, context) {
   return {
     pcos_status: {
       mode: "cloud_only",
-      puter_model_routing: "strict",
+      model_routing: "gemini_native",
       cloud_policy_enforced: safetyCloudOnly,
       route,
       cognitive: {
