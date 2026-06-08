@@ -27,24 +27,24 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 89%;
+    --card: 210 3% 12%;
+    --card-foreground: 0 0% 89%;
+    --popover: 210 3% 12%;
+    --popover-foreground: 0 0% 89%;
+    --primary: 0 0% 89%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 210 3% 12%;
+    --secondary-foreground: 0 0% 89%;
+    --muted: 210 3% 12%;
+    --muted-foreground: 150 5% 77%;
+    --accent: 210 3% 12%;
+    --accent-foreground: 0 0% 89%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
+    --destructive-foreground: 0 0% 89%;
+    --border: 210 3% 18%;
+    --input: 210 3% 18%;
     --ring: 212.7 26.8% 83.9%;
   }
 }
@@ -55,6 +55,11 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: "Google Sans Flex", "Google Sans", "Helvetica Neue", sans-serif;
+  }
+  .dark body {
+    background: #000000;
+    color: #E3E3E3;
   }
 }
 
@@ -101,6 +106,49 @@
 }
 .animate-spin-slow {
   animation: spin-slow 12s linear infinite;
+}
+
+/* Gemini sidebar slide animation */
+@keyframes sidebar-slide-in {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes sidebar-slide-out {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(-100%); opacity: 0; }
+}
+.animate-sidebar-in {
+  animation: sidebar-slide-in 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.animate-sidebar-out {
+  animation: sidebar-slide-out 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Gemini chip stagger fade-in */
+@keyframes chip-stagger {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-chip-stagger {
+  animation: chip-stagger 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Gemini greeting text fade-in */
+@keyframes greeting-fade {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-greeting-fade {
+  animation: greeting-fade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Gemini input area subtle glow on focus */
+@keyframes input-glow {
+  0%, 100% { box-shadow: 0 2px 8px -2px rgba(0,0,0,0.16); }
+  50% { box-shadow: 0 4px 16px -2px rgba(66,133,244,0.15); }
+}
+.animate-input-glow {
+  animation: input-glow 2s ease-in-out infinite;
 }
 
 /* Custom micro transitions */

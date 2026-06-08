@@ -10,26 +10,11 @@ import { askBackend, API_BASE_URL, getAuraIdentity, type AuraIdentity } from './
 import { useAppStore } from './store/useAppStore'
 import {
   Sparkles,
-  Share2,
-  MoreVertical,
-  Folder,
-  Pin,
-  Pencil,
-  Trash2,
-  Shield,
-  ShieldCheck,
   Camera,
   Plus,
   LogOut,
   X,
-  LayoutGrid
 } from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/shared/dropdown-menu"
 
 type GateStage = "landing" | "login" | "checking" | "onboarding" | "loading" | "ready";
 
@@ -190,9 +175,6 @@ export default function App() {
   const {
     chats,
     activeChatId,
-    deleteChat,
-    isTemporaryChat,
-    setTemporaryChat,
     isLiveOpen,
     activeTab,
     setActiveTab,
@@ -304,9 +286,6 @@ export default function App() {
 
   // Find active chat details
   const activeChat = chats.find(c => c.id === activeChatId) || { id: "New Chat", title: "New Chat", preview: "", time: "" }
-  
-  // Decide whether a chat is active or not (we can check if it is "New Chat" or has started)
-  const isChatStarted = activeChat.id !== "New Chat" && activeChat.title !== "New Chat"
 
   const runtime = useLocalRuntime({
     async run({ messages }: any) {
@@ -366,58 +345,41 @@ export default function App() {
     }
   });
 
-  const handleDeleteActiveChat = () => {
-    if (activeChat.id) {
-      deleteChat(activeChat.id);
-    }
-  };
-
-  // Determine the view title for header based on activeTab
-  const getHeaderTitle = () => {
-    switch (activeTab) {
-      case "study": return "Study Center";
-      case "exams": return "Exam Center";
-      case "settings": return "";
-      case "help": return "";
-      default: return isChatStarted ? activeChat.title : "";
-    }
-  };
-
   const gateScreen = useMemo(() => {
     if (gateStage === "ready") return null;
     if (gateStage === "landing") {
       return (
-        <div className="min-h-screen bg-white dark:bg-[#0e0e0f] text-[#1f1f1f] dark:text-[#e3e3e3] flex flex-col">
-          <header className="h-16 px-6 flex items-center justify-between border-b border-black/5 dark:border-white/5">
+        <div className="min-h-screen bg-black text-[#e3e3e3] flex flex-col">
+          <header className="h-16 px-6 flex items-center justify-between border-b border-white/5">
             <div className="flex items-center gap-2">
               <AuraLogo className="size-8" />
-              <span className="text-xl font-semibold">Aura</span>
+              <span className="text-xl font-semibold text-[#e3e3e3]">Aura</span>
             </div>
-            <button onClick={launchLogin} className="h-10 px-5 rounded-full bg-[#d3e3fd] text-[#0b57d0] text-sm font-bold">Log in</button>
+            <button onClick={launchLogin} className="h-10 px-5 rounded-full bg-[#c2e7ff] text-[#001d35] text-sm font-bold">Log in</button>
           </header>
           <main className="flex-1 flex items-center px-6 py-12">
             <div className="mx-auto max-w-5xl grid md:grid-cols-[1.1fr_0.9fr] gap-10 items-center">
               <div className="space-y-6">
-                <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 dark:bg-blue-950/30 px-4 py-2 text-xs font-bold text-blue-600 dark:text-blue-300">
+                <div className="inline-flex items-center gap-2 rounded-full bg-blue-950/30 px-4 py-2 text-xs font-bold text-blue-300">
                   <Sparkles className="size-4" /> Grade 9 Personal Intelligence
                 </div>
                 <h1 className="text-5xl md:text-7xl font-medium tracking-tight leading-none bg-gradient-to-r from-[#4285f4] via-[#9b72cb] to-[#d96570] text-transparent bg-clip-text">
                   Aura AI
                 </h1>
-                <p className="text-lg text-[#5f6368] dark:text-[#bdc1c6] leading-8 max-w-2xl">
+                <p className="text-lg text-[#bdc1c6] leading-8 max-w-2xl">
                   A personal study AI that remembers your learning style, routes every answer through Harmony, and builds a private intelligence profile for your Google account.
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <button onClick={launchLogin} className="h-12 px-6 rounded-full bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/20">
                     Start with Google
                   </button>
-                  <button onClick={launchLogin} className="h-12 px-6 rounded-full border border-[#dadce0] dark:border-[#2d2f31] font-bold">
+                  <button onClick={launchLogin} className="h-12 px-6 rounded-full border border-[#2d2f31] text-[#e3e3e3] font-bold hover:bg-white/5">
                     Continue to Aura
                   </button>
                 </div>
               </div>
-              <div className="rounded-[28px] border border-[#dadce0]/70 dark:border-[#2d2f31] bg-[#f8fafd] dark:bg-[#1e1f20] p-6 shadow-2xl">
-                <img src="/aura-logo.png" alt="Aura AI" className="w-full rounded-2xl object-contain bg-white/60 dark:bg-black/20 p-8" />
+              <div className="rounded-[28px] border border-[#2d2f31] bg-[#1e1f20] p-6 shadow-2xl">
+                <img src="/aura-logo.png" alt="Aura AI" className="w-full rounded-2xl object-contain bg-black/20 p-8" />
               </div>
             </div>
           </main>
@@ -428,7 +390,7 @@ export default function App() {
       return (
         <GateShell title="Log in to continue" subtitle="Aura must bind your unique intelligence to your Google account before the UI opens.">
           <button onClick={signInWithGoogle} className="w-full h-12 rounded-full bg-blue-600 text-white font-bold">Continue with Google</button>
-          <button onClick={() => setGateStage("landing")} className="w-full h-11 rounded-full border border-[#dadce0] dark:border-[#2d2f31] text-sm font-bold">Back</button>
+          <button onClick={() => setGateStage("landing")} className="w-full h-11 rounded-full border border-[#2d2f31] text-[#e3e3e3] text-sm font-bold hover:bg-white/5">Back</button>
           {gateError && <p className="text-xs text-red-500">{gateError}</p>}
         </GateShell>
       );
@@ -436,10 +398,10 @@ export default function App() {
     if (gateStage === "checking" || gateStage === "loading") {
       return (
         <GateShell title="Preparing your Aura" subtitle={gateStatus}>
-          <div className="h-1.5 rounded-full bg-black/5 dark:bg-white/10 overflow-hidden">
+          <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
             <div className="h-full w-1/2 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-progress-glow" />
           </div>
-          <p className="text-xs text-[#70757a] dark:text-[#9aa0a6]">This screen will not continue until the unique id and profile file are retrieved.</p>
+          <p className="text-xs text-[#9aa0a6]">This screen will not continue until the unique id and profile file are retrieved.</p>
         </GateShell>
       );
     }
@@ -447,13 +409,13 @@ export default function App() {
       <GateShell title="Personalize Aura" subtitle="Answer these once so Harmony can create the first version of your private profile.">
         <form onSubmit={submitBasicOnboarding} className="grid gap-3">
           {BASIC_QUESTIONS.map((question) => (
-            <label key={question.id} className="grid gap-1.5 text-xs font-bold text-[#5f6368] dark:text-[#bdc1c6]">
+            <label key={question.id} className="grid gap-1.5 text-xs font-bold text-[#bdc1c6]">
               <span>{question.label}</span>
               {question.kind === "select" ? (
                 <select
                   value={basicAnswers[question.id]}
                   onChange={(e) => setBasicAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))}
-                  className="h-10 rounded-xl border border-[#dadce0] dark:border-[#2d2f31] bg-[#f8fafd] dark:bg-[#0f0f10] px-3 text-sm text-foreground"
+                  className="h-10 rounded-xl border border-[#2d2f31] bg-[#0f0f10] px-3 text-sm text-[#e3e3e3]"
                 >
                   {(question.options || []).map((option) => <option key={option} value={option}>{option}</option>)}
                 </select>
@@ -463,7 +425,7 @@ export default function App() {
                   value={basicAnswers[question.id]}
                   placeholder={question.placeholder}
                   onChange={(e) => setBasicAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))}
-                  className="h-10 rounded-xl border border-[#dadce0] dark:border-[#2d2f31] bg-[#f8fafd] dark:bg-[#0f0f10] px-3 text-sm text-foreground"
+                  className="h-10 rounded-xl border border-[#2d2f31] bg-[#0f0f10] px-3 text-sm text-[#e3e3e3]"
                 />
               )}
             </label>
@@ -478,104 +440,23 @@ export default function App() {
   if (gateScreen) return gateScreen;
 
   return (
-    <div className="h-screen w-full flex bg-white dark:bg-[#0e0e0f] font-sans overflow-hidden relative">
+    <div className="h-screen w-full flex bg-black font-sans overflow-hidden relative">
       <AssistantRuntimeProvider runtime={runtime}>
-        {/* Collapsible Sidebar */}
+        {/* Collapsible Sidebar — Gemini style */}
         <Sidebar isExpanded={isSidebarExpanded} setIsExpanded={setIsSidebarExpanded} />
 
-        {/* Integrated Chat Canvas */}
-        <div className="flex-1 h-full flex flex-col min-w-0 bg-white dark:bg-[#0e0e0f] relative">
+        {/* Main Content Area */}
+        <div className="flex-1 h-full flex flex-col min-w-0 bg-black relative">
           
-          {/* Combined App Header (Seamless background, fixed logos) */}
-          <header className="h-[56px] w-full flex items-center justify-between px-6 bg-transparent shrink-0 z-30 select-none">
-            {/* Left Header: Fixed Logo word "Aura" immediately next to the sidebar strip */}
-            <div className="flex items-center gap-1.5 min-w-[120px]">
-              <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setActiveTab("chats")}>
-                <AuraLogo className="size-7" />
-                <span className="text-[20px] tracking-tight text-[#1f1f1f] dark:text-white font-medium select-none">Aura</span>
-                <Sparkles className="size-4 text-blue-600 animate-pulse mt-0.5" />
-              </div>
-            </div>
-
-            {/* Center Header: Active Chat Name or Feature Tab Title */}
-            <div className="text-sm font-semibold text-[#1f1f1f] dark:text-[#e3e3e3] truncate max-w-[280px] md:max-w-[400px]">
-              {getHeaderTitle()}
-            </div>
-
-            {/* Right Header: Upgrade, Temporary Chat, Share, Three Dots, Profile */}
-            <div className="flex items-center gap-2.5">
-              {/* Upgrade Button */}
-              <button className="h-9 px-4 rounded-full bg-[#d3e3fd] hover:bg-[#c2d7fb] text-[#0b57d0] text-xs font-bold tracking-wide transition-all flex items-center gap-1.5 active:scale-95">
-                <Sparkles className="size-3.5" />
-                <span>Upgrade</span>
-              </button>
-
-              {/* DYNAMIC: Conditional temporary chat or active chat indicators */}
-              {activeTab === "chats" && !isChatStarted ? (
-                /* Temporary Chat toggle shown next to Upgrade when in a empty / new chat */
-                <button
-                  onClick={() => setTemporaryChat(!isTemporaryChat)}
-                  className={`h-9 px-3 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 border active:scale-95 ${
-                    isTemporaryChat
-                      ? "bg-amber-50 border-amber-300 text-amber-600 dark:bg-amber-950/20 dark:border-amber-900 dark:text-amber-400"
-                      : "bg-transparent border-[#dadce0] hover:bg-black/5 text-[#444746] dark:border-[#2d2f31] dark:text-[#c4c7c5]"
-                  }`}
-                  title="Toggle Temporary Chat Mode"
-                >
-                  {isTemporaryChat ? <ShieldCheck className="size-4" /> : <Shield className="size-4 opacity-75" />}
-                  <span>{isTemporaryChat ? "Temporary chat (On)" : "Temporary chat"}</span>
-                </button>
-              ) : activeTab === "chats" && isChatStarted ? (
-                /* Share & Three Dots shown ONLY when chat has started or past chat selected */
-                <div className="flex items-center gap-1.5 animate-fade-in">
-                  {/* Share Icon */}
-                  <button className="size-9 flex items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-[#444746] dark:text-[#c4c7c5] transition-all">
-                    <Share2 className="size-4 opacity-80" />
-                  </button>
-
-                  {/* Three Dots dropdown menu */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className="size-9 flex items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-[#444746] dark:text-[#c4c7c5] transition-all">
-                      <MoreVertical className="size-4 opacity-80" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="min-w-48 rounded-xl shadow-xl border border-[#dadce0] dark:border-[#2d2f31] p-1.5 bg-white dark:bg-[#1e1f20] z-50">
-                      <DropdownMenuItem className="flex items-center gap-2.5 text-xs font-semibold hover:bg-[#f1f3f4] dark:hover:bg-[#2d2f31] rounded-lg px-3 py-2 cursor-default transition-all">
-                        <Folder className="size-4 text-muted-foreground" />
-                        <span>Files in this chat</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center gap-2.5 text-xs font-semibold hover:bg-[#f1f3f4] dark:hover:bg-[#2d2f31] rounded-lg px-3 py-2 cursor-default transition-all">
-                        <Pin className="size-4 text-muted-foreground" />
-                        <span>Pin</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center gap-2.5 text-xs font-semibold hover:bg-[#f1f3f4] dark:hover:bg-[#2d2f31] rounded-lg px-3 py-2 cursor-default transition-all">
-                        <Pencil className="size-4 text-muted-foreground" />
-                        <span>Rename</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onSelect={handleDeleteActiveChat}
-                        className="flex items-center gap-2.5 text-xs font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg px-3 py-2 cursor-default transition-all"
-                      >
-                        <Trash2 className="size-4" />
-                        <span>Delete</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ) : null}
-
-              {/* Layout grid utility icon */}
-              <button className="size-9 flex items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-[#444746] dark:text-[#c4c7c5]">
-                <LayoutGrid className="size-4 opacity-80" />
-              </button>
-
-              {/* Profile Avatar trigger */}
-              <button
-                onClick={() => setIsProfileOpen(true)}
-                className="h-9 w-9 aspect-square shrink-0 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center text-white text-[13px] font-bold shadow-md shadow-purple-500/10 hover:opacity-90 active:scale-95 transition-all overflow-hidden"
-              >
-                {identity.avatar ? <img src={identity.avatar} alt="" className="h-full w-full object-cover" /> : profileInitial}
-              </button>
-            </div>
+          {/* Minimal Gemini-style top bar: only profile & sign-in when sidebar is collapsed */}
+          <header className="h-[56px] w-full flex items-center justify-end px-4 bg-transparent shrink-0 z-30 select-none">
+            {/* Profile Avatar trigger */}
+            <button
+              onClick={() => setIsProfileOpen(true)}
+              className="h-9 w-9 aspect-square shrink-0 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center text-white text-[13px] font-bold shadow-md hover:opacity-90 active:scale-95 transition-all overflow-hidden"
+            >
+              {identity.avatar ? <img src={identity.avatar} alt="" className="h-full w-full object-cover" /> : profileInitial}
+            </button>
           </header>
 
           {/* Main Content Area — switches between Chat, Study, Exam */}
@@ -587,24 +468,23 @@ export default function App() {
             ) : activeTab === "exams" ? (
               <ExamCenter />
             ) : (
-              /* Default fallback for help/other tabs */
               <Gemini />
             )}
           </div>
         </div>
       </AssistantRuntimeProvider>
 
-      {/* Spectacular Google Profile expanded dialog card cloned exactly from screenshot 2 */}
+      {/* Google Profile expanded dialog card — Gemini dark style */}
       {isProfileOpen && (
         <div className="absolute inset-0 bg-transparent flex justify-end p-4 z-50 animate-fade-in pointer-events-none">
-          <div className="w-[380px] h-[340px] bg-[#e9eef6] dark:bg-[#1a1b1f] border border-[#dadce0]/50 dark:border-[#2d2f31]/50 rounded-[28px] p-5 shadow-2xl space-y-4 pointer-events-auto flex flex-col justify-between mt-12 mr-6 animate-scale-up">
+          <div className="w-[380px] h-[340px] bg-[#1e1f20] border border-[#2d2f31]/50 rounded-[28px] p-5 shadow-2xl space-y-4 pointer-events-auto flex flex-col justify-between mt-12 mr-6 animate-scale-up">
             
             {/* Header: User Email and X close */}
-            <div className="flex justify-between items-center text-[#444746] dark:text-[#c4c7c5]">
+            <div className="flex justify-between items-center text-[#c4c7c5]">
               <span className="text-[12.5px] font-medium tracking-wide">{identity.email}</span>
               <button
                 onClick={() => setIsProfileOpen(false)}
-                className="size-8 flex items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-[#444746] dark:text-[#c4c7c5]"
+                className="size-8 flex items-center justify-center rounded-full hover:bg-white/8 text-[#c4c7c5]"
               >
                 <X className="h-[18px] w-[18px]" />
               </button>
@@ -612,47 +492,44 @@ export default function App() {
 
             {/* Center Profile Section */}
             <div className="flex flex-col items-center text-center space-y-2.5">
-              {/* Large circular avatar with camera change icon */}
               <div className="relative">
                 <div className="h-20 w-20 aspect-square rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-purple-500/20 overflow-hidden">
                   {identity.avatar ? <img src={identity.avatar} alt="" className="h-full w-full object-cover" /> : profileInitial}
                 </div>
                 <button
-                  className="absolute bottom-0 right-0 h-[26px] w-[26px] aspect-square bg-white dark:bg-[#1e1f20] border border-[#dadce0]/70 dark:border-[#2d2f31]/70 rounded-full flex items-center justify-center text-[#444746] dark:text-[#c4c7c5] shadow-md hover:bg-[#f1f3f4]"
+                  className="absolute bottom-0 right-0 h-[26px] w-[26px] aspect-square bg-[#2b2c2d] border border-[#2d2f31]/70 rounded-full flex items-center justify-center text-[#c4c7c5] shadow-md hover:bg-[#3c4043]"
                   title="Change profile photo"
                 >
                   <Camera className="h-3.5 w-3.5" />
                 </button>
               </div>
 
-              {/* Greeting */}
-              <h3 className="text-[17px] font-medium text-[#1f1f1f] dark:text-[#e3e3e3]">
+              <h3 className="text-[17px] font-medium text-[#e3e3e3]">
                 Hi, {identity.name || "Student"}!
               </h3>
 
-              {/* Manage Aura Account button */}
               <button
                 onClick={() => window.open("https://myaccount.google.com/", "_blank", "noopener")}
-                className="bg-transparent border border-[#747775] hover:bg-[#0b57d0]/5 dark:border-[#8e918f] dark:hover:bg-white/5 text-[#0b57d0] dark:text-blue-400 font-bold text-xs py-2 px-6 rounded-full transition-all"
+                className="bg-transparent border border-[#8e918f] hover:bg-white/5 text-[#a8c7fa] font-bold text-xs py-2 px-6 rounded-full transition-all"
               >
                 Manage your Google Account
               </button>
             </div>
 
             {/* Add account / Sign out capsule container */}
-            <div className="bg-white dark:bg-[#1e1f20] rounded-2xl flex border border-[#dadce0]/50 dark:border-[#2d2f31]/50 overflow-hidden shadow-sm">
-              <button onClick={signInWithGoogle} className="hover:bg-black/5 dark:hover:bg-white/5 flex-1 py-3 text-xs font-bold flex items-center justify-center gap-2 border-r border-[#dadce0]/50 dark:border-[#2d2f31]/50 text-[#444746] dark:text-[#c4c7c5]">
-                <Plus className="size-4 text-muted-foreground" />
+            <div className="bg-[#0e0e0e] rounded-2xl flex border border-[#2d2f31]/50 overflow-hidden shadow-sm">
+              <button onClick={signInWithGoogle} className="hover:bg-white/5 flex-1 py-3 text-xs font-bold flex items-center justify-center gap-2 border-r border-[#2d2f31]/50 text-[#c4c7c5]">
+                <Plus className="size-4 text-[#c4c7c5]" />
                 <span>Add account</span>
               </button>
-              <button onClick={signOut} className="hover:bg-black/5 dark:hover:bg-white/5 flex-1 py-3 text-xs font-bold flex items-center justify-center gap-2 text-[#444746] dark:text-[#c4c7c5]">
-                <LogOut className="size-4 text-muted-foreground" />
+              <button onClick={signOut} className="hover:bg-white/5 flex-1 py-3 text-xs font-bold flex items-center justify-center gap-2 text-[#c4c7c5]">
+                <LogOut className="size-4 text-[#c4c7c5]" />
                 <span>Sign out</span>
               </button>
             </div>
 
             {/* Footer Terms */}
-            <div className="text-[11px] text-[#747775] dark:text-[#8e918f] text-center select-none">
+            <div className="text-[11px] text-[#8e918f] text-center select-none">
               Privacy Policy • Terms of Service
             </div>
           </div>
@@ -667,13 +544,13 @@ export default function App() {
 
 function GateShell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0e0e0f] text-[#1f1f1f] dark:text-[#e3e3e3] flex items-center justify-center p-5">
-      <div className="w-full max-w-[560px] rounded-[28px] border border-[#dadce0]/70 dark:border-[#2d2f31] bg-white dark:bg-[#1e1f20] shadow-2xl p-6 space-y-5">
+    <div className="min-h-screen bg-black text-[#e3e3e3] flex items-center justify-center p-5">
+      <div className="w-full max-w-[560px] rounded-[28px] border border-[#2d2f31] bg-[#1e1f20] shadow-2xl p-6 space-y-5">
         <div className="flex items-center gap-3">
           <AuraLogo className="size-9" />
           <div>
-            <h1 className="text-xl font-bold">{title}</h1>
-            <p className="text-sm text-[#70757a] dark:text-[#9aa0a6] leading-6">{subtitle}</p>
+            <h1 className="text-xl font-bold text-[#e3e3e3]">{title}</h1>
+            <p className="text-sm text-[#9aa0a6] leading-6">{subtitle}</p>
           </div>
         </div>
         <div className="space-y-3">{children}</div>

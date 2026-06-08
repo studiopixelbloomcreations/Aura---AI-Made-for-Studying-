@@ -171,28 +171,30 @@ export const Gemini: FC = () => {
   }, []);
 
   return (
-    <ThreadPrimitive.Root className="flex h-full flex-col items-stretch bg-white dark:bg-[#0e0e0f] transition-all duration-300 relative select-none">
+    <ThreadPrimitive.Root className="flex h-full flex-col items-stretch bg-black transition-all duration-300 relative select-none">
       
       <AuiIf condition={(s) => s.thread.isEmpty}>
-        <div className="flex-1 flex flex-col justify-center px-4 md:px-8">
-          <div className="mx-auto w-full max-w-3xl">
-            {/* Hi Studio Pixel (Subtext) */}
-            <h2 className="text-2xl md:text-3xl text-[#c4c7c5] dark:text-[#444746] font-medium mb-1 tracking-tight select-none">
-              Hi Studio Pixel
-            </h2>
-            {/* Where should we start? (Gradient Bold text) */}
-            <h1 className="text-[38px] md:text-[56px] leading-tight font-medium tracking-tight mb-8 select-none text-transparent bg-clip-text bg-gradient-to-r from-[#4285f4] via-[#9b72cb] to-[#d96570]">
+        <div className="flex-1 flex flex-col pt-[90px] px-4 md:px-[72px]">
+          <div className="mx-auto w-full max-w-[760px]">
+            {/* Gemini-style greeting: plain white text, 32px, weight 400 */}
+            <h1 className="text-[28px] md:text-[32px] leading-[36px] font-normal text-[#e3e3e3] mb-6 select-none animate-greeting-fade">
               {startupMessage}
             </h1>
           </div>
-          <Composer />
-          {/* Exact Suggestion Chips */}
-          <div className="mx-auto mt-6 flex w-full max-w-3xl flex-wrap justify-center md:justify-start gap-2.5">
-            <SuggestionChip>Create image</SuggestionChip>
-            <SuggestionChip>Create music</SuggestionChip>
-            <SuggestionChip>Boost my day</SuggestionChip>
-            <SuggestionChip>Write anything</SuggestionChip>
-            <SuggestionChip>Help me learn</SuggestionChip>
+          {/* Suggestion Chips — vertical stack, left-aligned like Gemini */}
+          <div className="mx-auto w-full max-w-[760px] mb-6">
+            <div className="flex flex-col gap-2">
+              {["Write", "Plan", "Research", "Learn"].map((label, i) => (
+                <SuggestionChip key={label} delay={i * 80}>{label}</SuggestionChip>
+              ))}
+            </div>
+          </div>
+          {/* Composer at bottom */}
+          <div className="mx-auto w-full max-w-[760px] mt-auto">
+            <Composer />
+            <p className="text-center text-[#c4c7c5] text-[12px] leading-[16px] mt-3 mb-4 select-none">
+              Aura may display inaccurate info, including about people, so double-check its responses.
+            </p>
           </div>
         </div>
       </AuiIf>
@@ -201,23 +203,25 @@ export const Gemini: FC = () => {
         <ThreadPrimitive.Viewport className="flex grow flex-col overflow-y-auto pt-6 px-4">
           <ThreadPrimitive.Messages components={{ Message: ChatMessage }} />
         </ThreadPrimitive.Viewport>
-        <div className="space-y-3 px-6 pb-6 pt-2 bg-gradient-to-t from-white via-white/90 to-transparent dark:from-[#0e0e0f] dark:via-[#0e0e0f]/90 dark:to-transparent">
-          <Composer />
-          <p className="text-center text-[#70757a] text-[11px] dark:text-[#9aa0a6] font-medium">
-            Aura may display inaccurate info, including about people, so double-check its responses.
-          </p>
+        <div className="px-4 md:px-[72px] pb-4 pt-2">
+          <div className="mx-auto w-full max-w-[760px]">
+            <Composer />
+            <p className="text-center text-[#c4c7c5] text-[12px] leading-[16px] mt-3 select-none">
+              Aura may display inaccurate info, including about people, so double-check its responses.
+            </p>
+          </div>
         </div>
       </AuiIf>
 
       {/* Spectacular Multi-Tab settings Dialog cloned exactly from Gemini */}
       {activeTab === "settings" && (
         <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="w-full max-w-3xl h-[480px] bg-white dark:bg-[#1e1f20] border border-[#dadce0]/60 dark:border-[#2d2f31]/60 rounded-3xl shadow-2xl flex overflow-hidden animate-scale-up">
+          <div className="w-full max-w-3xl h-[480px] bg-[#1e1f20] border border-[#2d2f31]/60 rounded-3xl shadow-2xl flex overflow-hidden animate-scale-up">
             
             {/* Modal Sidebar Tabs */}
-            <div className="w-56 bg-[#f0f4f9] dark:bg-[#0f0f10] border-r border-[#dadce0]/45 dark:border-[#2d2f31]/45 p-4 flex flex-col justify-between shrink-0">
+            <div className="w-56 bg-[#0f0f10] border-r border-[#2d2f31]/45 p-4 flex flex-col justify-between shrink-0">
               <div className="space-y-1.5">
-                <h3 className="text-sm font-bold text-foreground px-3 mb-4">Settings</h3>
+                <h3 className="text-sm font-bold text-[#e3e3e3] px-3 mb-4">Settings</h3>
                 {[
                   { id: "general" as const, label: "General" },
                   { id: "personalization" as const, label: "Personalization" },
@@ -229,8 +233,8 @@ export const Gemini: FC = () => {
                     onClick={() => setSettingsTab(id)}
                     className={`w-full flex items-center px-3 py-2 rounded-xl text-xs font-semibold transition-all text-left ${
                       settingsTab === id
-                        ? "bg-[#d3e3fd]/60 dark:bg-[#1a2d4c] text-blue-600 dark:text-blue-400"
-                        : "hover:bg-black/5 dark:hover:bg-white/5 text-[#444746] dark:text-[#c4c7c5]"
+                        ? "bg-[#1a2d4c] text-blue-400"
+                        : "hover:bg-white/5 text-[#c4c7c5]"
                     }`}
                   >
                     {label}
@@ -240,21 +244,21 @@ export const Gemini: FC = () => {
               
               <button
                 onClick={() => setActiveTab("chats")}
-                className="w-full text-center text-xs font-bold py-2 rounded-xl border border-[#dadce0] dark:border-[#2d2f31] hover:bg-black/5 dark:hover:bg-white/5"
+                className="w-full text-center text-xs font-bold py-2 rounded-xl border border-[#2d2f31] hover:bg-white/5 text-[#c4c7c5]"
               >
                 Close Settings
               </button>
             </div>
 
             {/* Modal Main Content Pane */}
-            <div className="flex-1 p-6 overflow-y-auto space-y-6 bg-white dark:bg-[#1e1f20]">
-              <div className="flex justify-between items-center border-b border-black/5 dark:border-white/5 pb-2.5">
-                <h4 className="font-bold text-sm text-foreground uppercase tracking-wider">
+            <div className="flex-1 p-6 overflow-y-auto space-y-6 bg-[#1e1f20]">
+              <div className="flex justify-between items-center border-b border-white/5 pb-2.5">
+                <h4 className="font-bold text-sm text-[#e3e3e3] uppercase tracking-wider">
                   {settingsTab === "general" ? "General Options" : settingsTab === "personalization" ? "Personalization" : settingsTab === "voices" ? "Voice Settings" : "AI Model Selection"}
                 </h4>
                 <button
                   onClick={() => setActiveTab("chats")}
-                  className="size-7 flex items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground hover:text-foreground transition-all"
+                  className="size-7 flex items-center justify-center rounded-full hover:bg-white/5 text-[#c4c7c5] hover:text-[#e3e3e3] transition-all"
                 >
                   <Cross2Icon className="size-4" />
                 </button>
@@ -269,7 +273,7 @@ export const Gemini: FC = () => {
                     <select
                       value={language}
                       onChange={(e) => setLanguage(e.target.value as any)}
-                      className="w-full bg-[#f0f4f9] dark:bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#dadce0]/50 dark:border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500"
+                      className="w-full bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500 text-[#e3e3e3]"
                     >
                       <option value="English">English</option>
                       <option value="Sinhala">සිංහල (Sinhala)</option>
@@ -282,7 +286,7 @@ export const Gemini: FC = () => {
                     <select
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
-                      className="w-full bg-[#f0f4f9] dark:bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#dadce0]/50 dark:border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500"
+                      className="w-full bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500 text-[#e3e3e3]"
                     >
                       <option value="General">General</option>
                       <option value="Math">Math</option>
@@ -304,7 +308,7 @@ export const Gemini: FC = () => {
                           className={`flex-1 py-2 px-3 rounded-xl border text-xs font-semibold capitalize transition-all ${
                             theme === t
                               ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                              : "border-[#dadce0]/50 dark:border-[#2d2f31]/50 hover:bg-black/5 dark:hover:bg-white/5"
+                              : "border-[#2d2f31]/50 hover:bg-white/5"
                           }`}
                         >
                           {t}
@@ -324,7 +328,7 @@ export const Gemini: FC = () => {
                     <select
                       value={teachingStyle}
                       onChange={(e) => setTeachingStyle(e.target.value as any)}
-                      className="w-full bg-[#f0f4f9] dark:bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#dadce0]/50 dark:border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500"
+                      className="w-full bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500 text-[#e3e3e3]"
                     >
                       <option value="storyteller">Storyteller (Narrative explanations)</option>
                       <option value="socratic">Socratic (Question-guided discovery)</option>
@@ -344,7 +348,7 @@ export const Gemini: FC = () => {
                           className={`flex-1 py-2 px-3 rounded-xl border text-xs font-semibold capitalize transition-all ${
                             responseLength === opt
                               ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                              : "border-[#dadce0]/50 dark:border-[#2d2f31]/50 hover:bg-black/5 dark:hover:bg-white/5"
+                              : "border-[#2d2f31]/50 hover:bg-white/5"
                           }`}
                         >
                           {opt}
@@ -376,7 +380,7 @@ export const Gemini: FC = () => {
                     <select
                       value={toneAdjustment}
                       onChange={(e) => setToneAdjustment(e.target.value as any)}
-                      className="w-full bg-[#f0f4f9] dark:bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#dadce0]/50 dark:border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500"
+                      className="w-full bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500 text-[#e3e3e3]"
                     >
                       <option value="encouraging">Encouraging & Supportive</option>
                       <option value="analytical">Analytical & Precise</option>
@@ -396,7 +400,7 @@ export const Gemini: FC = () => {
                           className={`flex-1 py-2 px-3 rounded-xl border text-xs font-semibold capitalize transition-all ${
                             learningSpeed === opt
                               ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                              : "border-[#dadce0]/50 dark:border-[#2d2f31]/50 hover:bg-black/5 dark:hover:bg-white/5"
+                              : "border-[#2d2f31]/50 hover:bg-white/5"
                           }`}
                         >
                           {opt}
@@ -411,7 +415,7 @@ export const Gemini: FC = () => {
                     <select
                       value={memoryPreference}
                       onChange={(e) => setMemoryPreference(e.target.value as any)}
-                      className="w-full bg-[#f0f4f9] dark:bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#dadce0]/50 dark:border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500"
+                      className="w-full bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500 text-[#e3e3e3]"
                     >
                       <option value="deep">Deep Memory (Aura recalls all past sessions)</option>
                       <option value="session-only">Session Only (Forgets after closing)</option>
@@ -425,7 +429,7 @@ export const Gemini: FC = () => {
               {settingsTab === "voices" && (
                 <div className="space-y-5 animate-fade-in">
                   {/* Chatbot Voice Dropdown */}
-                  <div className="space-y-2.5 border-b border-black/5 dark:border-white/5 pb-4">
+                  <div className="space-y-2.5 border-b border-white/5 pb-4">
                     <div className="flex justify-between items-center">
                       <label className="text-xs font-bold text-muted-foreground">Chatbot Voice (Text-to-Speech)</label>
                       <button
@@ -439,7 +443,7 @@ export const Gemini: FC = () => {
                     <select
                       value={chatbotVoice}
                       onChange={(e) => setChatbotVoice(e.target.value)}
-                      className="w-full bg-[#f0f4f9] dark:bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#dadce0]/50 dark:border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500"
+                      className="w-full bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500 text-[#e3e3e3]"
                     >
                       <option value="Google US English (Female)">Google US English (Female)</option>
                       <option value="Google UK English (Male)">Google UK English (Male)</option>
@@ -463,7 +467,7 @@ export const Gemini: FC = () => {
                     <select
                       value={piVoice}
                       onChange={(e) => setPiVoice(e.target.value)}
-                      className="w-full bg-[#f0f4f9] dark:bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#dadce0]/50 dark:border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500"
+                      className="w-full bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500 text-[#e3e3e3]"
                     >
                       <option value="Google UK English (Male)">Google UK English (Male)</option>
                       <option value="Google US English (Female)">Google US English (Female)</option>
@@ -478,12 +482,12 @@ export const Gemini: FC = () => {
               {settingsTab === "models" && (
                 <div className="space-y-5 animate-fade-in">
                   {/* Chatbot Model Picker */}
-                  <div className="space-y-1.5 border-b border-black/5 dark:border-white/5 pb-4">
+                  <div className="space-y-1.5 border-b border-white/5 pb-4">
                     <label className="text-xs font-bold text-muted-foreground">Chatbot Processing Model</label>
                     <select
                       value={chatbotModel}
                       onChange={(e) => setChatbotModel(e.target.value)}
-                      className="w-full bg-[#f0f4f9] dark:bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#dadce0]/50 dark:border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500"
+                      className="w-full bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500 text-[#e3e3e3]"
                     >
                       <option value="fast">Aura Fast (Quick homework assist)</option>
                       <option value="thinking">Aura Reasoning (Step-by-step reasoning)</option>
@@ -497,7 +501,7 @@ export const Gemini: FC = () => {
                     <select
                       value={piModel}
                       onChange={(e) => setPiModel(e.target.value)}
-                      className="w-full bg-[#f0f4f9] dark:bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#dadce0]/50 dark:border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500"
+                      className="w-full bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500 text-[#e3e3e3]"
                     >
                       <option value="pi_dynamic">Personal dynamic (Auto-optimized)</option>
                       <option value="deep_research">Deep Research (Full Web crawl & Synthesis)</option>
@@ -517,17 +521,17 @@ export const Gemini: FC = () => {
         <div className="absolute inset-0 bg-black/45 backdrop-blur-sm flex items-center justify-center z-45 p-4 animate-fade-in select-none">
           <form
             onSubmit={handlePersonalizeSubmit}
-            className="w-full max-w-xl bg-white dark:bg-[#1e1f20] border border-[#dadce0]/70 dark:border-[#2d2f31]/70 rounded-[28px] p-6 shadow-2xl space-y-5 animate-scale-up"
+            className="w-full max-w-xl bg-[#1e1f20] border border-[#2d2f31]/70 rounded-[28px] p-6 shadow-2xl space-y-5 animate-scale-up"
           >
-            <div className="flex justify-between items-center border-b border-black/5 dark:border-white/5 pb-2">
+            <div className="flex justify-between items-center border-b border-white/5 pb-2">
               <div className="flex items-center gap-1.5">
-                <Sparkles className="size-4.5 text-blue-600 animate-pulse" />
-                <h3 className="font-bold text-[16px] text-[#1f1f1f] dark:text-[#e3e3e3]">Create Your Custom Intelligence</h3>
+                <Sparkles className="size-4.5 text-blue-400 animate-pulse" />
+                <h3 className="font-bold text-[16px] text-[#e3e3e3]">Create Your Custom Intelligence</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsPersonalizing(false)}
-                className="size-7 flex items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition"
+                className="size-7 flex items-center justify-center rounded-full hover:bg-white/5 text-[#c4c7c5] transition"
               >
                 <X className="size-4.5" />
               </button>
@@ -552,7 +556,7 @@ export const Gemini: FC = () => {
                     placeholder={placeholder}
                     value={(liveProfileInput as any)[key]}
                     onChange={(e) => setLiveProfileInput((prev) => ({ ...prev, [key]: e.target.value }))}
-                    className="w-full bg-[#f0f4f9] dark:bg-[#0f0f10] text-xs font-medium rounded-xl border border-[#dadce0]/50 dark:border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500 text-foreground"
+                    className="w-full bg-[#0f0f10] text-xs font-medium rounded-xl border border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500 text-[#e3e3e3]"
                   />
                 </div>
               ))}
@@ -565,7 +569,7 @@ export const Gemini: FC = () => {
                 <select
                   value={liveProfileInput.vocalStyle}
                   onChange={(e) => setLiveProfileInput((prev) => ({ ...prev, vocalStyle: e.target.value }))}
-                  className="w-full bg-[#f0f4f9] dark:bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#dadce0]/50 dark:border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500"
+                  className="w-full bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500 text-[#e3e3e3]"
                 >
                   <option value="interactive">Interactive Storyteller</option>
                   <option value="strict">Strict Academic Mentor</option>
@@ -579,7 +583,7 @@ export const Gemini: FC = () => {
                 <select
                   value={liveProfileInput.energyLevel}
                   onChange={(e) => setLiveProfileInput((prev) => ({ ...prev, energyLevel: e.target.value }))}
-                  className="w-full bg-[#f0f4f9] dark:bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#dadce0]/50 dark:border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500"
+                  className="w-full bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500 text-[#e3e3e3]"
                 >
                   <option value="calm">Calm and steady</option>
                   <option value="balanced">Balanced</option>
@@ -592,7 +596,7 @@ export const Gemini: FC = () => {
                 <select
                   value={liveProfileInput.correctionStyle}
                   onChange={(e) => setLiveProfileInput((prev) => ({ ...prev, correctionStyle: e.target.value }))}
-                  className="w-full bg-[#f0f4f9] dark:bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#dadce0]/50 dark:border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500"
+                  className="w-full bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500 text-[#e3e3e3]"
                 >
                   <option value="kind-direct">Kind but direct</option>
                   <option value="strict">Strict and precise</option>
@@ -605,7 +609,7 @@ export const Gemini: FC = () => {
                 <select
                   value={liveProfileInput.targetGrade}
                   onChange={(e) => setLiveProfileInput((prev) => ({ ...prev, targetGrade: e.target.value }))}
-                  className="w-full bg-[#f0f4f9] dark:bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#dadce0]/50 dark:border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500"
+                  className="w-full bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500 text-[#e3e3e3]"
                 >
                   <option value="Grade 9 - A Pass">Grade 9 - Standard A Pass target</option>
                   <option value="Grade 9 - Excellence">Grade 9 - Excellence target</option>
@@ -618,7 +622,7 @@ export const Gemini: FC = () => {
                 <select
                   value={liveProfileInput.motivationStyle}
                   onChange={(e) => setLiveProfileInput((prev) => ({ ...prev, motivationStyle: e.target.value }))}
-                  className="w-full bg-[#f0f4f9] dark:bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#dadce0]/50 dark:border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500"
+                  className="w-full bg-[#0f0f10] text-xs font-semibold rounded-xl border border-[#2d2f31]/50 p-2.5 outline-none focus:border-blue-500 text-[#e3e3e3]"
                 >
                   <option value="steady">Steady confidence building</option>
                   <option value="challenge">Challenge me hard</option>
@@ -628,11 +632,11 @@ export const Gemini: FC = () => {
             </div>
 
             {/* Bottom Actions */}
-            <div className="flex gap-3 pt-2.5 border-t border-black/5 dark:border-white/5">
+            <div className="flex gap-3 pt-2.5 border-t border-white/5">
               <button
                 type="button"
                 onClick={() => setIsPersonalizing(false)}
-                className="flex-1 py-2.5 border border-[#dadce0]/70 dark:border-[#2d2f31] hover:bg-black/5 dark:hover:bg-white/5 rounded-xl text-xs font-bold transition-all text-foreground"
+                className="flex-1 py-2.5 border border-[#2d2f31] hover:bg-white/5 rounded-xl text-xs font-bold transition-all text-[#c4c7c5]"
               >
                 Cancel
               </button>
@@ -682,11 +686,13 @@ export const Gemini: FC = () => {
 
 const SuggestionChip: FC<{
   children: string;
-}> = ({ children }) => {
+  delay?: number;
+}> = ({ children, delay = 0 }) => {
   return (
     <button
       type="button"
-      className="flex items-center gap-2 rounded-full bg-white dark:bg-[#1e1f20] px-[18px] py-2 text-[#444746] text-xs font-semibold shadow-sm hover:bg-[#f1f3f4] dark:text-[#c4c7c5] dark:hover:bg-[#2b2c2d] border border-[#dadce0]/70 dark:border-[#2d2f31] transition-all hover:scale-[1.01] active:scale-[0.99]"
+      className="flex items-center gap-3 rounded-full bg-[#0e0e0e] px-4 py-3 text-[#c4c7c5] text-[16px] leading-[24px] font-normal transition-all duration-200 hover:bg-[#1e1f20] active:scale-[0.97] animate-chip-stagger self-start"
+      style={{ animationDelay: `${delay}ms`, animationFillMode: 'both' }}
     >
       {children}
     </button>
@@ -700,7 +706,7 @@ const Composer: FC = () => {
     <ComposerPrimitive.Root
       data-empty={isEmpty}
       data-running={isRunning}
-      className="group/composer mx-auto flex w-full max-w-3xl flex-col rounded-[32px] border border-[#dadce0]/80 dark:border-[#2d2f31]/80 bg-white py-5 px-6 shadow-[0_12px_42px_rgba(0,0,0,0.12)] transition-all duration-300 dark:bg-[#1e1f20] hover:shadow-[0_16px_56px_rgba(0,0,0,0.16)] focus-within:border-blue-500 dark:focus-within:border-blue-500"
+      className="group/composer mx-auto flex w-full max-w-[760px] flex-col rounded-[32px] bg-[#1e1f20] shadow-[0_2px_8px_-2px_rgba(0,0,0,0.16)] transition-all duration-300 focus-within:shadow-[0_4px_16px_-2px_rgba(66,133,244,0.15)]"
     >
       <AuiIf condition={(s) => s.composer.attachments.length > 0}>
         <div className="overflow-hidden rounded-t-2xl flex flex-col gap-2">
@@ -715,43 +721,52 @@ const Composer: FC = () => {
         </div>
       </AuiIf>
 
-      <div className="flex flex-col gap-3">
-        <div className="relative">
-          <div className="wrap-break-word max-h-96 w-full overflow-y-auto">
+      <div className="flex flex-col">
+        <div className="relative px-3 pt-3">
+          <div className="wrap-break-word max-h-96 w-full overflow-y-auto px-3 py-2.5">
             <ComposerPrimitive.Input
-              placeholder="Ask Aura..."
-              className="block min-h-12 w-full resize-none bg-transparent px-3 py-2 text-sm text-[#1f1f1f] outline-none placeholder:text-[#70757a] dark:text-[#e3e3e3] dark:placeholder:text-[#9aa0a6] leading-relaxed"
+              placeholder="Ask Aura"
+              className="block min-h-[24px] w-full resize-none bg-transparent text-[16px] leading-[24px] text-[#e3e3e3] outline-none placeholder:text-[#bdc1c6]"
             />
           </div>
         </div>
 
-        <div className="flex w-full items-center text-[#444746] dark:text-[#c4c7c5] pt-2.5 border-t border-[#dadce0]/25 dark:border-[#2d2f31]/25">
+        <div className="flex w-full items-center px-3 pb-3 pt-1">
+          {/* Left: Upload (+) and Tools */}
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <ComposerPrimitive.AddAttachment className="flex h-[38px] w-[38px] aspect-square items-center justify-center rounded-full transition-all hover:bg-[#444746]/8 active:scale-[0.96] dark:hover:bg-[#c4c7c5]/8">
-              <PlusIcon width={20} height={20} />
+            <ComposerPrimitive.AddAttachment className="flex h-[40px] w-[40px] items-center justify-center rounded-full transition-all hover:bg-white/8 active:scale-[0.96] text-[#c4c7c5]">
+              <PlusIcon width={24} height={24} />
             </ComposerPrimitive.AddAttachment>
-            <span className="text-xs text-muted-foreground opacity-60 font-semibold px-1">Tools</span>
+            <button className="flex h-[40px] w-[40px] items-center justify-center rounded-full transition-all hover:bg-white/8 text-[#c4c7c5]">
+              <EllipsisVertical width={20} height={20} />
+            </button>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Thinking / Model Selector Pill matching the photo perfectly */}
-            <button className="text-xs text-[#444746] dark:text-[#c4c7c5] font-semibold hover:bg-black/5 dark:hover:bg-white/5 px-3 py-1.5 rounded-full flex items-center gap-1 transition-all">
-              <span>Thinking</span>
-              <ChevronDown className="size-3.5" />
+          {/* Right: Model selector, Mic, Send */}
+          <div className="flex items-center gap-1">
+            {/* Flash model selector pill — Gemini style */}
+            <button className="flex items-center gap-1.5 h-[40px] px-3 rounded-full hover:bg-white/8 transition-all text-[#c4c7c5] text-[14px] font-medium">
+              <Sparkles className="size-[20px]" />
+              <span>Flash</span>
+              <span className="size-[6px] rounded-full bg-[#3186FF] mt-0.5" />
+              <ChevronDown className="size-[20px]" />
             </button>
-            
-            <div className="relative h-[38px] w-[38px] aspect-square shrink-0">
-              <button
-                type="button"
-                className="absolute inset-0 flex items-center justify-center rounded-full transition-all duration-300 ease-out hover:bg-[#444746]/8 group-data-[empty=false]/composer:scale-0 group-data-[running=true]/composer:scale-0 group-data-[empty=false]/composer:opacity-0 group-data-[running=true]/composer:opacity-0 dark:hover:bg-[#c4c7c5]/8"
-                aria-label="Voice mode"
-              >
-                <Mic width={20} height={20} />
-              </button>
-              <ComposerPrimitive.Send className="absolute inset-0 flex items-center justify-center rounded-full bg-blue-600 text-white transition-all duration-300 ease-out hover:bg-blue-700 group-data-[empty=true]/composer:scale-0 group-data-[running=true]/composer:scale-0 group-data-[empty=true]/composer:opacity-0 group-data-[running=true]/composer:opacity-0 shadow-sm shadow-blue-500/20 active:scale-[0.96]">
-                <SendHorizonal width={16} height={16} />
+
+            {/* Mic button */}
+            <button
+              type="button"
+              className="flex h-[40px] w-[40px] items-center justify-center rounded-full transition-all hover:bg-white/8 text-[#c4c7c5] group-data-[empty=false]/composer:scale-0 group-data-[running=true]/composer:scale-0 group-data-[empty=false]/composer:opacity-0 group-data-[running=true]/composer:opacity-0 duration-300"
+              aria-label="Voice mode"
+            >
+              <Mic width={24} height={24} />
+            </button>
+
+            {/* Send / Cancel */}
+            <div className="relative h-[42px] w-[42px] shrink-0">
+              <ComposerPrimitive.Send className="absolute inset-0 flex items-center justify-center rounded-full bg-[#1e1f20] text-[#e3e3e3] transition-all duration-300 ease-out hover:bg-[#2b2c2d] group-data-[empty=true]/composer:scale-0 group-data-[running=true]/composer:scale-0 group-data-[empty=true]/composer:opacity-0 group-data-[running=true]/composer:opacity-0">
+                <SendHorizonal width={18} height={18} />
               </ComposerPrimitive.Send>
-              <ComposerPrimitive.Cancel className="absolute inset-0 flex items-center justify-center rounded-full bg-[#d3e3fd] text-[#1f1f1f] transition-all duration-300 ease-out hover:bg-[#c2d7fb] group-data-[running=false]/composer:scale-0 group-data-[running=false]/composer:opacity-0 dark:bg-[#1f3760] dark:text-[#e3e3e3] dark:hover:bg-[#2a4a7a]">
+              <ComposerPrimitive.Cancel className="absolute inset-0 flex items-center justify-center rounded-full bg-[#1e1f20] text-[#e3e3e3] transition-all duration-300 ease-out hover:bg-[#2b2c2d] group-data-[running=false]/composer:scale-0 group-data-[running=false]/composer:opacity-0">
                 <Square width={12} height={12} fill="currentColor" />
               </ComposerPrimitive.Cancel>
             </div>
@@ -763,11 +778,11 @@ const Composer: FC = () => {
 };
 
 const actionBtnClass =
-  "flex size-7 items-center justify-center rounded-full text-[#444746] transition-colors hover:bg-[#444746]/8 dark:text-[#c4c7c5] dark:hover:bg-[#c4c7c5]/8";
+  "flex size-7 items-center justify-center rounded-full text-[#c4c7c5] transition-colors hover:bg-white/8";
 
 const ChatMessage: FC = () => {
   return (
-    <MessagePrimitive.Root className="group/message relative mx-auto mb-6 flex w-full max-w-3xl flex-col pb-0.5 animate-fade-in">
+    <MessagePrimitive.Root className="group/message relative mx-auto mb-6 flex w-full max-w-[760px] flex-col pb-0.5 animate-fade-in">
       <AuiIf condition={(s) => s.message.role === "user"}>
         <div className="flex items-center justify-end gap-2">
           <ActionBarPrimitive.Root className="flex items-center gap-0.5 opacity-0 transition-opacity group-focus-within/message:opacity-100 group-hover/message:opacity-100">
@@ -778,8 +793,8 @@ const ChatMessage: FC = () => {
               <Pencil1Icon width={13} height={13} />
             </ActionBarPrimitive.Edit>
           </ActionBarPrimitive.Root>
-          <div className="max-w-[78%] rounded-[20px] rounded-tr-[4px] bg-[#f0f4f9] px-[18px] py-3 text-sm text-[#1f1f1f] dark:bg-[#282a2c] dark:text-[#e3e3e3] shadow-sm leading-relaxed break-words">
-            <div className="prose prose-sm dark:prose-invert wrap-break-word">
+          <div className="max-w-[78%] rounded-[20px] rounded-tr-[4px] bg-[#282a2c] px-[18px] py-3 text-sm text-[#e3e3e3] shadow-sm leading-relaxed break-words">
+            <div className="prose prose-sm prose-invert wrap-break-word">
               <MessagePrimitive.Parts components={{ Text: MarkdownText }} />
             </div>
           </div>
@@ -792,7 +807,7 @@ const ChatMessage: FC = () => {
             <AuraLogo className="size-5" state="responding" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="prose prose-sm dark:prose-invert wrap-break-word prose-li:my-1 prose-ol:my-1 prose-p:my-2 prose-ul:my-1 text-sm text-[#1f1f1f] dark:text-[#e3e3e3] leading-relaxed">
+            <div className="prose prose-sm prose-invert wrap-break-word prose-li:my-1 prose-ol:my-1 prose-p:my-2 prose-ul:my-1 text-sm text-[#e3e3e3] leading-relaxed">
               <MessagePrimitive.Parts components={{ Text: MarkdownText }} />
             </div>
             <ActionBarPrimitive.Root className="mt-3 -ml-2 flex items-center gap-0.5 opacity-0 transition-opacity duration-300 group-focus-within/message:opacity-100 group-hover/message:opacity-100">

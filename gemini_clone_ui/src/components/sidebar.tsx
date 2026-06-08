@@ -2,10 +2,8 @@ import React from "react";
 import { useAppStore } from "../store/useAppStore";
 import {
   Menu,
-  Search,
   Plus,
   MessageSquare,
-  ChevronRight,
   Settings as SettingsIcon,
   Sparkles,
   PenSquare,
@@ -13,6 +11,9 @@ import {
   BookOpen,
   ClipboardCheck,
   HelpCircle,
+  Compass,
+  Package,
+  Briefcase,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -46,259 +47,187 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
     }
   };
 
+  // Collapsed state: only hamburger icon visible
+  if (!isExpanded) {
+    return (
+      <aside className="h-full flex flex-col items-center pt-3 shrink-0 select-none bg-transparent">
+        <button
+          onClick={() => setIsExpanded(true)}
+          className="size-10 flex items-center justify-center rounded-full hover:bg-[#1e1f20] text-[#c4c7c5] transition-all duration-200"
+          title="Open sidebar"
+        >
+          <Menu className="size-[20px]" />
+        </button>
+      </aside>
+    );
+  }
+
   return (
     <aside
-      className={`h-full flex flex-col justify-between bg-[#f0f4f9] dark:bg-[#0f0f10] py-4 transition-all duration-300 ease-in-out shrink-0 select-none border-r border-[#dadce0]/20 dark:border-[#2d2f31]/20 ${
-        isExpanded ? "w-[260px] px-3.5" : "w-[68px] px-2 items-center"
-      }`}
+      className="h-full flex flex-col shrink-0 select-none bg-[#1e1f20] w-[308px] rounded-r-2xl relative overflow-hidden animate-sidebar-in"
     >
-      {/* Top Section */}
-      <div className="space-y-4 w-full flex flex-col items-stretch pt-0.5 min-h-0">
-        
-        {/* Toggle Hamburger & Search Row */}
-        {isExpanded ? (
-          <div className="flex items-center justify-between px-1 mb-1">
-            <button
-              onClick={() => setIsExpanded(false)}
-              className="size-10 flex items-center justify-center rounded-full hover:bg-[#e3e3e3]/75 dark:hover:bg-white/5 text-[#444746] dark:text-[#c4c7c5] transition-all"
-            >
-              <Menu className="size-[20px]" />
-            </button>
-            <button
-              className="size-10 flex items-center justify-center rounded-full hover:bg-[#e3e3e3]/75 dark:hover:bg-white/5 text-[#444746] dark:text-[#c4c7c5] transition-all"
-              title="Search"
-            >
-              <Search className="size-[18px] opacity-80" />
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-1">
-            <button
-              onClick={() => setIsExpanded(true)}
-              className="size-11 flex items-center justify-center rounded-full hover:bg-[#e3e3e3]/75 dark:hover:bg-white/5 text-[#444746] dark:text-[#c4c7c5] transition-all"
-              title="Expand menu"
-            >
-              <Menu className="size-[20px]" />
-            </button>
-            <button
-              onClick={() => setIsExpanded(true)}
-              className="size-11 flex items-center justify-center rounded-full hover:bg-[#e3e3e3]/75 dark:hover:bg-white/5 text-[#444746] dark:text-[#c4c7c5] transition-all"
-              title="Search"
-            >
-              <Search className="size-[18px] opacity-80" />
+      {/* Top gradient overlay */}
+      <div className="absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-[#1e1f20] to-transparent z-10 pointer-events-none" />
+
+      {/* Header: Hamburger + "Aura" */}
+      <div className="flex items-center gap-2 px-4 pt-3 pb-2 shrink-0">
+        <button
+          onClick={() => setIsExpanded(false)}
+          className="size-10 flex items-center justify-center rounded-full hover:bg-white/8 text-[#c4c7c5] transition-all duration-200"
+        >
+          <Menu className="size-[20px]" />
+        </button>
+        <span className="text-[20px] font-medium leading-[26px] text-[#c4c7c5] select-none">Aura</span>
+      </div>
+
+      {/* New chat button */}
+      <div className="px-4 py-2 shrink-0">
+        <button
+          onClick={handleNewChat}
+          className="w-[272px] flex items-center gap-3 bg-white/8 hover:bg-white/12 text-[#e3e3e3] text-[14px] font-medium py-3 px-5 rounded-[30px] transition-all duration-200"
+        >
+          <PenSquare className="size-[18px] text-[#e3e3e3] shrink-0" />
+          <span>New chat</span>
+        </button>
+      </div>
+
+      {/* Chats section heading */}
+      <div className="px-4 pt-2 pb-1 shrink-0">
+        <span className="text-[14px] font-medium leading-[20px] text-[#c4c7c5]">Chats</span>
+      </div>
+
+      {/* Scrollable middle section */}
+      <div className="flex-1 overflow-y-auto px-3 min-h-0 scrollbar-thin">
+        {/* Sign-in prompt card (shown when no chats) */}
+        {chats.length === 0 && (
+          <div className="mx-1 mb-3 rounded-2xl bg-white/5 p-4 space-y-2">
+            <p className="text-[14px] font-medium text-[#c4c7c5]">Sign in to start saving your chats</p>
+            <p className="text-[14px] text-[#c4c7c5] leading-[20px]">
+              Once you're signed in, you can access your recent chats here.
+            </p>
+            <button className="text-[14px] font-medium text-[#a8c7fa] hover:underline">
+              Sign in
             </button>
           </div>
         )}
 
-        {/* New chat / My stuff Row */}
-        {isExpanded ? (
-          <div className="space-y-0.5 px-0.5">
-            <button
-              onClick={handleNewChat}
-              className="w-full flex items-center gap-3.5 hover:bg-[#e3e3e3]/60 dark:hover:bg-white/5 text-[#1f1f1f] dark:text-[#c4c7c5] text-[13px] font-medium py-3 px-4.5 rounded-full transition-all text-left"
-            >
-              <PenSquare className="size-[18px] text-[#444746] dark:text-[#c4c7c5] shrink-0" />
-              <span>New chat</span>
-            </button>
-            <button
-              className="w-full flex items-center gap-3.5 hover:bg-[#e3e3e3]/60 dark:hover:bg-white/5 text-[#1f1f1f] dark:text-[#c4c7c5] text-[13px] font-medium py-3 px-4.5 rounded-full transition-all text-left"
-            >
-              <Sparkles className="size-[18px] text-[#444746] dark:text-[#c4c7c5] shrink-0" />
-              <span>My stuff</span>
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-1.5 pt-1.5">
-            <button
-              onClick={handleNewChat}
-              className="size-11 flex items-center justify-center bg-white hover:bg-[#f1f3f4] dark:bg-[#1e1f20] dark:hover:bg-[#2b2c2d] text-[#444746] dark:text-[#c4c7c5] rounded-full transition-all shadow-sm"
-              title="New chat"
-            >
-              <PenSquare className="size-5" />
-            </button>
-          </div>
-        )}
-
-        {/* Collapsible details like Notebooks, Gems, Study, Exam, Chats */}
-        {isExpanded && (
-          <div className="flex-1 overflow-y-auto pr-0.5 space-y-4 pt-2 max-h-[380px] scrollbar-thin">
-            
-            {/* Aura Live (Formerly Notebooks) row */}
-            <div className="space-y-1">
-              <div className="w-full flex items-center justify-between px-4 py-2 text-[13px] font-bold text-[#1f1f1f] dark:text-[#c4c7c5]">
+        {/* Aura Live section */}
+        <div className="mb-2">
+          <button
+            onClick={handleIntelligenceClick}
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-[14px] font-medium text-[#e3e3e3] hover:bg-white/8 transition-all duration-200 text-left"
+          >
+            {intelligenceCreated ? (
+              <>
+                <Volume2 className="size-[18px] text-emerald-400 shrink-0" />
                 <span>Aura Live</span>
-                <ChevronRight className="size-4 opacity-75" />
-              </div>
-              <button
-                onClick={handleIntelligenceClick}
-                className="w-full flex items-center gap-3 px-7 py-2 rounded-xl text-left text-[12.5px] font-semibold text-[#0b57d0] dark:text-blue-400 hover:bg-[#e3e3e3]/50 dark:hover:bg-white/5 transition-all"
-              >
-                {intelligenceCreated ? (
-                  <>
-                    <Volume2 className="size-4 animate-bounce text-emerald-500" />
-                    <span>Open Aura Live</span>
-                    <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse ml-auto mr-1" />
-                  </>
-                ) : (
-                  <>
-                    <Plus className="size-4" />
-                    <span>Create Your Intelligence</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* Study Center Tab */}
-            <div>
-              <button
-                onClick={() => setActiveTab("study")}
-                className={`w-full flex items-center gap-3.5 px-4 py-2.5 rounded-full text-[13px] font-semibold transition-all text-left ${
-                  activeTab === "study"
-                    ? "bg-[#d3e3fd]/60 dark:bg-[#1a2d4c] text-blue-600 dark:text-blue-400"
-                    : "hover:bg-[#e3e3e3]/60 dark:hover:bg-white/5 text-[#444746] dark:text-[#c4c7c5]"
-                }`}
-              >
-                <BookOpen className="size-[18px] opacity-80 shrink-0" />
-                <span>Study Center</span>
-              </button>
-            </div>
-
-            {/* Exam Center Tab */}
-            <div>
-              <button
-                onClick={() => setActiveTab("exams")}
-                className={`w-full flex items-center gap-3.5 px-4 py-2.5 rounded-full text-[13px] font-semibold transition-all text-left ${
-                  activeTab === "exams"
-                    ? "bg-[#d3e3fd]/60 dark:bg-[#1a2d4c] text-blue-600 dark:text-blue-400"
-                    : "hover:bg-[#e3e3e3]/60 dark:hover:bg-white/5 text-[#444746] dark:text-[#c4c7c5]"
-                }`}
-              >
-                <ClipboardCheck className="size-[18px] opacity-80 shrink-0" />
-                <span>Exam Center</span>
-              </button>
-            </div>
-
-            {/* Gems row */}
-            <div>
-              <button className="w-full flex items-center justify-between px-4 py-2 hover:bg-[#e3e3e3]/50 dark:hover:bg-white/5 rounded-xl text-[13px] font-bold text-[#1f1f1f] dark:text-[#c4c7c5] transition-all">
-                <span>Gems</span>
-                <ChevronRight className="size-4 opacity-75" />
-              </button>
-            </div>
-
-            {/* Recent chats list */}
-            {chats.length > 0 && (
-              <div className="space-y-1 pt-1">
-                <div className="text-[12px] font-bold text-[#1f1f1f] dark:text-[#c4c7c5] px-4 pb-1">
-                  Chats
-                </div>
-                <div className="space-y-0.5">
-                  {chats.map((chat) => {
-                    const isActive = chat.id === activeChatId && activeTab === "chats";
-                    return (
-                      <button
-                        key={chat.id}
-                        onClick={() => {
-                          setActiveChatId(chat.id);
-                          setActiveTab("chats");
-                        }}
-                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-full text-[12.5px] font-semibold text-left truncate transition-all ${
-                          isActive
-                            ? "bg-[#d3e3fd]/60 dark:bg-[#1a2d4c] text-blue-600 dark:text-blue-400"
-                            : "hover:bg-[#e3e3e3]/60 dark:hover:bg-white/5 text-[#444746] dark:text-[#c4c7c5]"
-                        }`}
-                      >
-                        <MessageSquare className="size-3.5 shrink-0 opacity-70" />
-                        <span className="truncate">{chat.title}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse ml-auto mr-1" />
+              </>
+            ) : (
+              <>
+                <Sparkles className="size-[18px] text-[#c4c7c5] shrink-0" />
+                <span>Aura Live</span>
+              </>
             )}
-          </div>
-        )}
+          </button>
+        </div>
 
-        {/* Collapsed sidebar icons for study/exam */}
-        {!isExpanded && (
-          <div className="flex flex-col items-center gap-1.5 pt-3">
-            <button
-              onClick={() => { setActiveTab("study"); setIsExpanded(false); }}
-              className={`size-11 flex items-center justify-center rounded-full transition-all ${
-                activeTab === "study"
-                  ? "bg-[#d3e3fd]/60 dark:bg-[#1a2d4c] text-blue-600 dark:text-blue-400"
-                  : "hover:bg-[#e3e3e3]/60 dark:hover:bg-white/5 text-[#444746] dark:text-[#c4c7c5]"
-              }`}
-              title="Study Center"
-            >
-              <BookOpen className="size-[18px]" />
-            </button>
-            <button
-              onClick={() => { setActiveTab("exams"); setIsExpanded(false); }}
-              className={`size-11 flex items-center justify-center rounded-full transition-all ${
-                activeTab === "exams"
-                  ? "bg-[#d3e3fd]/60 dark:bg-[#1a2d4c] text-blue-600 dark:text-blue-400"
-                  : "hover:bg-[#e3e3e3]/60 dark:hover:bg-white/5 text-[#444746] dark:text-[#c4c7c5]"
-              }`}
-              title="Exam Center"
-            >
-              <ClipboardCheck className="size-[18px]" />
-            </button>
+        {/* Study Center */}
+        <div className="mb-1">
+          <button
+            onClick={() => setActiveTab("study")}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-[14px] font-medium transition-all duration-200 text-left ${
+              activeTab === "study"
+                ? "bg-white/12 text-[#e3e3e3]"
+                : "hover:bg-white/8 text-[#e3e3e3]"
+            }`}
+          >
+            <BookOpen className="size-[18px] shrink-0" />
+            <span>Study Center</span>
+          </button>
+        </div>
+
+        {/* Exam Center */}
+        <div className="mb-1">
+          <button
+            onClick={() => setActiveTab("exams")}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-[14px] font-medium transition-all duration-200 text-left ${
+              activeTab === "exams"
+                ? "bg-white/12 text-[#e3e3e3]"
+                : "hover:bg-white/8 text-[#e3e3e3]"
+            }`}
+          >
+            <ClipboardCheck className="size-[18px] shrink-0" />
+            <span>Exam Center</span>
+          </button>
+        </div>
+
+        {/* Recent chats list */}
+        {chats.length > 0 && (
+          <div className="pt-2 space-y-0.5">
+            {chats.map((chat) => {
+              const isActive = chat.id === activeChatId && activeTab === "chats";
+              return (
+                <button
+                  key={chat.id}
+                  onClick={() => {
+                    setActiveChatId(chat.id);
+                    setActiveTab("chats");
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-[14px] font-medium text-left truncate transition-all duration-200 ${
+                    isActive
+                      ? "bg-white/12 text-[#e3e3e3]"
+                      : "hover:bg-white/8 text-[#e3e3e3]"
+                  }`}
+                >
+                  <MessageSquare className="size-[18px] shrink-0 opacity-70" />
+                  <span className="truncate">{chat.title}</span>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* Bottom Section: Settings & help */}
-      <div className="w-full mt-auto space-y-1">
-        {isExpanded ? (
-          <>
-            <button
-              onClick={() => setActiveTab("help")}
-              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-full hover:bg-[#e3e3e3]/60 dark:hover:bg-white/5 text-[#444746] dark:text-[#c4c7c5] text-[13px] font-semibold transition-all ${
-                activeTab === "help" ? "bg-[#d3e3fd]/60 dark:bg-[#1a2d4c]" : ""
-              }`}
-            >
-              <HelpCircle className="size-[18px] opacity-80" />
-              <span>Help</span>
-            </button>
-            <button
-              onClick={() => setActiveTab("settings")}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-full hover:bg-[#e3e3e3]/60 dark:hover:bg-white/5 text-[#444746] dark:text-[#c4c7c5] text-[13px] font-semibold transition-all ${
-                activeTab === "settings" ? "bg-[#d3e3fd]/60 dark:bg-[#1a2d4c]" : ""
-              }`}
-            >
-              <div className="flex items-center gap-3.5">
-                <SettingsIcon className="size-[18px] opacity-80" />
-                <span>Settings</span>
-              </div>
-              {/* Blue notification dot */}
-              <span className="size-1.5 rounded-full bg-blue-600 dark:bg-blue-400 mr-1.5" />
-            </button>
-          </>
-        ) : (
-          <div className="flex flex-col items-center gap-1">
-            <button
-              onClick={() => setActiveTab("help")}
-              className={`size-11 flex items-center justify-center rounded-full hover:bg-[#e3e3e3]/60 dark:hover:bg-white/5 text-[#444746] dark:text-[#c4c7c5] transition-all ml-1.5 ${
-                activeTab === "help" ? "bg-[#d3e3fd]/60 dark:bg-[#1a2d4c]" : ""
-              }`}
-              title="Help"
-            >
-              <HelpCircle className="size-[18px] opacity-80" />
-            </button>
-            <button
-              onClick={() => setActiveTab("settings")}
-              className={`size-11 flex items-center justify-center rounded-full hover:bg-[#e3e3e3]/60 dark:hover:bg-white/5 text-[#444746] dark:text-[#c4c7c5] transition-all ml-1.5 relative ${
-                activeTab === "settings" ? "bg-[#d3e3fd]/60 dark:bg-[#1a2d4c]" : ""
-              }`}
-              title="Settings"
-            >
-              <SettingsIcon className="size-[18px] opacity-80" />
-              <span className="absolute top-2.5 right-2.5 size-1.5 rounded-full bg-blue-600 dark:bg-blue-400" />
-            </button>
-          </div>
-        )}
+      {/* Bottom section: About Aura + Settings */}
+      <div className="shrink-0 px-3 pb-3 space-y-0.5">
+        {/* About Aura heading */}
+        <div className="px-4 py-2">
+          <span className="text-[14px] font-medium text-[#c4c7c5]">About Aura</span>
+        </div>
+
+        {/* Settings & help */}
+        <button
+          onClick={() => setActiveTab("settings")}
+          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-[14px] font-medium text-[#e3e3e3] hover:bg-white/8 transition-all duration-200 text-left ${
+            activeTab === "settings" ? "bg-white/12" : ""
+          }`}
+        >
+          <SettingsIcon className="size-[18px] shrink-0" />
+          <span>Settings & help</span>
+        </button>
+
+        {/* Aura App */}
+        <button className="w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-[14px] font-medium text-[#e3e3e3] hover:bg-white/8 transition-all duration-200 text-left">
+          <Sparkles className="size-[18px] shrink-0" />
+          <span>Aura App</span>
+        </button>
+
+        {/* Subscriptions */}
+        <button className="w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-[14px] font-medium text-[#e3e3e3] hover:bg-white/8 transition-all duration-200 text-left">
+          <Package className="size-[18px] shrink-0" />
+          <span>Subscriptions</span>
+        </button>
+
+        {/* For Business */}
+        <button className="w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-[14px] font-medium text-[#e3e3e3] hover:bg-white/8 transition-all duration-200 text-left">
+          <Briefcase className="size-[18px] shrink-0" />
+          <span>For Business</span>
+        </button>
       </div>
+
+      {/* Bottom gradient overlay */}
+      <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-[#1e1f20] to-transparent z-10 pointer-events-none" />
     </aside>
   );
 };
