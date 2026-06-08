@@ -68,7 +68,11 @@
     },
     {
       "source": "/public-config",
-      "destination": "/api/index.py"
+      "destination": "/api/public-config.js"
+    },
+    {
+      "source": "/api/public-config",
+      "destination": "/api/public-config.js"
     },
     {
       "source": "/ws/live",

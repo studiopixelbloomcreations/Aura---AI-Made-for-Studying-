@@ -24,7 +24,7 @@ function startStaticServer(rootDir, port) {
       const urlPath = decodeURIComponent((req.url || "/").split("?")[0]);
       let filePath = path.join(rootDir, urlPath.replace(/^\/+/, ""));
       if (urlPath === "/") filePath = path.join(rootDir, "index.html");
-      if (urlPath === "/public-config") {
+      if (urlPath === "/public-config" || urlPath === "/api/public-config") {
         res.setHeader("Content-Type", "application/json");
         return res.end(JSON.stringify({ ok: true, firebase: { apiKey: "test", authDomain: "test", projectId: "test" } }));
       }

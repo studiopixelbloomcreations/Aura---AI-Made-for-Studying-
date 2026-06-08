@@ -18,6 +18,12 @@
   }
 
   function ensureFirebase(){
+    if(window.FirebaseConfig && window.FirebaseConfig.getFirebase){
+      const fbFromRuntime = window.FirebaseConfig.getFirebase();
+      if(fbFromRuntime && fbFromRuntime.apps && fbFromRuntime.apps.length){
+        return fbFromRuntime;
+      }
+    }
     if(window.FirebaseRuntimeConfig && window.FirebaseRuntimeConfig.getFirebase){
       const fbFromRuntime = window.FirebaseRuntimeConfig.getFirebase();
       if(fbFromRuntime && fbFromRuntime.apps && fbFromRuntime.apps.length){
@@ -140,7 +146,10 @@
 
     let fb = null;
     try {
-      if(window.FirebaseRuntimeConfig && window.FirebaseRuntimeConfig.ensureInitialized){
+      if(window.FirebaseConfig && window.FirebaseConfig.ensureInitialized){
+        const runtime = await window.FirebaseConfig.ensureInitialized();
+        fb = runtime && runtime.firebase ? runtime.firebase : null;
+      } else if(window.FirebaseRuntimeConfig && window.FirebaseRuntimeConfig.ensureInitialized){
         const runtime = await window.FirebaseRuntimeConfig.ensureInitialized();
         fb = runtime && runtime.firebase ? runtime.firebase : null;
       }

@@ -14,7 +14,7 @@ const rootFilesToCopy = [
   "chat.js",
   "core/logger.js",
   "core/state_manager.js",
-  "firebase_runtime_config.js",
+  "firebase_config.js",
   "gamification.js",
   "gamification_sync.js",
   "googleSync.js",

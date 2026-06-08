@@ -117,20 +117,27 @@
 
   // ─── Init ───
   async function init() {
-    // Wait for Firebase
+    // Wait for Firebase to be fully initialized before doing anything
+    let runtime = null;
     try {
-      if (window.FirebaseRuntimeConfig && window.FirebaseRuntimeConfig.ensureInitialized) {
-        await window.FirebaseRuntimeConfig.ensureInitialized();
+      if (window.FirebaseConfig && window.FirebaseConfig.ensureInitialized) {
+        runtime = await window.FirebaseConfig.ensureInitialized();
+      } else if (window.FirebaseRuntimeConfig && window.FirebaseRuntimeConfig.ensureInitialized) {
+        runtime = await window.FirebaseRuntimeConfig.ensureInitialized();
       }
     } catch (e) {
-      console.error('Firebase runtime config error:', e);
-      showToast('Signup is unavailable: Firebase config missing.', 'error');
+      console.error('Firebase config error:', e);
+      showToast('Signup is unavailable: Firebase config failed to load.', 'error');
       return;
     }
 
-    auth = window.auth || (window.firebase && firebase.auth ? firebase.auth() : null);
+    // Get auth instance — guaranteed initialized at this point
+    auth = (runtime && runtime.auth) || window.auth || null;
     if (!auth) {
-      showToast('Signup is unavailable: Firebase not initialized.', 'error');
+      try { auth = firebase.auth(); } catch (e) { /* not initialized */ }
+    }
+    if (!auth) {
+      showToast('Signup is unavailable: Firebase not initialized. Check /api/public-config.', 'error');
       return;
     }
 
