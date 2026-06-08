@@ -1,61 +1,82 @@
 import fs from "node:fs";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
 
 const baseDir = process.cwd();
 const repoRoot = path.resolve(baseDir, "..");
 const distDir = path.join(baseDir, "dist");
-const auraUiDir = path.join(repoRoot, "gemini_clone_ui");
-const auraDistDir = path.join(auraUiDir, "dist");
 
-function runNpm(args) {
-  if (process.platform === "win32") {
-    const npmCli = path.join(path.dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
-    execFileSync("node", [npmCli, ...args], {
-      cwd: auraUiDir,
-      stdio: "inherit",
-    });
-    return;
-  }
+const rootFilesToCopy = [
+  "account.js",
+  "api.js",
+  "app.html",
+  "auth.js",
+  "badges.js",
+  "chat.js",
+  "core/logger.js",
+  "core/state_manager.js",
+  "firebase_runtime_config.js",
+  "gamification.js",
+  "gamification_sync.js",
+  "googleSync.js",
+  "googlef11f1400b8d2bbab.html",
+  "index.html",
+  "landing.css",
+  "landing.js",
+  "login.css",
+  "login.html",
+  "login.js",
+  "loginRedirect.js",
+  "mic.js",
+  "personal_intelligence_ui.js",
+  "personalization_sync.js",
+  "points.js",
+  "profile.js",
+  "progress.js",
+  "puter_voice_catalog.js",
+  "reset.js",
+  "robots.txt",
+  "script.js",
+  "settings.js",
+  "service_worker.js",
+  "signup.html",
+  "signup.js",
+  "sitemap.xml",
+  "styles.css",
+  "timer.js",
+  "upload.js",
+  "voice_multimodal_ui.js",
+  "vis_controller.js",
+];
 
-  execFileSync("npm", args, {
-    cwd: auraUiDir,
-    stdio: "inherit",
-  });
-}
+const rootDirsToCopy = [
+  "ExamModeToggle",
+  "public",
+  "ui",
+];
 
 function cleanDir(target) {
   fs.rmSync(target, { recursive: true, force: true });
   fs.mkdirSync(target, { recursive: true });
 }
 
-cleanDir(distDir);
-
-if (!fs.existsSync(path.join(auraUiDir, "node_modules", ".bin", process.platform === "win32" ? "tsc.cmd" : "tsc"))) {
-  runNpm(["ci", "--include=dev"]);
+function copyFileRelative(relativePath) {
+  const source = path.join(repoRoot, relativePath);
+  if (!fs.existsSync(source)) return;
+  const target = path.join(distDir, relativePath);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.copyFileSync(source, target);
 }
 
-runNpm(["run", "build"]);
+function copyDirRelative(relativePath) {
+  const source = path.join(repoRoot, relativePath);
+  if (!fs.existsSync(source)) return;
+  const target = path.join(distDir, relativePath);
+  fs.cpSync(source, target, { recursive: true });
+}
 
-fs.cpSync(auraDistDir, distDir, { recursive: true });
-fs.cpSync(path.join(repoRoot, "firebase_runtime_config.js"), path.join(distDir, "firebase_runtime_config.js"));
+cleanDir(distDir);
 
-fs.renameSync(path.join(distDir, "index.html"), path.join(distDir, "app.html"));
-[
-  "index.html",
-  "landing.html",
-  "landing.css",
-  "landing.js",
-  "login.html",
-  "login.css",
-  "login.js",
-  "signup.html",
-  "signup.js",
-  "auth.js",
-  "api.js",
-].forEach((file) => {
-  const source = path.join(repoRoot, file);
-  if (fs.existsSync(source)) fs.copyFileSync(source, path.join(distDir, file));
-});
+for (const file of rootFilesToCopy) copyFileRelative(file);
+for (const dir of rootDirsToCopy) copyDirRelative(dir);
 
-console.log("Netlify Aura UI bundle prepared at", distDir);
+console.log("Netlify frontend bundle prepared at", distDir);

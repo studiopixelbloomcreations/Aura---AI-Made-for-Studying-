@@ -35,7 +35,7 @@
     } catch (e) {}
     // Only guard the main app pages.
     const page = (window.location.pathname.split('/').pop() || '').toLowerCase();
-    if(page === 'login.html' || page === 'signup.html' || page === 'landing.html' || page === 'index.html') return;
+    if(page === 'login.html' || page === 'signup.html' || page === 'index.html') return;
 
     let alreadyRedirected = false;
     try { alreadyRedirected = sessionStorage.getItem(SESSION_REDIRECT_KEY) === '1'; } catch (e) {}

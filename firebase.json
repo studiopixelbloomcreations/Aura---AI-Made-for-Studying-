@@ -27,7 +27,7 @@
       "rewrites": [
         {
           "source": "/",
-          "destination": "/landing.html"
+          "destination": "/index.html"
         },
         {
           "source": "**",

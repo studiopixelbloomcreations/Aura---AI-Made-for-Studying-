@@ -1,5 +1,5 @@
 fastapi
-uvicorn
+uvicorn[standard]
 groq
 pydantic
 python-multipart
@@ -10,3 +10,11 @@ SpeechRecognition
 pyttsx3
 pytesseract
 pillow
+numpy
+beautifulsoup4
+lxml
+pypdf
+slowapi
+google-genai
+supabase
+websockets

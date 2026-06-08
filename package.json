@@ -8,14 +8,13 @@
   "scripts": {
     "desktop": "electron .",
     "desktop:url": "set APP_START_URL=https://aevra-ai.netlify.app/&& electron .",
-    "cloud-sync:watch": "node cloud_sync/run_monitor.js",
-    "cloud-sync:watch:fast": "set CLOUD_SYNC_POLL_MS=500&& node cloud_sync/run_monitor.js",
+
     "desktop:build": "electron-builder --win nsis",
     "desktop:publish": "electron-builder --win nsis --publish always",
     "test:evolution": "node netlify/functions/personal_intelligence_evolution/evolution.test.js",
     "test:distribution": "node netlify/functions/personal_intelligence_evolution/distribution.test.js",
     "test:production": "npm run test:evolution && npm run test:distribution",
-    "test:hardening": "node --check netlify/functions/personal_intelligence_dashboard.js && node --check netlify/functions/personal_intelligence_worker_tick.js && node --check netlify/functions/personal_intelligence_health.js && node --check netlify/functions/personal_intelligence_governance.js"
+    "test:hardening": "node --check netlify/functions/personal_intelligence_dashboard.js && node --check netlify/functions/personal_intelligence_health.js && node --check netlify/functions/personal_intelligence_governance.js"
   },
   "engines": {
     "node": ">=18"

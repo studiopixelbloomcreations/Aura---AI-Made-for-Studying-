@@ -1,0 +1,140 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python",
+      "config": {
+        "runtime": "python3.11"
+      }
+    },
+    {
+      "src": "*.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.svg",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.xml",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.txt",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "_redirects",
+      "use": "@vercel/static"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/health",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/ask",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/generate_title",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/check_answer",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/progress(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/memory(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/public-config",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/ws/live",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/api/lumen/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/api/evolution/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/api/notes/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/api/observability/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/api/voice-identity/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/api/personality/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/api/usage/(.*)",
+      "destination": "/api/index.py"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+      ]
+    },
+    {
+      "source": "/(.*)\\.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/(.*)\\.css",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/app.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, must-revalidate" }
+      ]
+    }
+  ]
+}

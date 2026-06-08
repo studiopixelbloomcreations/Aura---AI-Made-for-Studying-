@@ -10,12 +10,7 @@
 [[redirects]]
   from = "/"
   to = "/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/app"
-  to = "/app.html"
-  status = 200
+  status = 302
 
 
 # API redirect to Netlify Functions
