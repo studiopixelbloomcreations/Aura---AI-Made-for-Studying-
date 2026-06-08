@@ -35,9 +35,21 @@
     {
       "src": "_redirects",
       "use": "@vercel/static"
+    },
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
     }
   ],
   "rewrites": [
+    {
+      "source": "/public-config",
+      "destination": "/api/public-config.js"
+    },
+    {
+      "source": "/api/public-config",
+      "destination": "/api/public-config.js"
+    },
     {
       "source": "/api/(.*)",
       "destination": "/api/index.py"
@@ -65,14 +77,6 @@
     {
       "source": "/memory(.*)",
       "destination": "/api/index.py"
-    },
-    {
-      "source": "/public-config",
-      "destination": "/api/public-config.js"
-    },
-    {
-      "source": "/api/public-config",
-      "destination": "/api/public-config.js"
     },
     {
       "source": "/ws/live",

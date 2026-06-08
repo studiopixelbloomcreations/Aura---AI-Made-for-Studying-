@@ -186,7 +186,7 @@
 
     // Get auth instance — guaranteed initialized at this point
     auth = (runtime && runtime.auth) || window.auth || null;
-    if (!auth) {
+    if (!auth && runtime && !runtime.skipped) {
       try { auth = firebase.auth(); } catch (e) { /* not initialized */ }
     }
     if (!auth) {
