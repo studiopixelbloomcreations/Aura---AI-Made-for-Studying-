@@ -32,6 +32,7 @@ function getModelApiKey(provider) {
     mistral: "MISTRAL_API_KEY",
     huggingface: "HUGGINGFACE_API_KEY",
     deepseek: "DEEPSEEK_API_KEY",
+    gemini: "GEMINI_API_KEY",
   };
   const envName = envMap[String(provider).toLowerCase()];
   if (envName && env(envName)) {
@@ -41,10 +42,10 @@ function getModelApiKey(provider) {
 }
 
 function getProviderAvailability() {
-  const providers = ["openrouter", "grok", "groq", "mistral", "huggingface", "deepseek", "puter"];
+  const providers = ["openrouter", "grok", "groq", "mistral", "huggingface", "deepseek", "gemini"];
   const out = {};
   providers.forEach((provider) => {
-    out[provider] = provider === "puter" ? true : !!getModelApiKey(provider);
+    out[provider] = !!getModelApiKey(provider);
   });
   return out;
 }

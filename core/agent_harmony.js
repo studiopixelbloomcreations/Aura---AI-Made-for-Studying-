@@ -32,11 +32,11 @@ const COUNCIL_ROLES = {
 };
 
 const MODEL_PRIORITY = {
-  casual:        ["grok"],
-  deep_research: ["deepseek", "openrouter"],
-  tutorial:      ["mistral", "openrouter"],
-  coding:        ["openrouter", "deepseek"],
-  creative:      ["grok", "huggingface"],
+  casual:        ["gemini", "grok"],
+  deep_research: ["gemini", "deepseek", "openrouter"],
+  tutorial:      ["gemini", "mistral", "openrouter"],
+  coding:        ["gemini", "openrouter", "deepseek"],
+  creative:      ["gemini", "grok", "huggingface"],
 };
 
 // Map model providers to default council roles
@@ -47,6 +47,7 @@ const DEFAULT_MODEL_ROLES = {
   mistral:      "coach",
   huggingface:  "critic",
   deepseek:     "reasoning",
+  gemini:       "leader",
 };
 
 // ---------------------------------------------------------------------------
@@ -149,7 +150,7 @@ function computeConfidence(answer, latencyMs, modelName) {
  * Otherwise, race mode: first good response wins, others continue in background.
  */
 async function coordinateQuery(analysis, options = {}) {
-  let preferred = preferredModelsFor(analysis).filter((name) => name !== "puter");
+  let preferred = preferredModelsFor(analysis);
 
   if (options.modelOverride && typeof options.modelOverride === "string" && preferred.includes(options.modelOverride)) {
     preferred = [options.modelOverride, ...preferred.filter((m) => m !== options.modelOverride)];

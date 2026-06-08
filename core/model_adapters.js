@@ -13,6 +13,7 @@ function providerConfig() {
     mistral: getProviderConfig("mistral"),
     huggingface: getProviderConfig("huggingface"),
     deepseek: getProviderConfig("deepseek"),
+    gemini: getProviderConfig("gemini"),
   };
   return {
     openrouter: {
@@ -52,6 +53,12 @@ function providerConfig() {
       apiKey: getModelApiKey("deepseek") || master.deepseek.apiKey || env("DEEPSEEK_API_KEY"),
       baseUrl: master.deepseek.baseUrl || env("PI_DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
       model: master.deepseek.model || env("PI_DEEPSEEK_MODEL", "deepseek-chat"),
+      headers: {},
+    },
+    gemini: {
+      apiKey: getModelApiKey("gemini") || master.gemini.apiKey || env("GEMINI_API_KEY"),
+      baseUrl: master.gemini.baseUrl || env("PI_GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai"),
+      model: master.gemini.model || env("PI_GEMINI_MODEL", "gemini-2.5-flash"),
       headers: {},
     },
   };
@@ -119,6 +126,7 @@ function buildHarmonyAdapters() {
     mistral: async (context) => postChatCompletion(configs.mistral, context),
     huggingface: async (context) => postChatCompletion(configs.huggingface, context),
     deepseek: async (context) => postChatCompletion(configs.deepseek, context),
+    gemini: async (context) => postChatCompletion(configs.gemini, context),
   };
 }
 
