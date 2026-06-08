@@ -168,9 +168,10 @@
     return true;
   }
 
-  // ─── Init ───
-  async function init() {
-    // Wait for Firebase to be fully initialized before doing anything
+  // ─── Firebase Init (background, non-blocking) ───
+  let firebaseReady = false;
+
+  async function initFirebase() {
     let runtime = null;
     try {
       if (window.FirebaseConfig && window.FirebaseConfig.ensureInitialized) {
@@ -184,7 +185,6 @@
       return;
     }
 
-    // Get auth instance — guaranteed initialized at this point
     auth = (runtime && runtime.auth) || window.auth || null;
     if (!auth && runtime && !runtime.skipped) {
       try { auth = firebase.auth(); } catch (e) { /* not initialized */ }
@@ -194,11 +194,10 @@
       return;
     }
 
-    // Setup UI
-    setupPasswordToggle();
-    persistReturnTarget();
+    firebaseReady = true;
+    console.log('[Login] Firebase auth ready');
 
-    // Handle redirect result
+    // Handle redirect result (non-blocking)
     try {
       await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
       const res = await auth.getRedirectResult();
@@ -207,111 +206,121 @@
         await completeSignIn(res.user, 'Signed in — redirecting...');
       }
     } catch (err) {
-      console.error('Redirect sign-in error:', err);
+      console.warn('Redirect sign-in result:', err.message || err);
     }
 
     // Auth state listener
     auth.onAuthStateChanged((user) => {
       if (user) {
         console.log('User signed in:', user.email || user.displayName);
+      } else {
+        console.log('No user signed in');
       }
-    });
-
-    // ─── Form Submit (Email/Password) ───
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (isLoading) return;
-
-      const email = emailInput.value.trim();
-      const password = passwordInput.value;
-
-      // Clear previous errors
-      clearInputError(emailInput);
-      clearInputError(passwordInput);
-
-      // Validate
-      let hasError = false;
-      if (!email) {
-        setInputError(emailInput, 'Email is required');
-        hasError = true;
-      } else if (!/\S+@\S+\.\S+/.test(email)) {
-        setInputError(emailInput, 'Enter a valid email address');
-        hasError = true;
-      }
-      if (!password) {
-        setInputError(passwordInput, 'Password is required');
-        hasError = true;
-      } else if (password.length < 6) {
-        setInputError(passwordInput, 'Password must be at least 6 characters');
-        hasError = true;
-      }
-      if (hasError) return;
-
-      setLoading(true);
-      try {
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-          firebase.auth().settings.appVerificationDisabledForTesting = true;
-        }
-        await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-        markLoginFlowStarted();
-        const cred = await auth.signInWithEmailAndPassword(email, password);
-        const ok = await completeSignIn(cred && cred.user, 'Signed in — redirecting...');
-        if (!ok) showToast('Unable to sign in. Please try again.', 'error');
-      } catch (err) {
-        console.error('Login error:', err);
-        showToast(friendlyAuthError(err), 'error');
-      } finally {
-        setLoading(false);
-      }
-    });
-
-    // ─── Google Sign In ───
-    googleBtn.addEventListener('click', async () => {
-      if (isLoading) return;
-      setLoading(true);
-      try {
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-          firebase.auth().settings.appVerificationDisabledForTesting = true;
-        }
-        await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-        persistReturnTarget();
-        markLoginFlowStarted();
-
-        const provider = new firebase.auth.GoogleAuthProvider();
-        provider.addScope('email');
-        let cred = null;
-        try {
-          cred = await auth.signInWithPopup(provider);
-        } catch (popupErr) {
-          const code = popupErr && popupErr.code ? String(popupErr.code) : '';
-          if (code === 'auth/popup-blocked' || code === 'auth/cancelled-popup-request' || code === 'auth/popup-closed-by-user') {
-            await auth.signInWithRedirect(provider);
-            return;
-          }
-          throw popupErr;
-        }
-        const ok = await completeSignIn(cred && cred.user, 'Signed in with Google — redirecting...');
-        if (!ok) showToast('Unable to complete sign-in. Please try again.', 'error');
-      } catch (err) {
-        console.error('Google sign-in error:', err);
-        showToast(friendlyAuthError(err), 'error');
-      } finally {
-        setLoading(false);
-      }
-    });
-
-    // ─── Clear errors on input ───
-    [emailInput, passwordInput].forEach((input) => {
-      if (!input) return;
-      input.addEventListener('input', () => clearInputError(input));
-      input.addEventListener('focus', () => clearInputError(input));
     });
   }
 
-  // Start
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  // ─── Form Submit (Email/Password) ───
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (isLoading) return;
+    if (!firebaseReady || !auth) {
+      showToast('Please wait — still connecting to Firebase...', 'error');
+      return;
+    }
+
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+
+    // Clear previous errors
+    clearInputError(emailInput);
+    clearInputError(passwordInput);
+
+    // Validate
+    let hasError = false;
+    if (!email) {
+      setInputError(emailInput, 'Email is required');
+      hasError = true;
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      setInputError(emailInput, 'Enter a valid email address');
+      hasError = true;
+    }
+    if (!password) {
+      setInputError(passwordInput, 'Password is required');
+      hasError = true;
+    } else if (password.length < 6) {
+      setInputError(passwordInput, 'Password must be at least 6 characters');
+      hasError = true;
+    }
+    if (hasError) return;
+
+    setLoading(true);
+    try {
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        firebase.auth().settings.appVerificationDisabledForTesting = true;
+      }
+      await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+      markLoginFlowStarted();
+      const cred = await auth.signInWithEmailAndPassword(email, password);
+      const ok = await completeSignIn(cred && cred.user, 'Signed in — redirecting...');
+      if (!ok) showToast('Unable to sign in. Please try again.', 'error');
+    } catch (err) {
+      console.error('Login error:', err);
+      showToast(friendlyAuthError(err), 'error');
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  // ─── Google Sign In ───
+  googleBtn.addEventListener('click', async () => {
+    if (isLoading) return;
+    if (!firebaseReady || !auth) {
+      showToast('Please wait — still connecting to Firebase...', 'error');
+      return;
+    }
+    setLoading(true);
+    try {
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        firebase.auth().settings.appVerificationDisabledForTesting = true;
+      }
+      await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+      persistReturnTarget();
+      markLoginFlowStarted();
+
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.addScope('email');
+      let cred = null;
+      try {
+        cred = await auth.signInWithPopup(provider);
+      } catch (popupErr) {
+        const code = popupErr && popupErr.code ? String(popupErr.code) : '';
+        if (code === 'auth/popup-blocked' || code === 'auth/cancelled-popup-request' || code === 'auth/popup-closed-by-user') {
+          await auth.signInWithRedirect(provider);
+          return;
+        }
+        throw popupErr;
+      }
+      const ok = await completeSignIn(cred && cred.user, 'Signed in with Google — redirecting...');
+      if (!ok) showToast('Unable to complete sign-in. Please try again.', 'error');
+    } catch (err) {
+      console.error('Google sign-in error:', err);
+      showToast(friendlyAuthError(err), 'error');
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  // ─── Clear errors on input ───
+  [emailInput, passwordInput].forEach((input) => {
+    if (!input) return;
+    input.addEventListener('input', () => clearInputError(input));
+    input.addEventListener('focus', () => clearInputError(input));
+  });
+
+  // ─── Setup UI immediately ───
+  setupPasswordToggle();
+  persistReturnTarget();
+
+  // ─── Start Firebase init in background ───
+  initFirebase();
 })();

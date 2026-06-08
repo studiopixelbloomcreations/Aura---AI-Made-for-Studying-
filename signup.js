@@ -115,9 +115,10 @@
     });
   }
 
-  // ─── Init ───
-  async function init() {
-    // Wait for Firebase to be fully initialized before doing anything
+  // ─── Firebase Init (background, non-blocking) ───
+  let firebaseReady = false;
+
+  async function initFirebase() {
     let runtime = null;
     try {
       if (window.FirebaseConfig && window.FirebaseConfig.ensureInitialized) {
@@ -131,7 +132,6 @@
       return;
     }
 
-    // Get auth instance — guaranteed initialized at this point
     auth = (runtime && runtime.auth) || window.auth || null;
     if (!auth && runtime && !runtime.skipped) {
       try { auth = firebase.auth(); } catch (e) { /* not initialized */ }
@@ -141,10 +141,10 @@
       return;
     }
 
-    // Setup UI
-    setupPasswordToggle();
+    firebaseReady = true;
+    console.log('[Signup] Firebase auth ready');
 
-    // Handle redirect result
+    // Handle redirect result (non-blocking)
     try {
       const res = await auth.getRedirectResult();
       if (res && res.user) {
@@ -155,125 +155,132 @@
         }
       }
     } catch (e) {
-      console.error('Signup redirect error:', e);
+      console.warn('Signup redirect result:', e.message || e);
+    }
+  }
+
+  // ─── Setup UI immediately ───
+  setupPasswordToggle();
+
+  // ─── Form Submit ───
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    if (isLoading) return;
+    if (!firebaseReady || !auth) {
+      showToast('Please wait — still connecting to Firebase...', 'error');
+      return;
     }
 
-    // ─── Form Submit ───
-    form.addEventListener('submit', async (ev) => {
-      ev.preventDefault();
-      if (isLoading) return;
+    const name = nameInput.value.trim();
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+    const confirm = confirmInput.value;
 
-      const name = nameInput.value.trim();
-      const email = emailInput.value.trim();
-      const password = passwordInput.value;
-      const confirm = confirmInput.value;
+    // Clear previous errors
+    [nameInput, emailInput, passwordInput, confirmInput].forEach(clearInputError);
 
-      // Clear previous errors
-      [nameInput, emailInput, passwordInput, confirmInput].forEach(clearInputError);
+    // Validate
+    let hasError = false;
+    if (!name) {
+      setInputError(nameInput, 'Name is required');
+      hasError = true;
+    }
+    if (!email) {
+      setInputError(emailInput, 'Email is required');
+      hasError = true;
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      setInputError(emailInput, 'Enter a valid email address');
+      hasError = true;
+    }
+    if (!password) {
+      setInputError(passwordInput, 'Password is required');
+      hasError = true;
+    } else if (password.length < 6) {
+      setInputError(passwordInput, 'Password must be at least 6 characters');
+      hasError = true;
+    }
+    if (!confirm) {
+      setInputError(confirmInput, 'Please confirm your password');
+      hasError = true;
+    } else if (password !== confirm) {
+      setInputError(confirmInput, 'Passwords do not match');
+      hasError = true;
+    }
+    if (hasError) return;
 
-      // Validate
-      let hasError = false;
-      if (!name) {
-        setInputError(nameInput, 'Name is required');
-        hasError = true;
-      }
-      if (!email) {
-        setInputError(emailInput, 'Email is required');
-        hasError = true;
-      } else if (!/\S+@\S+\.\S+/.test(email)) {
-        setInputError(emailInput, 'Enter a valid email address');
-        hasError = true;
-      }
-      if (!password) {
-        setInputError(passwordInput, 'Password is required');
-        hasError = true;
-      } else if (password.length < 6) {
-        setInputError(passwordInput, 'Password must be at least 6 characters');
-        hasError = true;
-      }
-      if (!confirm) {
-        setInputError(confirmInput, 'Please confirm your password');
-        hasError = true;
-      } else if (password !== confirm) {
-        setInputError(confirmInput, 'Passwords do not match');
-        hasError = true;
-      }
-      if (hasError) return;
-
-      setLoading(true);
-      try {
-        const cred = await auth.createUserWithEmailAndPassword(email, password);
-        if (cred.user) {
-          await cred.user.updateProfile({ displayName: name });
-          try {
-            await cred.user.sendEmailVerification();
-            showToast('Verification email sent.', 'success');
-          } catch (e) {
-            console.warn('Verification email failed', e);
-          }
-        }
-        await storeTokenFromUser(cred && cred.user);
-        showToast('Account created — redirecting...', 'success');
-        setTimeout(() => { window.location.href = getReturnTarget(); }, 1000);
-      } catch (err) {
-        showToast(friendlyAuthError(err), 'error');
-      } finally {
-        setLoading(false);
-      }
-    });
-
-    // ─── Google Sign Up ───
-    googleBtn.addEventListener('click', async () => {
-      if (isLoading) return;
-      setLoading(true);
-      try {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        provider.addScope('email');
-        let cred = null;
+    setLoading(true);
+    try {
+      const cred = await auth.createUserWithEmailAndPassword(email, password);
+      if (cred.user) {
+        await cred.user.updateProfile({ displayName: name });
         try {
-          cred = await auth.signInWithPopup(provider);
-        } catch (popupErr) {
-          const code = popupErr && popupErr.code ? String(popupErr.code) : '';
-          if (code === 'auth/popup-blocked' || code === 'auth/cancelled-popup-request' || code === 'auth/popup-closed-by-user') {
-            await auth.signInWithRedirect(provider);
-            return;
-          }
-          throw popupErr;
+          await cred.user.sendEmailVerification();
+          showToast('Verification email sent.', 'success');
+        } catch (e) {
+          console.warn('Verification email failed', e);
         }
-        const ok = await storeTokenFromUser(cred && cred.user);
-        if (!ok) {
-          showToast('Unable to complete signup. Please try again.', 'error');
+      }
+      await storeTokenFromUser(cred && cred.user);
+      showToast('Account created — redirecting...', 'success');
+      setTimeout(() => { window.location.href = getReturnTarget(); }, 1000);
+    } catch (err) {
+      showToast(friendlyAuthError(err), 'error');
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  // ─── Google Sign Up ───
+  googleBtn.addEventListener('click', async () => {
+    if (isLoading) return;
+    if (!firebaseReady || !auth) {
+      showToast('Please wait — still connecting to Firebase...', 'error');
+      return;
+    }
+    setLoading(true);
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.addScope('email');
+      let cred = null;
+      try {
+        cred = await auth.signInWithPopup(provider);
+      } catch (popupErr) {
+        const code = popupErr && popupErr.code ? String(popupErr.code) : '';
+        if (code === 'auth/popup-blocked' || code === 'auth/cancelled-popup-request' || code === 'auth/popup-closed-by-user') {
+          await auth.signInWithRedirect(provider);
           return;
         }
-        showToast('Account ready — redirecting...', 'success');
-        setTimeout(() => { window.location.href = getReturnTarget(); }, 900);
-      } catch (err) {
-        showToast(friendlyAuthError(err), 'error');
-      } finally {
-        setLoading(false);
+        throw popupErr;
       }
-    });
+      const ok = await storeTokenFromUser(cred && cred.user);
+      if (!ok) {
+        showToast('Unable to complete signup. Please try again.', 'error');
+        return;
+      }
+      showToast('Account ready — redirecting...', 'success');
+      setTimeout(() => { window.location.href = getReturnTarget(); }, 900);
+    } catch (err) {
+      showToast(friendlyAuthError(err), 'error');
+    } finally {
+      setLoading(false);
+    }
+  });
 
-    // ─── Clear errors on input ───
-    [nameInput, emailInput, passwordInput, confirmInput].forEach((input) => {
-      if (!input) return;
-      input.addEventListener('input', () => clearInputError(input));
-      input.addEventListener('focus', () => clearInputError(input));
-    });
+  // ─── Clear errors on input ───
+  [nameInput, emailInput, passwordInput, confirmInput].forEach((input) => {
+    if (!input) return;
+    input.addEventListener('input', () => clearInputError(input));
+    input.addEventListener('focus', () => clearInputError(input));
+  });
 
-    // ─── Enter key submits ───
-    [nameInput, emailInput, passwordInput, confirmInput].forEach((el) => {
-      if (!el) return;
-      el.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') form.dispatchEvent(new Event('submit', { cancelable: true }));
-      });
+  // ─── Enter key submits ───
+  [nameInput, emailInput, passwordInput, confirmInput].forEach((el) => {
+    if (!el) return;
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') form.dispatchEvent(new Event('submit', { cancelable: true }));
     });
-  }
+  });
 
-  // Start
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  // ─── Start Firebase init in background ───
+  initFirebase();
 })();
