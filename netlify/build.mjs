@@ -1,81 +1,105 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execSync } from "node:child_process";
 
 const baseDir = process.cwd();
 const repoRoot = path.resolve(baseDir, "..");
 const distDir = path.join(baseDir, "dist");
+const geminiDir = path.join(repoRoot, "gemini_clone_ui");
 
-const rootFilesToCopy = [
-  "account.js",
-  "api.js",
-  "app.html",
-  "auth.js",
-  "badges.js",
-  "chat.js",
-  "core/logger.js",
-  "core/state_manager.js",
-  "firebase_config.js",
-  "gamification.js",
-  "gamification_sync.js",
-  "googleSync.js",
-  "googlef11f1400b8d2bbab.html",
-  "index.html",
-  "landing.css",
-  "landing.js",
-  "auth.css",
-  "login.html",
-  "login.js",
-  "loginRedirect.js",
-  "mic.js",
-  "personal_intelligence_ui.js",
-  "personalization_sync.js",
-  "points.js",
-  "profile.js",
-  "progress.js",
-  "reset.js",
-  "robots.txt",
-  "script.js",
-  "settings.js",
-  "service_worker.js",
-  "signup.html",
-  "signup.js",
-  "sitemap.xml",
-  "styles.css",
-  "timer.js",
-  "upload.js",
-  "voice_multimodal_ui.js",
-  "vis_controller.js",
-];
+// ── Step 1: Build the Gemini UI (React + Vite) ──────────────────────
+console.log("Building Gemini UI...");
+try {
+  execSync("npm run build", { cwd: geminiDir, stdio: "inherit" });
+  console.log("Gemini UI built successfully.");
+} catch (err) {
+  console.error("Gemini UI build failed:", err.message);
+  process.exit(1);
+}
 
-const rootDirsToCopy = [
-  "ExamModeToggle",
-  "public",
-  "ui",
-];
-
+// ── Step 2: Prepare dist directory ───────────────────────────────────
 function cleanDir(target) {
   fs.rmSync(target, { recursive: true, force: true });
   fs.mkdirSync(target, { recursive: true });
 }
 
-function copyFileRelative(relativePath) {
+cleanDir(distDir);
+
+// ── Step 3: Copy Gemini UI build output ─────────────────────────────
+const geminiDist = path.join(geminiDir, "dist");
+if (!fs.existsSync(geminiDist)) {
+  console.error("Gemini UI dist/ not found at", geminiDist);
+  process.exit(1);
+}
+
+// Copy all Gemini dist files
+fs.cpSync(geminiDist, distDir, { recursive: true });
+
+// Rename index.html → app.html (Gemini UI becomes the main app page)
+const geminiIndex = path.join(distDir, "index.html");
+const appHtml = path.join(distDir, "app.html");
+if (fs.existsSync(geminiIndex)) {
+  fs.renameSync(geminiIndex, appHtml);
+  console.log("Renamed Gemini index.html → app.html");
+}
+
+// ── Step 4: Copy legacy files still needed ───────────────────────────
+const legacyFiles = [
+  // Firebase config (loaded dynamically by React app)
+  "firebase_config.js",
+  // Landing page
+  "index.html",
+  "landing.css",
+  "landing.js",
+  // Login / Signup / Auth pages
+  "login.html",
+  "login.js",
+  "loginRedirect.js",
+  "signup.html",
+  "signup.js",
+  "auth.js",
+  // API helper (used by legacy auth pages)
+  "api.js",
+  // SEO & meta
+  "robots.txt",
+  "sitemap.xml",
+  "googlef11f1400b8d2bbab.html",
+  // Redirects
+  "_redirects",
+];
+
+function copyFile(relativePath) {
   const source = path.join(repoRoot, relativePath);
-  if (!fs.existsSync(source)) return;
+  if (!fs.existsSync(source)) {
+    console.warn("  (skip) not found:", relativePath);
+    return;
+  }
   const target = path.join(distDir, relativePath);
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.copyFileSync(source, target);
 }
 
-function copyDirRelative(relativePath) {
+console.log("Copying legacy support files...");
+for (const file of legacyFiles) copyFile(file);
+
+// ── Step 5: Copy legacy directories still needed ────────────────────
+const legacyDirs = [
+  "public",   // harmony_system.js, vis/, vais/, etc.
+];
+
+function copyDir(relativePath) {
   const source = path.join(repoRoot, relativePath);
-  if (!fs.existsSync(source)) return;
+  if (!fs.existsSync(source)) {
+    console.warn("  (skip dir) not found:", relativePath);
+    return;
+  }
   const target = path.join(distDir, relativePath);
   fs.cpSync(source, target, { recursive: true });
 }
 
-cleanDir(distDir);
+console.log("Copying legacy support directories...");
+for (const dir of legacyDirs) copyDir(dir);
 
-for (const file of rootFilesToCopy) copyFileRelative(file);
-for (const dir of rootDirsToCopy) copyDirRelative(dir);
-
-console.log("Netlify frontend bundle prepared at", distDir);
+console.log("\n✅  Netlify frontend bundle ready at", distDir);
+console.log("   app.html = New Gemini UI (React)");
+console.log("   index.html = Landing page");

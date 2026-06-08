@@ -15,7 +15,9 @@
         "functions/**",
         "netlify/**",
         "src/**",
-        "dist/**",
+        "gemini_clone_ui/src/**",
+        "gemini_clone_ui/node_modules/**",
+        "gemini_clone_ui/dist/**",
         "ExamMode/**",
         "exam_mode/**",
         "desktop/**",
@@ -31,7 +33,7 @@
         },
         {
           "source": "**",
-          "destination": "/index.html"
+          "destination": "/app.html"
         }
       ]
     }

@@ -17,11 +17,8 @@
   }
 
   function launchAuraAI() {
-    if (isTokenValid()) {
-      window.location.href = 'app.html';
-      return;
-    }
-    window.location.href = 'login.html?return=app.html';
+    // The new Gemini UI handles auth internally — go directly to app.html
+    window.location.href = 'app.html';
   }
 
   function getSystemTheme() {

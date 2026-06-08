@@ -2,7 +2,6 @@ import React from "react";
 import { useAppStore } from "../store/useAppStore";
 import {
   Menu,
-  Plus,
   MessageSquare,
   Settings as SettingsIcon,
   Sparkles,
@@ -10,8 +9,6 @@ import {
   Volume2,
   BookOpen,
   ClipboardCheck,
-  HelpCircle,
-  Compass,
   Package,
   Briefcase,
 } from "lucide-react";

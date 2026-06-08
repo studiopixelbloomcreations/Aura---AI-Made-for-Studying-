@@ -40,6 +40,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/public-config"
+  to = "/.netlify/functions/public_config"
+  status = 200
+
+[[redirects]]
   from = "/check_answer"
   to = "/.netlify/functions/check_answer"
   status = 200
@@ -112,6 +117,12 @@
 [[redirects]]
   from = "/voice/identity"
   to = "/.netlify/functions/voice_identity"
+  status = 200
+
+# SPA catch-all: all unmatched routes serve the new Gemini UI (React app)
+[[redirects]]
+  from = "/*"
+  to = "/app.html"
   status = 200
 
 # Basic headers for HTML/CSS/JS

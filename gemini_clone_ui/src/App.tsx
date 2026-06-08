@@ -150,7 +150,7 @@ function loadScriptOnce(src: string, key: string) {
 async function ensureFirebaseAuthRuntime() {
   await loadScriptOnce("https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js", "firebase-app");
   await loadScriptOnce("https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js", "firebase-auth");
-  await loadScriptOnce("/firebase_runtime_config.js", "firebase-runtime-config");
+  await loadScriptOnce("/firebase_config.js", "firebase-runtime-config");
   return (window as any).FirebaseRuntimeConfig?.ensureInitialized?.();
 }
 
@@ -173,11 +173,9 @@ export default function App() {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const {
-    chats,
     activeChatId,
     isLiveOpen,
     activeTab,
-    setActiveTab,
   } = useAppStore()
   const identity = gateIdentity || getAuraIdentity()
   const profileInitial = (identity.name || identity.email || "Aura").slice(0, 1).toUpperCase()
@@ -283,9 +281,6 @@ export default function App() {
     setGateIdentity(null);
     setGateStage("landing");
   };
-
-  // Find active chat details
-  const activeChat = chats.find(c => c.id === activeChatId) || { id: "New Chat", title: "New Chat", preview: "", time: "" }
 
   const runtime = useLocalRuntime({
     async run({ messages }: any) {
