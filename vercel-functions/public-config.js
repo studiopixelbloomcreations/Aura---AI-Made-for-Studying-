@@ -76,8 +76,26 @@ module.exports = function handler(req, res) {
   }
 
   if (!firebase) {
-    console.error("[public-config] No Firebase config found. Set FIREBASE_API_KEY+FIREBASE_PROJECT_ID, or FIREBASE_CONFIG, or AURA_ENV.");
-    return res.status(500).json({ error: "Firebase not configured" });
+    const debug = {
+      error: "Firebase not configured",
+      env_check: {
+        FIREBASE_API_KEY: !!process.env.FIREBASE_API_KEY,
+        FIREBASE_PROJECT_ID: !!process.env.FIREBASE_PROJECT_ID,
+        FIREBASE_CONFIG: !!process.env.FIREBASE_CONFIG,
+        AURA_ENV: !!process.env.AURA_ENV,
+      },
+    };
+    // If AURA_ENV exists, check if FIREBASE_CONFIG is inside it
+    if (process.env.AURA_ENV) {
+      try {
+        const a = JSON.parse(process.env.AURA_ENV);
+        debug.env_check.AURA_ENV_has_FIREBASE_CONFIG = !!a.FIREBASE_CONFIG;
+        debug.env_check.AURA_ENV_keys = Object.keys(a);
+      } catch (e) {
+        debug.env_check.AURA_ENV_parse_error = e.message;
+      }
+    }
+    return res.status(500).json(debug);
   }
 
   res.setHeader("Content-Type", "application/json");
