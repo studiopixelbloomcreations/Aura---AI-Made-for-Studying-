@@ -3,23 +3,29 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Aura AI — Redirecting...</title>
-  <meta http-equiv="refresh" content="0;url=/" />
+  <title>Aura AI — Launching...</title>
   <style>
     body { margin: 0; background: #000; color: #e3e3e3; font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
     .card { text-align: center; padding: 2rem; }
     a { color: #a8c7fa; }
+    .loader { width: 40px; height: 40px; margin: 1rem auto; border: 3px solid #1e1f20; border-top-color: #4285f4; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>Aura AI</h1>
-    <p>The legacy UI has been retired. Redirecting to the new Aura experience...</p>
-    <p><a href="/">Go to Aura AI</a></p>
+    <div class="loader"></div>
+    <h2 style="font-weight:400;font-size:18px;">Launching Aura AI...</h2>
+    <p id="status" style="color:#9aa0a6;font-size:14px;">Starting the new experience</p>
   </div>
   <script>
-    // Redirect to landing page which links to the new Gemini UI
-    window.location.replace('/');
+    // Local dev: redirect to Vite dev server; Production: app.html is the real React app (this stub won't be served)
+    var isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    if (isLocal) {
+      document.getElementById('status').textContent = 'Redirecting to dev server...';
+      // Try Vite dev server on port 5173
+      window.location.replace('http://localhost:5173');
+    }
   </script>
 </body>
 </html>
