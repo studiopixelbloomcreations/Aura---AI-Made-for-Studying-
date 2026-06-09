@@ -17,8 +17,13 @@
   }
 
   function launchAuraAI() {
-    // The new Gemini UI handles auth internally — go directly to app.html
-    window.location.href = 'app.html';
+    // Local dev: Vite dev server on port 5173; Production: app.html is the real React app
+    var isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    if (isLocal) {
+      window.location.href = 'http://localhost:5173';
+    } else {
+      window.location.href = 'app.html';
+    }
   }
 
   function getSystemTheme() {

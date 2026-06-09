@@ -37,11 +37,19 @@
       "use": "@vercel/static"
     },
     {
+      "src": "*.png",
+      "use": "@vercel/static"
+    },
+    {
       "src": "_redirects",
       "use": "@vercel/static"
     },
     {
       "src": "public/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "assets/**",
       "use": "@vercel/static"
     }
   ],
@@ -113,6 +121,30 @@
     {
       "source": "/api/usage/(.*)",
       "destination": "/api/index.py"
+    },
+    {
+      "source": "/personal-intelligence/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/voice/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/gamification/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/exam-mode/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/multimodal/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/app.html"
     }
   ],
   "headers": [

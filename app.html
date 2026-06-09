@@ -1,38 +1,17 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Aura AI — Launching...</title>
-  <style>
-    body { margin: 0; background: #000; color: #e3e3e3; font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-    .card { text-align: center; padding: 2rem; }
-    a { color: #a8c7fa; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .loader { width: 40px; height: 40px; margin: 1rem auto; border: 3px solid #1e1f20; border-top-color: #4285f4; border-radius: 50%; animation: spin 0.8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .hidden { display: none; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="loader"></div>
-    <h2 style="font-weight:400;font-size:18px;">Launching Aura AI...</h2>
-    <p id="status" style="color:#9aa0a6;font-size:14px;">Starting the new experience</p>
-    <p id="fallback" class="hidden" style="color:#9aa0a6;font-size:14px;margin-top:1rem;">
-      If it doesn't load automatically, <a href="http://localhost:5173">open Aura AI directly</a>
-    </p>
-  </div>
-  <script>
-    var isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-    if (isLocal) {
-      document.getElementById('status').textContent = 'Redirecting to dev server...';
-      // Show fallback link after 2 seconds if redirect doesn't work
-      setTimeout(function() {
-        document.getElementById('fallback').classList.remove('hidden');
-      }, 2000);
-      window.location.replace('http://localhost:5173');
-    }
-  </script>
-</body>
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/aura-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@300;400;500;600;700&family=Google+Sans+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Aura AI</title>
+    <script type="module" crossorigin src="/assets/index-DOWmGoTn.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-5ZET1xvm.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
 </html>

@@ -200,6 +200,20 @@ export default function App() {
     setGateStage("login");
   };
 
+  const skipAsGuest = () => {
+    setGateError("");
+    const guestId = `guest-${Date.now()}`;
+    const guestIdentity: AuraIdentity = {
+      user_id: guestId,
+      email: `guest@aura.local`,
+      name: "Guest Student",
+      avatar: "",
+    };
+    saveIdentity(guestIdentity);
+    setGateIdentity(guestIdentity);
+    setGateStage("ready");
+  };
+
   const signInWithGoogle = async () => {
     setGateError("");
     setGateStatus("Connecting your Google account...");
@@ -368,8 +382,8 @@ export default function App() {
                   <button onClick={launchLogin} className="h-12 px-6 rounded-full bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/20">
                     Start with Google
                   </button>
-                  <button onClick={launchLogin} className="h-12 px-6 rounded-full border border-[#2d2f31] text-[#e3e3e3] font-bold hover:bg-white/5">
-                    Continue to Aura
+                  <button onClick={skipAsGuest} className="h-12 px-6 rounded-full border border-[#2d2f31] text-[#e3e3e3] font-bold hover:bg-white/5">
+                    Continue as Guest
                   </button>
                 </div>
               </div>
@@ -385,6 +399,7 @@ export default function App() {
       return (
         <GateShell title="Log in to continue" subtitle="Aura must bind your unique intelligence to your Google account before the UI opens.">
           <button onClick={signInWithGoogle} className="w-full h-12 rounded-full bg-blue-600 text-white font-bold">Continue with Google</button>
+          <button onClick={skipAsGuest} className="w-full h-11 rounded-full bg-white/5 text-[#a8c7fa] text-sm font-bold hover:bg-white/10">Skip — Continue as Guest</button>
           <button onClick={() => setGateStage("landing")} className="w-full h-11 rounded-full border border-[#2d2f31] text-[#e3e3e3] text-sm font-bold hover:bg-white/5">Back</button>
           {gateError && <p className="text-xs text-red-500">{gateError}</p>}
         </GateShell>

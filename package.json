@@ -6,6 +6,7 @@
   "author": "Aura AI Team",
   "main": "desktop/main.js",
   "scripts": {
+    "vercel-deploy": "cd gemini_clone_ui && npm install && npm run build && cp dist/index.html ../app.html && cp -r dist/assets ../assets",
     "desktop": "electron .",
     "desktop:url": "set APP_START_URL=https://aevra-ai.netlify.app/&& electron .",
 
