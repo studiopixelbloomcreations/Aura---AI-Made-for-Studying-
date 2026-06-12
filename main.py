@@ -82,12 +82,10 @@ def _include_optional_upload_routers(app: FastAPI) -> None:
     try:
         from voice_router import router as voice_router
         from multimodal_router import router as multimodal_router
-    except RuntimeError as exc:
-        if "python-multipart" in str(exc):
-            return
-        raise
-    app.include_router(voice_router)
-    app.include_router(multimodal_router)
+        app.include_router(voice_router)
+        app.include_router(multimodal_router)
+    except Exception as exc:
+        logger.warning(f"Optional upload routers (voice/multimodal) unavailable: {exc}")
 
 
 _include_optional_upload_routers(app)
