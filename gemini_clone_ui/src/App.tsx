@@ -416,41 +416,33 @@ export default function App() {
         {/* Main Content Area */}
         <div className="flex-1 h-full flex flex-col min-w-0 bg-black relative gemini-gradient-bg">
           
-          {/* Gemini-style top bar: model selector left, Upgrade + settings + profile right */}
-          <header className="h-[52px] w-full flex items-center justify-between px-4 bg-transparent shrink-0 z-30 select-none">
-            {/* Left: Model name dropdown */}
-            <button className="flex items-center gap-1 text-[18px] font-normal text-[#c4c7c5] hover:text-[#e3e3e3] transition-colors duration-150">
-              <span>Aura</span>
-              <ChevronDown className="size-[16px] opacity-60" />
+          {/* Gemini-style top bar: model selector left, Upgrade + settings right */}
+          <header className="h-[52px] w-full flex items-center justify-between px-3 bg-transparent shrink-0 z-30 select-none">
+            {/* Left: Model name dropdown — Gemini exact */}
+            <button className="flex items-center gap-1.5 text-[20px] font-normal text-[#e3e3e3] hover:bg-white/5 px-3 py-1.5 rounded-full transition-colors duration-150">
+              <span>Aura 2.5 Pro</span>
+              <ChevronDown className="size-[18px] opacity-60" />
             </button>
 
-            {/* Right: Upgrade + Temp chat toggle + Profile */}
+            {/* Right: Upgrade + settings icon */}
             <div className="flex items-center gap-2">
-              {/* Upgrade button — Gemini style */}
-              <button className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-[#1a2d4c] hover:bg-[#1f3560] text-blue-400 text-[13px] font-medium transition-colors duration-150">
-                <Gem className="size-[14px]" />
+              {/* Upgrade button — Gemini exact blue pill */}
+              <button className="flex items-center gap-1.5 h-[36px] px-4 rounded-full bg-[#0b57d0] hover:bg-[#0842a0] text-white text-[14px] font-medium transition-colors duration-150">
+                <Gem className="size-[16px]" />
                 <span>Upgrade</span>
               </button>
 
-              {/* Temporary chat toggle icon */}
+              {/* Settings/customize icon — Gemini's small circular pen icon */}
               <button
                 onClick={() => setTemporaryChat(!isTemporaryChat)}
-                className={`size-9 flex items-center justify-center rounded-full transition-colors duration-150 ${
+                className={`size-[36px] flex items-center justify-center rounded-full transition-colors duration-150 ${
                   isTemporaryChat
                     ? "bg-[#1a2d4c] text-blue-400"
-                    : "hover:bg-[#393b3d] text-[#c4c7c5]"
+                    : "hover:bg-[#393b3d] text-[#9aa0a6]"
                 }`}
                 title={isTemporaryChat ? "Turn off temporary chat" : "Turn on temporary chat"}
               >
                 <PenSquare className="size-[18px]" />
-              </button>
-
-              {/* Profile Avatar */}
-              <button
-                onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className="h-8 w-8 aspect-square shrink-0 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center text-white text-[12px] font-bold shadow-md hover:opacity-90 active:scale-95 transition-all overflow-hidden"
-              >
-                {identity.avatar ? <img src={identity.avatar} alt="" className="h-full w-full object-cover" /> : profileInitial}
               </button>
             </div>
           </header>

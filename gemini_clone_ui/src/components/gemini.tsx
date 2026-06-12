@@ -176,15 +176,15 @@ export const Gemini: FC = () => {
       <AuiIf condition={(s) => s.thread.isEmpty}>
         <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-[72px]">
           <div className="mx-auto w-full max-w-[680px] text-center">
-            {/* Gemini-style greeting: "Ready when you are" — smaller, more refined */}
-            <h1 className="text-[32px] md:text-[36px] leading-[44px] font-normal text-[#e3e3e3] mb-6 select-none animate-greeting-fade">
+            {/* Gemini-style greeting: "Ready when you are" — exact 28px */}
+            <h1 className="text-[28px] md:text-[32px] leading-[40px] font-normal text-[#e3e3e3] mb-5 select-none animate-greeting-fade">
               Ready when you are
             </h1>
           </div>
           {/* Composer */}
           <div className="mx-auto w-full max-w-[680px]">
             <Composer />
-            <p className="text-center text-[#9aa0a6] text-[11px] leading-[16px] mt-3 mb-4 select-none">
+            <p className="text-center text-[#9aa0a6] text-[12px] leading-[16px] mt-3 mb-4 select-none">
               Aura may display inaccurate info, including about people, so double-check its responses.
             </p>
           </div>
@@ -700,7 +700,7 @@ const Composer: FC = () => {
     <ComposerPrimitive.Root
       data-empty={isEmpty}
       data-running={isRunning}
-      className="group/composer mx-auto flex w-full max-w-[680px] flex-col rounded-[28px] bg-[#1e1f20] shadow-[0_2px_8px_-2px_rgba(0,0,0,0.2)] transition-all duration-300 focus-within:shadow-[0_4px_16px_-2px_rgba(66,133,244,0.12)]"
+      className="group/composer mx-auto flex w-full max-w-[680px] flex-col rounded-[28px] bg-[#1e1f20] border border-white/5 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.3)] transition-all duration-300 focus-within:shadow-[0_4px_16px_-2px_rgba(66,133,244,0.12)]"
     >
       <AuiIf condition={(s) => s.composer.attachments.length > 0}>
         <div className="overflow-hidden rounded-t-2xl flex flex-col gap-2">
@@ -719,7 +719,7 @@ const Composer: FC = () => {
         <div className="relative px-4 pt-3">
           <div className="wrap-break-word max-h-96 w-full overflow-y-auto px-2 py-1.5">
             <ComposerPrimitive.Input
-              placeholder="Ask Aura"
+              placeholder="Ask Gemini"
               className="block min-h-[24px] w-full resize-none bg-transparent text-[15px] leading-[22px] text-[#e3e3e3] outline-none placeholder:text-[#9aa0a6]"
             />
           </div>
@@ -728,18 +728,17 @@ const Composer: FC = () => {
         <div className="flex w-full items-center px-3 pb-2.5 pt-1">
           {/* Left: Upload (+) */}
           <div className="flex min-w-0 items-center gap-1">
-            <ComposerPrimitive.AddAttachment className="flex h-[36px] w-[36px] items-center justify-center rounded-full transition-all hover:bg-white/8 active:scale-[0.96] text-[#9aa0a6]">
-              <PlusIcon width={20} height={20} />
+            <ComposerPrimitive.AddAttachment className="flex h-[32px] w-[32px] items-center justify-center rounded-full transition-all hover:bg-white/8 active:scale-[0.96] text-[#9aa0a6]">
+              <PlusIcon width={18} height={18} />
             </ComposerPrimitive.AddAttachment>
           </div>
 
           {/* Right: Model selector (Pro), Mic, Send */}
           <div className="flex items-center gap-0.5 ml-auto">
             {/* Pro model selector pill — Gemini style */}
-            <button className="flex items-center gap-1 h-[36px] px-2.5 rounded-full hover:bg-white/8 transition-all text-[#9aa0a6] text-[13px] font-medium">
-              <Sparkles className="size-[16px]" />
-              <span>Pro</span>
-              <ChevronDown className="size-[16px]" />
+            <button className="flex items-center gap-1 h-[32px] px-2 rounded-full hover:bg-white/8 transition-all text-[#9aa0a6] text-[13px] font-medium">
+              <span className="text-[#e3e3e3] font-medium">Pro</span>
+              <ChevronDown className="size-[14px]" />
             </button>
 
             {/* Mic button */}
@@ -748,7 +747,7 @@ const Composer: FC = () => {
               className="flex h-[36px] w-[36px] items-center justify-center rounded-full transition-all hover:bg-white/8 text-[#9aa0a6] group-data-[empty=false]/composer:scale-0 group-data-[running=true]/composer:scale-0 group-data-[empty=false]/composer:opacity-0 group-data-[running=true]/composer:opacity-0 duration-300"
               aria-label="Voice mode"
             >
-              <Mic width={20} height={20} />
+              <Mic width={18} height={18} />
             </button>
 
             {/* Send / Cancel */}

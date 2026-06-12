@@ -74,7 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
   }
 
   return (
-    <aside className="h-full flex flex-col shrink-0 select-none bg-[#1e1f20] w-[260px] animate-sidebar-in overflow-hidden">
+    <aside className="h-full flex flex-col shrink-0 select-none bg-[#1b1b1d] w-[260px] animate-sidebar-in overflow-hidden">
       {/* Header: Menu + Aura branding */}
       <div className="flex items-center gap-1 px-2 pt-2 pb-1 shrink-0 h-[56px]">
         <button
@@ -88,7 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
           <div className="size-6 relative">
             <Sparkles className="size-6 text-blue-400" style={{ filter: "drop-shadow(0 0 4px rgba(66,133,244,0.4))" }} />
           </div>
-          <span className="text-[22px] font-normal text-[#c4c7c5] tracking-tight">Aura</span>
+          <span className="text-[22px] font-normal text-[#e3e3e3] tracking-tight">Aura</span>
         </div>
       </div>
 
@@ -126,14 +126,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
       {/* Scrollable middle section */}
       <div className="flex-1 overflow-y-auto px-3 min-h-0">
 
-        {/* Aura Live Agents section (replaces Notebooks) — Gemini section style */}
+        {/* Notebooks section — Gemini exact */}
         <div className="pt-4 pb-0.5">
-          <button
-            onClick={() => setNotebooksOpen(!notebooksOpen)}
-            className="w-full flex items-center px-4 py-1.5 text-[12px] font-medium text-[#9aa0a6] hover:text-[#c4c7c5] transition-colors duration-150"
-          >
-            <span>Aura Live Agents</span>
-          </button>
+          <div className="px-4 py-1.5 text-[12px] font-medium text-[#9aa0a6]">
+            <span>Notebooks</span>
+          </div>
 
           {notebooksOpen && (
             <div className="space-y-0 animate-fade-in">
@@ -143,7 +140,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
                 className="w-full flex items-center gap-3 hover:bg-[#393b3d] text-[#e3e3e3] text-[14px] font-normal py-2.5 px-4 rounded-full transition-colors duration-150"
               >
                 <Plus className="size-[18px] text-[#e3e3e3] shrink-0" />
-                <span>New Aura Live Agent</span>
+                <span>New notebook</span>
               </button>
 
               {/* Live agent items */}
@@ -177,12 +174,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
 
         {/* Recents section — Gemini style: section header + plain text list */}
         <div className="pt-3 pb-0.5">
-          <button
-            onClick={() => setRecentsOpen(!recentsOpen)}
-            className="w-full flex items-center px-4 py-1.5 text-[12px] font-medium text-[#9aa0a6] hover:text-[#c4c7c5] transition-colors duration-150"
-          >
+          <div className="px-4 py-1.5 text-[12px] font-medium text-[#9aa0a6]">
             <span>Recents</span>
-          </button>
+          </div>
 
           {recentsOpen && (
             <div className="space-y-0 animate-fade-in">
@@ -218,7 +212,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
       <div className="shrink-0 px-3 pb-3 pt-2 border-t border-white/5">
         <button
           onClick={() => setActiveTab("settings")}
-          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-[14px] font-normal transition-colors duration-150 text-left ${
+          className={`w-full flex items-center gap-3 px-4 py-2 rounded-full text-[14px] font-normal transition-colors duration-150 text-left ${
             activeTab === "settings"
               ? "bg-[#393b3d] text-[#e3e3e3]"
               : "hover:bg-[#393b3d] text-[#e3e3e3]"
@@ -227,8 +221,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
           <div className="size-7 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center text-white text-[10px] font-bold shrink-0 overflow-hidden">
             <span>A</span>
           </div>
-          <span className="truncate flex-1">Student</span>
-          <SettingsIcon className="size-[18px] text-[#9aa0a6] shrink-0" />
+          <span className="truncate flex-1 text-[13px]">Student</span>
+          <SettingsIcon className="size-[16px] text-[#9aa0a6] shrink-0" />
         </button>
       </div>
     </aside>
