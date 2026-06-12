@@ -17,12 +17,44 @@ from core.env_config import (
 )
 from core.auth_middleware import require_auth, init_firebase, get_supabase_client
 
-from user_personalization_router import router as personalization_router
-from gamification_router import router as gamification_router
-from exam_mode.exam_routes import router as exam_mode_router
-from personal_assistant_router import router as personal_assistant_router
-from live.aura_live_server import router as live_router
-from services.evolution_routes import router as evolution_router
+# Optional routers — gracefully skip if dependencies are missing (e.g. on Vercel)
+_optional_routers = {}
+
+try:
+    from user_personalization_router import router as personalization_router
+    _optional_routers["personalization"] = personalization_router
+except Exception as _e:
+    logging.getLogger("aevra").warning(f"personalization_router unavailable: {_e}")
+
+try:
+    from gamification_router import router as gamification_router
+    _optional_routers["gamification"] = gamification_router
+except Exception as _e:
+    logging.getLogger("aevra").warning(f"gamification_router unavailable: {_e}")
+
+try:
+    from exam_mode.exam_routes import router as exam_mode_router
+    _optional_routers["exam_mode"] = exam_mode_router
+except Exception as _e:
+    logging.getLogger("aevra").warning(f"exam_mode_router unavailable: {_e}")
+
+try:
+    from personal_assistant_router import router as personal_assistant_router
+    _optional_routers["personal_assistant"] = personal_assistant_router
+except Exception as _e:
+    logging.getLogger("aevra").warning(f"personal_assistant_router unavailable: {_e}")
+
+try:
+    from live.aura_live_server import router as live_router
+    _optional_routers["live"] = live_router
+except Exception as _e:
+    logging.getLogger("aevra").warning(f"live_router unavailable: {_e}")
+
+try:
+    from services.evolution_routes import router as evolution_router
+    _optional_routers["evolution"] = evolution_router
+except Exception as _e:
+    logging.getLogger("aevra").warning(f"evolution_router unavailable: {_e}")
 
 logger = logging.getLogger("aevra")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
@@ -35,12 +67,8 @@ client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 app = FastAPI(title="AURA AI", version="2.0.0", environment=ENVIRONMENT)
 
-app.include_router(personalization_router)
-app.include_router(gamification_router)
-app.include_router(exam_mode_router)
-app.include_router(personal_assistant_router)
-app.include_router(live_router)
-app.include_router(evolution_router)
+for _name, _router in _optional_routers.items():
+    app.include_router(_router)
 
 
 def _include_optional_upload_routers(app: FastAPI) -> None:
