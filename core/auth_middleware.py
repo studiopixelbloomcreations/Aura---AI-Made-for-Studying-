@@ -191,7 +191,7 @@ def get_supabase_client():
 
     try:
         from supabase import create_client, Client
-        _supabase_client: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+        _supabase_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
         logger.info("Supabase client initialized (service role)")
         return _supabase_client
     except ImportError:
