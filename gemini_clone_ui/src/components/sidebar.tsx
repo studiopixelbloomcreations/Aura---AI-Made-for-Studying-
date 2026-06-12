@@ -1,16 +1,18 @@
-import React from "react";
+import React, { useState } from "react";
 import { useAppStore } from "../store/useAppStore";
 import {
   Menu,
-  MessageSquare,
-  Settings as SettingsIcon,
-  Sparkles,
   PenSquare,
+  Search,
+  Image,
+  Library,
+  Settings as SettingsIcon,
+  ChevronDown,
+  ChevronRight,
+  Plus,
+  MessageSquare,
   Volume2,
-  BookOpen,
-  ClipboardCheck,
-  Package,
-  Briefcase,
+  Sparkles,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -26,17 +28,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
     setActiveTab,
     activeChatId,
     setActiveChatId,
+    liveAgents,
+    addLiveAgent,
+    liveAgentChats,
+    setIsLiveOpen,
     intelligenceCreated,
     setIsPersonalizing,
-    setIsLiveOpen
   } = useAppStore();
+
+  const [agentsOpen, setAgentsOpen] = useState(true);
+  const [recentsOpen, setRecentsOpen] = useState(true);
 
   const handleNewChat = () => {
     addChat("New Chat", "Ask Aura anything...");
     setActiveTab("chats");
   };
 
-  const handleIntelligenceClick = () => {
+  const handleNewAgent = () => {
+    addLiveAgent(`Agent ${liveAgents.length + 1}`);
     if (intelligenceCreated) {
       setIsLiveOpen(true);
     } else {
@@ -44,187 +53,189 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
     }
   };
 
-  // Collapsed state: only hamburger icon visible
+  const handleAgentClick = () => {
+    if (intelligenceCreated) {
+      setIsLiveOpen(true);
+    } else {
+      setIsPersonalizing(true);
+    }
+  };
+
+  // Collapsed state: only hamburger icon visible (Gemini style)
   if (!isExpanded) {
     return (
-      <aside className="h-full flex flex-col items-center pt-3 shrink-0 select-none bg-transparent">
+      <div className="h-full flex flex-col items-start pt-2 pl-2 shrink-0 select-none">
         <button
           onClick={() => setIsExpanded(true)}
-          className="size-10 flex items-center justify-center rounded-full hover:bg-[#1e1f20] text-[#c4c7c5] transition-all duration-200"
+          className="size-12 flex items-center justify-center rounded-full hover:bg-[#393b3d] text-[#c4c7c5] transition-colors duration-150"
           title="Open sidebar"
         >
-          <Menu className="size-[20px]" />
+          <Menu className="size-[22px]" />
         </button>
-      </aside>
+      </div>
     );
   }
 
   return (
-    <aside
-      className="h-full flex flex-col shrink-0 select-none bg-[#1e1f20] w-[308px] rounded-r-2xl relative overflow-hidden animate-sidebar-in"
-    >
-      {/* Top gradient overlay */}
-      <div className="absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-[#1e1f20] to-transparent z-10 pointer-events-none" />
-
-      {/* Header: Hamburger + "Aura" */}
-      <div className="flex items-center gap-2 px-4 pt-3 pb-2 shrink-0">
+    <aside className="h-full flex flex-col shrink-0 select-none bg-[#1e1f20] w-[260px] animate-sidebar-in overflow-hidden">
+      {/* Header: Menu + Aura branding */}
+      <div className="flex items-center gap-1 px-2 pt-2 pb-1 shrink-0">
         <button
           onClick={() => setIsExpanded(false)}
-          className="size-10 flex items-center justify-center rounded-full hover:bg-white/8 text-[#c4c7c5] transition-all duration-200"
+          className="size-12 flex items-center justify-center rounded-full hover:bg-[#393b3d] text-[#c4c7c5] transition-colors duration-150"
+          title="Close sidebar"
         >
-          <Menu className="size-[20px]" />
+          <Menu className="size-[22px]" />
         </button>
-        <span className="text-[20px] font-medium leading-[26px] text-[#c4c7c5] select-none">Aura</span>
+        <div className="flex items-center gap-2 ml-1">
+          <div className="size-7 rounded-full bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 flex items-center justify-center">
+            <Sparkles className="size-4 text-white" />
+          </div>
+          <span className="text-[22px] font-normal text-[#c4c7c5] tracking-tight">Aura</span>
+        </div>
       </div>
 
       {/* New chat button */}
-      <div className="px-4 py-2 shrink-0">
+      <div className="px-3 pt-1 pb-1 shrink-0">
         <button
           onClick={handleNewChat}
-          className="w-[272px] flex items-center gap-3 bg-white/8 hover:bg-white/12 text-[#e3e3e3] text-[14px] font-medium py-3 px-5 rounded-[30px] transition-all duration-200"
+          className="w-full flex items-center gap-3 bg-[#393b3d] hover:bg-[#484a4d] text-[#e3e3e3] text-[14px] font-normal py-3 px-4 rounded-full transition-colors duration-150"
         >
-          <PenSquare className="size-[18px] text-[#e3e3e3] shrink-0" />
+          <PenSquare className="size-[20px] text-[#e3e3e3] shrink-0" />
           <span>New chat</span>
         </button>
       </div>
 
-      {/* Chats section heading */}
-      <div className="px-4 pt-2 pb-1 shrink-0">
-        <span className="text-[14px] font-medium leading-[20px] text-[#c4c7c5]">Chats</span>
+      {/* Search chats */}
+      <div className="px-3 pb-1 shrink-0">
+        <button
+          className="w-full flex items-center gap-3 hover:bg-[#393b3d] text-[#e3e3e3] text-[14px] font-normal py-3 px-4 rounded-full transition-colors duration-150"
+        >
+          <Search className="size-[20px] text-[#e3e3e3] shrink-0" />
+          <span>Search chats</span>
+        </button>
+      </div>
+
+      {/* Nav: Images, Library */}
+      <div className="px-3 pb-2 shrink-0 space-y-0.5">
+        <button className="w-full flex items-center gap-3 hover:bg-[#393b3d] text-[#e3e3e3] text-[14px] font-normal py-3 px-4 rounded-full transition-colors duration-150">
+          <Image className="size-[20px] text-[#e3e3e3] shrink-0" />
+          <span>Images</span>
+        </button>
+        <button className="w-full flex items-center gap-3 hover:bg-[#393b3d] text-[#e3e3e3] text-[14px] font-normal py-3 px-4 rounded-full transition-colors duration-150">
+          <Library className="size-[20px] text-[#e3e3e3] shrink-0" />
+          <span>Library</span>
+        </button>
       </div>
 
       {/* Scrollable middle section */}
-      <div className="flex-1 overflow-y-auto px-3 min-h-0 scrollbar-thin">
-        {/* Sign-in prompt card (shown when no chats) */}
-        {chats.length === 0 && (
-          <div className="mx-1 mb-3 rounded-2xl bg-white/5 p-4 space-y-2">
-            <p className="text-[14px] font-medium text-[#c4c7c5]">Sign in to start saving your chats</p>
-            <p className="text-[14px] text-[#c4c7c5] leading-[20px]">
-              Once you're signed in, you can access your recent chats here.
-            </p>
-            <button className="text-[14px] font-medium text-[#a8c7fa] hover:underline">
-              Sign in
-            </button>
-          </div>
-        )}
+      <div className="flex-1 overflow-y-auto px-3 min-h-0">
 
-        {/* Aura Live section */}
-        <div className="mb-2">
+        {/* Aura Live Agents section (replaces Notebooks) */}
+        <div className="pt-3 pb-1">
           <button
-            onClick={handleIntelligenceClick}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-[14px] font-medium text-[#e3e3e3] hover:bg-white/8 transition-all duration-200 text-left"
+            onClick={() => setAgentsOpen(!agentsOpen)}
+            className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] font-medium text-[#9aa0a6] hover:text-[#e3e3e3] transition-colors duration-150"
           >
-            {intelligenceCreated ? (
-              <>
-                <Volume2 className="size-[18px] text-emerald-400 shrink-0" />
-                <span>Aura Live</span>
-                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse ml-auto mr-1" />
-              </>
-            ) : (
-              <>
-                <Sparkles className="size-[18px] text-[#c4c7c5] shrink-0" />
-                <span>Aura Live</span>
-              </>
-            )}
+            {agentsOpen ? <ChevronDown className="size-[16px]" /> : <ChevronRight className="size-[16px]" />}
+            <span>Aura Live Agents</span>
           </button>
-        </div>
 
-        {/* Study Center */}
-        <div className="mb-1">
-          <button
-            onClick={() => setActiveTab("study")}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-[14px] font-medium transition-all duration-200 text-left ${
-              activeTab === "study"
-                ? "bg-white/12 text-[#e3e3e3]"
-                : "hover:bg-white/8 text-[#e3e3e3]"
-            }`}
-          >
-            <BookOpen className="size-[18px] shrink-0" />
-            <span>Study Center</span>
-          </button>
-        </div>
+          {agentsOpen && (
+            <div className="space-y-0.5 animate-fade-in">
+              {/* + New Aura Live Agent */}
+              <button
+                onClick={handleNewAgent}
+                className="w-full flex items-center gap-3 hover:bg-[#393b3d] text-[#e3e3e3] text-[14px] font-normal py-2.5 px-4 rounded-full transition-colors duration-150"
+              >
+                <Plus className="size-[18px] text-[#e3e3e3] shrink-0" />
+                <span>New Aura Live Agent</span>
+              </button>
 
-        {/* Exam Center */}
-        <div className="mb-1">
-          <button
-            onClick={() => setActiveTab("exams")}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-[14px] font-medium transition-all duration-200 text-left ${
-              activeTab === "exams"
-                ? "bg-white/12 text-[#e3e3e3]"
-                : "hover:bg-white/8 text-[#e3e3e3]"
-            }`}
-          >
-            <ClipboardCheck className="size-[18px] shrink-0" />
-            <span>Exam Center</span>
-          </button>
-        </div>
+              {/* Live agent items */}
+              {liveAgents.map((agent) => (
+                <button
+                  key={agent.id}
+                  onClick={handleAgentClick}
+                  className="w-full flex items-center gap-3 hover:bg-[#393b3d] text-[#e3e3e3] text-[14px] font-normal py-2.5 px-4 rounded-full transition-colors duration-150 text-left"
+                >
+                  <Volume2 className="size-[18px] text-emerald-400 shrink-0" />
+                  <span className="truncate">{agent.name}</span>
+                  {agent.status === "active" && (
+                    <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse ml-auto shrink-0" />
+                  )}
+                </button>
+              ))}
 
-        {/* Recent chats list */}
-        {chats.length > 0 && (
-          <div className="pt-2 space-y-0.5">
-            {chats.map((chat) => {
-              const isActive = chat.id === activeChatId && activeTab === "chats";
-              return (
+              {/* Live agent conversations */}
+              {liveAgentChats.map((chat) => (
                 <button
                   key={chat.id}
-                  onClick={() => {
-                    setActiveChatId(chat.id);
-                    setActiveTab("chats");
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-[14px] font-medium text-left truncate transition-all duration-200 ${
-                    isActive
-                      ? "bg-white/12 text-[#e3e3e3]"
-                      : "hover:bg-white/8 text-[#e3e3e3]"
-                  }`}
+                  className="w-full flex items-center gap-3 hover:bg-[#393b3d] text-[#c4c7c5] text-[14px] font-normal py-2.5 px-4 rounded-full transition-colors duration-150 text-left"
                 >
-                  <MessageSquare className="size-[18px] shrink-0 opacity-70" />
+                  <MessageSquare className="size-[18px] shrink-0 opacity-60" />
                   <span className="truncate">{chat.title}</span>
                 </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Bottom section: About Aura + Settings */}
-      <div className="shrink-0 px-3 pb-3 space-y-0.5">
-        {/* About Aura heading */}
-        <div className="px-4 py-2">
-          <span className="text-[14px] font-medium text-[#c4c7c5]">About Aura</span>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Settings & help */}
-        <button
-          onClick={() => setActiveTab("settings")}
-          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-[14px] font-medium text-[#e3e3e3] hover:bg-white/8 transition-all duration-200 text-left ${
-            activeTab === "settings" ? "bg-white/12" : ""
-          }`}
-        >
-          <SettingsIcon className="size-[18px] shrink-0" />
-          <span>Settings & help</span>
-        </button>
+        {/* Recents section */}
+        <div className="pt-2 pb-1">
+          <button
+            onClick={() => setRecentsOpen(!recentsOpen)}
+            className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] font-medium text-[#9aa0a6] hover:text-[#e3e3e3] transition-colors duration-150"
+          >
+            {recentsOpen ? <ChevronDown className="size-[16px]" /> : <ChevronRight className="size-[16px]" />}
+            <span>Recents</span>
+          </button>
 
-        {/* Aura App */}
-        <button className="w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-[14px] font-medium text-[#e3e3e3] hover:bg-white/8 transition-all duration-200 text-left">
-          <Sparkles className="size-[18px] shrink-0" />
-          <span>Aura App</span>
-        </button>
-
-        {/* Subscriptions */}
-        <button className="w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-[14px] font-medium text-[#e3e3e3] hover:bg-white/8 transition-all duration-200 text-left">
-          <Package className="size-[18px] shrink-0" />
-          <span>Subscriptions</span>
-        </button>
-
-        {/* For Business */}
-        <button className="w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-[14px] font-medium text-[#e3e3e3] hover:bg-white/8 transition-all duration-200 text-left">
-          <Briefcase className="size-[18px] shrink-0" />
-          <span>For Business</span>
-        </button>
+          {recentsOpen && (
+            <div className="space-y-0.5 animate-fade-in">
+              {chats.length === 0 ? (
+                <p className="text-[13px] text-[#9aa0a6] px-4 py-2">No recent chats yet</p>
+              ) : (
+                chats.map((chat) => {
+                  const isActive = chat.id === activeChatId && activeTab === "chats";
+                  return (
+                    <button
+                      key={chat.id}
+                      onClick={() => {
+                        setActiveChatId(chat.id);
+                        setActiveTab("chats");
+                      }}
+                      className={`w-full flex items-center gap-3 text-[14px] font-normal py-2.5 px-4 rounded-full transition-colors duration-150 text-left ${
+                        isActive
+                          ? "bg-[#393b3d] text-[#e3e3e3]"
+                          : "hover:bg-[#393b3d] text-[#e3e3e3]"
+                      }`}
+                    >
+                      <MessageSquare className="size-[18px] shrink-0 opacity-60" />
+                      <span className="truncate">{chat.title}</span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Bottom gradient overlay */}
-      <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-[#1e1f20] to-transparent z-10 pointer-events-none" />
+      {/* Bottom: Settings */}
+      <div className="shrink-0 px-3 pb-3">
+        <button
+          onClick={() => setActiveTab("settings")}
+          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-[14px] font-normal transition-colors duration-150 text-left ${
+            activeTab === "settings"
+              ? "bg-[#393b3d] text-[#e3e3e3]"
+              : "hover:bg-[#393b3d] text-[#e3e3e3]"
+          }`}
+        >
+          <SettingsIcon className="size-[20px] shrink-0" />
+          <span>Settings</span>
+        </button>
+      </div>
     </aside>
   );
 };

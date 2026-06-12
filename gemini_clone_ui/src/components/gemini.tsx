@@ -37,6 +37,7 @@ import { MarkdownText } from "@/components/assistant-ui/markdown-text";
 import { useAppStore } from "../store/useAppStore";
 import { AuraLogo } from "./icons/aura-logo";
 
+// @ts-expect-error kept for future use
 const GEMINI_STARTUP_MESSAGES = [
   "Where should we start?",
   "What shall we learn today?",
@@ -90,7 +91,6 @@ export const Gemini: FC = () => {
     setIntelligenceProfile
   } = useAppStore();
 
-  const [startupMessage, setStartupMessage] = useState(GEMINI_STARTUP_MESSAGES[0]);
   const [settingsTab, setSettingsTab] = useState<"general" | "voices" | "models" | "personalization">("general");
 
   // Form states inside components
@@ -164,35 +164,27 @@ export const Gemini: FC = () => {
     }
   }, [isInitializing]);
 
-  // Set random greeting on mount
-  useEffect(() => {
-    const randomIndex = Math.floor(Math.random() * GEMINI_STARTUP_MESSAGES.length);
-    setStartupMessage(GEMINI_STARTUP_MESSAGES[randomIndex]!);
-  }, []);
+  // Set random greeting on mount (kept for potential future use)
+  // useEffect(() => {
+  //   const randomIndex = Math.floor(Math.random() * GEMINI_STARTUP_MESSAGES.length);
+  //   setStartupMessage(GEMINI_STARTUP_MESSAGES[randomIndex]!);
+  // }, []);
 
   return (
     <ThreadPrimitive.Root className="flex h-full flex-col items-stretch bg-black transition-all duration-300 relative select-none">
       
       <AuiIf condition={(s) => s.thread.isEmpty}>
-        <div className="flex-1 flex flex-col pt-[90px] px-4 md:px-[72px]">
-          <div className="mx-auto w-full max-w-[760px]">
-            {/* Gemini-style greeting: plain white text, 32px, weight 400 */}
-            <h1 className="text-[28px] md:text-[32px] leading-[36px] font-normal text-[#e3e3e3] mb-6 select-none animate-greeting-fade">
-              {startupMessage}
+        <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-[72px]">
+          <div className="mx-auto w-full max-w-[760px] text-center">
+            {/* Gemini-style greeting: "Ready when you are" */}
+            <h1 className="text-[36px] md:text-[44px] leading-[52px] font-normal text-[#e3e3e3] mb-8 select-none animate-greeting-fade">
+              Ready when you are
             </h1>
           </div>
-          {/* Suggestion Chips — vertical stack, left-aligned like Gemini */}
-          <div className="mx-auto w-full max-w-[760px] mb-6">
-            <div className="flex flex-col gap-2">
-              {["Write", "Plan", "Research", "Learn"].map((label, i) => (
-                <SuggestionChip key={label} delay={i * 80}>{label}</SuggestionChip>
-              ))}
-            </div>
-          </div>
-          {/* Composer at bottom */}
-          <div className="mx-auto w-full max-w-[760px] mt-auto">
+          {/* Composer */}
+          <div className="mx-auto w-full max-w-[760px]">
             <Composer />
-            <p className="text-center text-[#c4c7c5] text-[12px] leading-[16px] mt-3 mb-4 select-none">
+            <p className="text-center text-[#9aa0a6] text-[12px] leading-[16px] mt-3 mb-4 select-none">
               Aura may display inaccurate info, including about people, so double-check its responses.
             </p>
           </div>
@@ -698,6 +690,8 @@ const SuggestionChip: FC<{
     </button>
   );
 };
+// Suppress unused warning
+void SuggestionChip;
 
 const Composer: FC = () => {
   const isEmpty = useAuiState((s) => s.composer.isEmpty);

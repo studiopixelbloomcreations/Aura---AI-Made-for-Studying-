@@ -14,6 +14,8 @@ import {
   Plus,
   LogOut,
   X,
+  PenSquare,
+  ChevronDown,
 } from 'lucide-react'
 
 type GateStage = "landing" | "login" | "checking" | "onboarding" | "loading" | "ready";
@@ -172,6 +174,7 @@ export default function App() {
   })
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const { isTemporaryChat, setTemporaryChat } = useAppStore()
   const {
     activeChatId,
     isLiveOpen,
@@ -458,15 +461,37 @@ export default function App() {
         {/* Main Content Area */}
         <div className="flex-1 h-full flex flex-col min-w-0 bg-black relative">
           
-          {/* Minimal Gemini-style top bar: only profile & sign-in when sidebar is collapsed */}
-          <header className="h-[56px] w-full flex items-center justify-end px-4 bg-transparent shrink-0 z-30 select-none">
-            {/* Profile Avatar trigger */}
-            <button
-              onClick={() => setIsProfileOpen(true)}
-              className="h-9 w-9 aspect-square shrink-0 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center text-white text-[13px] font-bold shadow-md hover:opacity-90 active:scale-95 transition-all overflow-hidden"
-            >
-              {identity.avatar ? <img src={identity.avatar} alt="" className="h-full w-full object-cover" /> : profileInitial}
+          {/* Gemini-style top bar: model selector left, temp chat + profile right */}
+          <header className="h-[56px] w-full flex items-center justify-between px-4 bg-transparent shrink-0 z-30 select-none">
+            {/* Left: Model name dropdown */}
+            <button className="flex items-center gap-1.5 text-[22px] font-normal text-[#c4c7c5] hover:text-[#e3e3e3] transition-colors duration-150">
+              <span>Aura</span>
+              <ChevronDown className="size-[18px] opacity-60" />
             </button>
+
+            {/* Right: Temp chat toggle + Profile */}
+            <div className="flex items-center gap-2">
+              {/* Temporary chat toggle icon */}
+              <button
+                onClick={() => setTemporaryChat(!isTemporaryChat)}
+                className={`size-10 flex items-center justify-center rounded-full transition-colors duration-150 ${
+                  isTemporaryChat
+                    ? "bg-[#1a2d4c] text-blue-400"
+                    : "hover:bg-[#393b3d] text-[#c4c7c5]"
+                }`}
+                title={isTemporaryChat ? "Turn off temporary chat" : "Turn on temporary chat"}
+              >
+                <PenSquare className="size-[20px]" />
+              </button>
+
+              {/* Profile Avatar */}
+              <button
+                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                className="h-9 w-9 aspect-square shrink-0 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center text-white text-[13px] font-bold shadow-md hover:opacity-90 active:scale-95 transition-all overflow-hidden"
+              >
+                {identity.avatar ? <img src={identity.avatar} alt="" className="h-full w-full object-cover" /> : profileInitial}
+              </button>
+            </div>
           </header>
 
           {/* Main Content Area — switches between Chat, Study, Exam */}

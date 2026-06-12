@@ -9,6 +9,21 @@ interface Chat {
   time: string;
 }
 
+interface LiveAgent {
+  id: string;
+  name: string;
+  status: "active" | "idle" | "ended";
+  createdAt: string;
+}
+
+interface LiveAgentChat {
+  id: string;
+  agentId: string;
+  title: string;
+  preview: string;
+  time: string;
+}
+
 export interface SubjectMastery {
   subject: string;
   readiness: number; // percentage (0-100)
@@ -95,6 +110,14 @@ interface AppState {
   setIsLiveOpen: (val: boolean) => void;
   intelligenceProfile: IntelligenceProfile;
   setIntelligenceProfile: (profile: IntelligenceProfile) => void;
+
+  // Aura Live Agents
+  liveAgents: LiveAgent[];
+  addLiveAgent: (name: string) => string;
+  activeAgentId: string;
+  setActiveAgentId: (id: string) => void;
+  liveAgentChats: LiveAgentChat[];
+  addLiveAgentChat: (agentId: string, title: string, preview?: string) => string;
 }
 
 function loadChats(): { chats: Chat[]; activeChatId: string } {
@@ -267,5 +290,31 @@ export const useAppStore = create<AppState>((set) => ({
     memoryPriorities: "",
     boundaries: ""
   },
-  setIntelligenceProfile: (profile) => set({ intelligenceProfile: profile })
+  setIntelligenceProfile: (profile) => set({ intelligenceProfile: profile }),
+
+  // Aura Live Agents
+  liveAgents: [],
+  addLiveAgent: (name) => {
+    const id = `agent-${Date.now()}`;
+    set((state) => ({
+      liveAgents: [
+        { id, name, status: "idle" as const, createdAt: new Date().toISOString() },
+        ...state.liveAgents,
+      ],
+    }));
+    return id;
+  },
+  activeAgentId: "",
+  setActiveAgentId: (id) => set({ activeAgentId: id }),
+  liveAgentChats: [],
+  addLiveAgentChat: (agentId, title, preview = "No messages yet") => {
+    const id = `agent-chat-${Date.now()}`;
+    set((state) => ({
+      liveAgentChats: [
+        { id, agentId, title, preview, time: "Just now" },
+        ...state.liveAgentChats,
+      ],
+    }));
+    return id;
+  },
 }));
