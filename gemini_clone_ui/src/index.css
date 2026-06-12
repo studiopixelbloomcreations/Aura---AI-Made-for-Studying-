@@ -66,9 +66,8 @@
     color: #E3E3E3;
   }
 
-  /* Gemini-style gradient background for main content — subtle deep blue */
   .gemini-gradient-bg {
-    background: radial-gradient(ellipse 80% 50% at 50% 35%, rgba(13, 27, 42, 0.7) 0%, rgba(10, 14, 20, 0.4) 40%, #000000 80%);
+    background: radial-gradient(ellipse 75% 55% at 50% 38%, rgba(24, 46, 95, 0.95) 0%, rgba(10, 15, 30, 0.55) 45%, #000000 85%);
   }
 }
 

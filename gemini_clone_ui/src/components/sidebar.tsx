@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import React from "react";
 import { useAppStore } from "../store/useAppStore";
 import {
-  Menu,
   PenSquare,
   Search,
   Image,
@@ -10,13 +9,32 @@ import {
   Plus,
   FileText,
   Volume2,
-  Sparkles,
+  PanelLeftClose,
+  PanelLeft,
 } from "lucide-react";
 
 interface SidebarProps {
   isExpanded: boolean;
   setIsExpanded: (expanded: boolean) => void;
 }
+
+// Exact shape and color gradient for the Gemini 4-pointed star logo
+const GeminiStarLogo = () => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="size-[22px] shrink-0">
+    <path
+      d="M12 2C12 7.5 16.5 12 22 12C16.5 12 12 16.5 12 22C12 16.5 7.5 12 2 12C7.5 12 12 7.5 12 2Z"
+      fill="url(#gemini-logo-grad)"
+    />
+    <defs>
+      <linearGradient id="gemini-logo-grad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stopColor="#4285f4" />
+        <stop offset="35%" stopColor="#9b72cb" />
+        <stop offset="70%" stopColor="#d96570" />
+        <stop offset="100%" stopColor="#f4af67" />
+      </linearGradient>
+    </defs>
+  </svg>
+);
 
 export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) => {
   const {
@@ -33,9 +51,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
     intelligenceCreated,
     setIsPersonalizing,
   } = useAppStore();
-
-  const [notebooksOpen, setNotebooksOpen] = useState(true);
-  const [recentsOpen, setRecentsOpen] = useState(true);
 
   const handleNewChat = () => {
     addChat("New Chat", "Ask Aura anything...");
@@ -59,171 +74,183 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
     }
   };
 
-  // Collapsed state: only hamburger icon visible
+  // Get user identity for bottom profile segment
+  const identity = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("aura_identity") || "null") || {};
+    } catch {
+      return {};
+    }
+  })();
+
+  const profileInitial = (identity?.name || identity?.email || "T").slice(0, 1).toUpperCase();
+
+  // Collapsed state: vertical bar showing only the expand panel icon
   if (!isExpanded) {
     return (
-      <div className="h-full flex flex-col items-start pt-2 pl-2 shrink-0 select-none">
+      <div className="h-full flex flex-col items-center pt-3 w-[60px] bg-[#1e1f20] shrink-0 select-none border-r border-white/5">
         <button
           onClick={() => setIsExpanded(true)}
-          className="size-12 flex items-center justify-center rounded-full hover:bg-[#393b3d] text-[#c4c7c5] transition-colors duration-150"
+          className="size-10 flex items-center justify-center rounded-full hover:bg-[#393b3d] text-[#c4c7c5] transition-colors duration-150"
+          title="Expand menu"
         >
-          <Menu className="size-[22px]" />
+          <PanelLeft className="size-[20px]" />
         </button>
       </div>
     );
   }
 
   return (
-    <aside className="h-full flex flex-col shrink-0 select-none bg-[#1b1b1d] w-[260px] animate-sidebar-in overflow-hidden">
-      {/* Header: Menu + Aura branding */}
-      <div className="flex items-center gap-1 px-2 pt-2 pb-1 shrink-0 h-[56px]">
+    <aside className="h-full flex flex-col shrink-0 select-none bg-[#1e1f20] w-[260px] animate-sidebar-in overflow-hidden border-r border-white/5">
+      {/* Header: Gemini Logo + Collapse button */}
+      <div className="flex items-center justify-between px-4 pt-3.5 pb-2 shrink-0">
+        <div className="flex items-center gap-2.5">
+          <GeminiStarLogo />
+          <span className="text-[20px] font-normal text-[#e3e3e3] tracking-normal font-sans">Gemini</span>
+        </div>
         <button
           onClick={() => setIsExpanded(false)}
-          className="size-12 flex items-center justify-center rounded-full hover:bg-[#393b3d] text-[#c4c7c5] transition-colors duration-150 shrink-0"
+          className="size-10 flex items-center justify-center rounded-full hover:bg-[#393b3d] text-[#c4c7c5] transition-colors duration-150 shrink-0"
+          title="Collapse menu"
         >
-          <Menu className="size-[22px]" />
+          <PanelLeftClose className="size-[20px]" />
         </button>
-        <div className="flex items-center gap-2.5 ml-1">
-          {/* Gemini-style colorful star logo */}
-          <div className="size-6 relative">
-            <Sparkles className="size-6 text-blue-400" style={{ filter: "drop-shadow(0 0 4px rgba(66,133,244,0.4))" }} />
-          </div>
-          <span className="text-[22px] font-normal text-[#e3e3e3] tracking-tight">Aura</span>
-        </div>
       </div>
 
-      {/* New chat button — Gemini's rounded pill style */}
-      <div className="px-3 pt-2 pb-0.5 shrink-0">
+      {/* New chat button — Gemini exact capsule style */}
+      <div className="px-3 pt-2 pb-1.5 shrink-0">
         <button
           onClick={handleNewChat}
-          className="w-full flex items-center gap-3 bg-[#282a2c] hover:bg-[#393b3d] text-[#e3e3e3] text-[14px] font-medium py-2.5 px-4 rounded-full transition-colors duration-150"
+          className="w-full flex items-center gap-3 bg-[#131314]/30 hover:bg-[#393b3d] text-[#e3e3e3] text-[13px] font-medium py-2 px-4 rounded-full border border-white/10 transition-colors duration-150"
         >
-          <PenSquare className="size-[18px] text-[#e3e3e3] shrink-0" />
+          <PenSquare className="size-[16px] text-[#e3e3e3] shrink-0" />
           <span>New chat</span>
         </button>
       </div>
 
-      {/* Search chats */}
-      <div className="px-3 pt-1 shrink-0">
-        <button className="w-full flex items-center gap-3 hover:bg-[#393b3d] text-[#e3e3e3] text-[14px] font-normal py-2.5 px-4 rounded-full transition-colors duration-150">
-          <Search className="size-[18px] text-[#e3e3e3] shrink-0" />
+      {/* Nav Actions: Search chats, Images, Library */}
+      <div className="px-3 space-y-0.5 shrink-0">
+        <button className="w-full flex items-center gap-3 hover:bg-[#393b3d]/50 text-[#c4c7c5] text-[13px] font-normal py-2 px-4 rounded-full transition-colors duration-150">
+          <Search className="size-[16px] shrink-0" />
           <span>Search chats</span>
         </button>
-      </div>
-
-      {/* Nav: Images, Library */}
-      <div className="px-3 space-y-0 shrink-0">
-        <button className="w-full flex items-center gap-3 hover:bg-[#393b3d] text-[#e3e3e3] text-[14px] font-normal py-2.5 px-4 rounded-full transition-colors duration-150">
-          <Image className="size-[18px] text-[#e3e3e3] shrink-0" />
+        <button className="w-full flex items-center gap-3 hover:bg-[#393b3d]/50 text-[#c4c7c5] text-[13px] font-normal py-2 px-4 rounded-full transition-colors duration-150">
+          <Image className="size-[16px] shrink-0" />
           <span>Images</span>
         </button>
-        <button className="w-full flex items-center gap-3 hover:bg-[#393b3d] text-[#e3e3e3] text-[14px] font-normal py-2.5 px-4 rounded-full transition-colors duration-150">
-          <Library className="size-[18px] text-[#e3e3e3] shrink-0" />
+        <button className="w-full flex items-center gap-3 hover:bg-[#393b3d]/50 text-[#c4c7c5] text-[13px] font-normal py-2 px-4 rounded-full transition-colors duration-150">
+          <Library className="size-[16px] shrink-0" />
           <span>Library</span>
         </button>
       </div>
 
-      {/* Scrollable middle section */}
-      <div className="flex-1 overflow-y-auto px-3 min-h-0">
-
-        {/* Notebooks section — Gemini exact */}
-        <div className="pt-4 pb-0.5">
-          <div className="px-4 py-1.5 text-[12px] font-medium text-[#9aa0a6]">
-            <span>Notebooks</span>
+      {/* Scrollable Center Pane */}
+      <div className="flex-1 overflow-y-auto px-3 min-h-0 custom-scrollbar">
+        {/* Notebooks Section */}
+        <div className="pt-4 pb-1">
+          <div className="px-4 py-1 text-[11px] font-semibold text-[#9aa0a6] uppercase tracking-wider">
+            Notebooks
           </div>
+          <div className="space-y-0.5 mt-1">
+            <button
+              onClick={handleNewAgent}
+              className="w-full flex items-center gap-3 hover:bg-[#393b3d]/50 text-[#c4c7c5] text-[12.5px] font-normal py-2 px-4 rounded-full transition-colors duration-150"
+            >
+              <Plus className="size-[16px] shrink-0" />
+              <span>New notebook</span>
+            </button>
 
-          {notebooksOpen && (
-            <div className="space-y-0 animate-fade-in">
-              {/* + New Aura Live Agent */}
+            <button
+              onClick={handleAgentClick}
+              className="w-full flex items-center gap-3 hover:bg-[#393b3d]/50 text-[#c4c7c5] text-[12.5px] font-normal py-2 px-4 rounded-full transition-colors duration-150 text-left"
+            >
+              <FileText className="size-[16px] shrink-0 text-[#9aa0a6]" />
+              <span className="truncate">Untitled notebook</span>
+            </button>
+
+            {/* Live agents list */}
+            {liveAgents.map((agent) => (
               <button
-                onClick={handleNewAgent}
-                className="w-full flex items-center gap-3 hover:bg-[#393b3d] text-[#e3e3e3] text-[14px] font-normal py-2.5 px-4 rounded-full transition-colors duration-150"
+                key={agent.id}
+                onClick={handleAgentClick}
+                className="w-full flex items-center gap-3 hover:bg-[#393b3d]/50 text-[#c4c7c5] text-[12.5px] font-normal py-2 px-4 rounded-full transition-colors duration-150 text-left"
               >
-                <Plus className="size-[18px] text-[#e3e3e3] shrink-0" />
-                <span>New notebook</span>
+                <Volume2 className="size-[15px] text-emerald-400 shrink-0" />
+                <span className="truncate">{agent.name}</span>
+                {agent.status === "active" && (
+                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse ml-auto shrink-0" />
+                )}
               </button>
+            ))}
 
-              {/* Live agent items */}
-              {liveAgents.map((agent) => (
-                <button
-                  key={agent.id}
-                  onClick={handleAgentClick}
-                  className="w-full flex items-center gap-3 hover:bg-[#393b3d] text-[#e3e3e3] text-[14px] font-normal py-2.5 px-4 rounded-full transition-colors duration-150 text-left"
-                >
-                  <Volume2 className="size-[16px] text-emerald-400 shrink-0" />
-                  <span className="truncate">{agent.name}</span>
-                  {agent.status === "active" && (
-                    <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse ml-auto shrink-0" />
-                  )}
-                </button>
-              ))}
-
-              {/* Live agent conversations */}
-              {liveAgentChats.map((chat) => (
-                <button
-                  key={chat.id}
-                  className="w-full flex items-center gap-3 hover:bg-[#393b3d] text-[#c4c7c5] text-[14px] font-normal py-2.5 px-4 rounded-full transition-colors duration-150 text-left"
-                >
-                  <FileText className="size-[16px] shrink-0 opacity-50" />
-                  <span className="truncate">{chat.title}</span>
-                </button>
-              ))}
-            </div>
-          )}
+            {liveAgentChats.map((chat) => (
+              <button
+                key={chat.id}
+                className="w-full flex items-center gap-3 hover:bg-[#393b3d]/50 text-[#c4c7c5] text-[12.5px] font-normal py-2 px-4 rounded-full transition-colors duration-150 text-left"
+              >
+                <FileText className="size-[15px] shrink-0 opacity-50" />
+                <span className="truncate">{chat.title}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Recents section — Gemini style: section header + plain text list */}
-        <div className="pt-3 pb-0.5">
-          <div className="px-4 py-1.5 text-[12px] font-medium text-[#9aa0a6]">
-            <span>Recents</span>
+        {/* Recents Section — Ultra Compact */}
+        <div className="pt-3 pb-2">
+          <div className="px-4 py-1 text-[11px] font-semibold text-[#9aa0a6] uppercase tracking-wider">
+            Recents
           </div>
-
-          {recentsOpen && (
-            <div className="space-y-0 animate-fade-in">
-              {chats.length === 0 ? (
-                <p className="text-[13px] text-[#9aa0a6] px-4 py-2">No recent chats yet</p>
-              ) : (
-                chats.map((chat) => {
-                  const isActive = chat.id === activeChatId && activeTab === "chats";
-                  return (
-                    <button
-                      key={chat.id}
-                      onClick={() => {
-                        setActiveChatId(chat.id);
-                        setActiveTab("chats");
-                      }}
-                      className={`w-full text-left text-[14px] font-normal py-2.5 px-4 rounded-full transition-colors duration-150 truncate ${
-                        isActive
-                          ? "bg-[#393b3d] text-[#e3e3e3]"
-                          : "hover:bg-[#393b3d] text-[#e3e3e3]"
-                      }`}
-                    >
-                      {chat.title}
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          )}
+          <div className="space-y-0.5 mt-1">
+            {chats.length === 0 ? (
+              <div className="text-[12px] text-[#9aa0a6] px-4 py-2 italic">No recent chats</div>
+            ) : (
+              chats.map((chat) => {
+                const isActive = chat.id === activeChatId && activeTab === "chats";
+                return (
+                  <button
+                    key={chat.id}
+                    onClick={() => {
+                      setActiveChatId(chat.id);
+                      setActiveTab("chats");
+                    }}
+                    className={`w-full text-left text-[12.5px] font-normal py-1.5 px-4 rounded-full transition-colors duration-150 truncate ${
+                      isActive
+                        ? "bg-[#393b3d] text-[#e3e3e3]"
+                        : "hover:bg-[#393b3d]/50 text-[#c4c7c5]"
+                    }`}
+                  >
+                    {chat.title}
+                  </button>
+                );
+              })
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Bottom: User avatar + name + Settings */}
+      {/* Bottom: Profile card matching exact lowercase style in reference image */}
       <div className="shrink-0 px-3 pb-3 pt-2 border-t border-white/5">
-        <button
-          onClick={() => setActiveTab("settings")}
-          className={`w-full flex items-center gap-3 px-4 py-2 rounded-full text-[14px] font-normal transition-colors duration-150 text-left ${
-            activeTab === "settings"
-              ? "bg-[#393b3d] text-[#e3e3e3]"
-              : "hover:bg-[#393b3d] text-[#e3e3e3]"
-          }`}
-        >
-          <div className="size-7 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center text-white text-[10px] font-bold shrink-0 overflow-hidden">
-            <span>A</span>
+        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-full hover:bg-[#393b3d]/40 transition-colors duration-150 text-[#e3e3e3]">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="size-6.5 rounded-full bg-gradient-to-tr from-purple-500 via-indigo-500 to-blue-500 flex items-center justify-center text-white text-[9.5px] font-bold shrink-0 overflow-hidden shadow-sm">
+              {identity?.avatar ? (
+                <img src={identity.avatar} alt="" className="h-full w-full object-cover" />
+              ) : (
+                profileInitial
+              )}
+            </div>
+            <span className="truncate text-[12.5px] font-normal text-[#c4c7c5] tracking-tight">
+              {String(identity?.name || "thenuja premasiri").toLowerCase()}
+            </span>
           </div>
-          <span className="truncate flex-1 text-[13px]">Student</span>
-          <SettingsIcon className="size-[16px] text-[#9aa0a6] shrink-0" />
-        </button>
+          <button
+            onClick={() => setActiveTab("settings")}
+            className="size-7 flex items-center justify-center rounded-full hover:bg-white/10 text-[#9aa0a6] hover:text-[#e3e3e3] transition-colors shrink-0"
+            title="Settings"
+          >
+            <SettingsIcon className="size-[15px]" />
+          </button>
+        </div>
       </div>
     </aside>
   );

@@ -173,20 +173,17 @@ export const Gemini: FC = () => {
   return (
     <ThreadPrimitive.Root className="flex h-full flex-col items-stretch transition-all duration-300 relative select-none gemini-gradient-bg">
       
-      <AuiIf condition={(s) => s.thread.isEmpty}>
-        <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-[72px]">
+      <AuiIf condition={(s) => s.composer.isEmpty}>
+        <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-[72px] -mt-16">
           <div className="mx-auto w-full max-w-[680px] text-center">
-            {/* Gemini-style greeting: "Ready when you are" — exact 28px */}
-            <h1 className="text-[28px] md:text-[32px] leading-[40px] font-normal text-[#e3e3e3] mb-5 select-none animate-greeting-fade">
+            {/* Gemini-style greeting: "Ready when you are" */}
+            <h1 className="text-[36px] md:text-[44px] leading-[48px] font-normal text-[#e3e3e3] mb-7 select-none animate-greeting-fade tracking-tight">
               Ready when you are
             </h1>
           </div>
           {/* Composer */}
           <div className="mx-auto w-full max-w-[680px]">
             <Composer />
-            <p className="text-center text-[#9aa0a6] text-[12px] leading-[16px] mt-3 mb-4 select-none">
-              Aura may display inaccurate info, including about people, so double-check its responses.
-            </p>
           </div>
         </div>
       </AuiIf>
@@ -700,11 +697,11 @@ const Composer: FC = () => {
     <ComposerPrimitive.Root
       data-empty={isEmpty}
       data-running={isRunning}
-      className="group/composer mx-auto flex w-full max-w-[680px] flex-col rounded-[28px] bg-[#1e1f20] border border-white/5 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.3)] transition-all duration-300 focus-within:shadow-[0_4px_16px_-2px_rgba(66,133,244,0.12)]"
+      className="group/composer mx-auto flex w-full max-w-[680px] flex-col gap-2"
     >
       <AuiIf condition={(s) => s.composer.attachments.length > 0}>
-        <div className="overflow-hidden rounded-t-2xl flex flex-col gap-2">
-          <div className="overflow-x-auto p-3.5">
+        <div className="overflow-hidden rounded-2xl bg-[#1e1f20] border border-white/5 p-2 flex flex-col gap-2">
+          <div className="overflow-x-auto p-1.5">
             <div className="flex flex-row gap-3">
               <ComposerPrimitive.Attachments
                 components={{ Attachment: GeminiAttachment }}
@@ -715,50 +712,42 @@ const Composer: FC = () => {
         </div>
       </AuiIf>
 
-      <div className="flex flex-col">
-        <div className="relative px-4 pt-3">
-          <div className="wrap-break-word max-h-96 w-full overflow-y-auto px-2 py-1.5">
-            <ComposerPrimitive.Input
-              placeholder="Ask Gemini"
-              className="block min-h-[24px] w-full resize-none bg-transparent text-[15px] leading-[22px] text-[#e3e3e3] outline-none placeholder:text-[#9aa0a6]"
-            />
-          </div>
+      <div className="flex w-full items-center rounded-full bg-[#1e1f20] px-3.5 py-1 border border-white/5 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.3)] transition-all duration-300 focus-within:shadow-[0_4px_16px_-2px_rgba(66,133,244,0.12)]">
+        {/* Left: Add attachment (+) */}
+        <ComposerPrimitive.AddAttachment className="flex h-[36px] w-[36px] items-center justify-center rounded-full transition-all hover:bg-white/8 active:scale-[0.96] text-[#9aa0a6] shrink-0">
+          <PlusIcon width={20} height={20} />
+        </ComposerPrimitive.AddAttachment>
+
+        {/* Input area */}
+        <div className="flex-1 min-w-0 px-2.5">
+          <ComposerPrimitive.Input
+            placeholder="Ask Gemini"
+            className="block w-full bg-transparent text-[14px] leading-[20px] text-[#e3e3e3] outline-none placeholder:text-[#9aa0a6] py-2.5"
+          />
         </div>
 
-        <div className="flex w-full items-center px-3 pb-2.5 pt-1">
-          {/* Left: Upload (+) */}
-          <div className="flex min-w-0 items-center gap-1">
-            <ComposerPrimitive.AddAttachment className="flex h-[32px] w-[32px] items-center justify-center rounded-full transition-all hover:bg-white/8 active:scale-[0.96] text-[#9aa0a6]">
-              <PlusIcon width={18} height={18} />
-            </ComposerPrimitive.AddAttachment>
-          </div>
+        {/* Right actions: Model (Pro), Mic, Send */}
+        <div className="flex items-center gap-1 shrink-0">
+          <button className="flex items-center gap-1 h-[32px] px-2.5 rounded-full hover:bg-white/8 transition-all text-[#e3e3e3] text-[13px] font-normal">
+            <span>Pro</span>
+            <ChevronDown className="size-[14px] opacity-70" />
+          </button>
 
-          {/* Right: Model selector (Pro), Mic, Send */}
-          <div className="flex items-center gap-0.5 ml-auto">
-            {/* Pro model selector pill — Gemini style */}
-            <button className="flex items-center gap-1 h-[32px] px-2 rounded-full hover:bg-white/8 transition-all text-[#9aa0a6] text-[13px] font-medium">
-              <span className="text-[#e3e3e3] font-medium">Pro</span>
-              <ChevronDown className="size-[14px]" />
-            </button>
+          <button
+             type="button"
+             className="flex h-[36px] w-[36px] items-center justify-center rounded-full transition-all hover:bg-white/8 text-[#9aa0a6]"
+             aria-label="Voice mode"
+          >
+            <Mic width={18} height={18} />
+          </button>
 
-            {/* Mic button */}
-            <button
-              type="button"
-              className="flex h-[36px] w-[36px] items-center justify-center rounded-full transition-all hover:bg-white/8 text-[#9aa0a6] group-data-[empty=false]/composer:scale-0 group-data-[running=true]/composer:scale-0 group-data-[empty=false]/composer:opacity-0 group-data-[running=true]/composer:opacity-0 duration-300"
-              aria-label="Voice mode"
-            >
-              <Mic width={18} height={18} />
-            </button>
-
-            {/* Send / Cancel */}
-            <div className="relative h-[36px] w-[36px] shrink-0">
-              <ComposerPrimitive.Send className="absolute inset-0 flex items-center justify-center rounded-full bg-[#1e1f20] text-[#e3e3e3] transition-all duration-300 ease-out hover:bg-[#2b2c2d] group-data-[empty=true]/composer:scale-0 group-data-[running=true]/composer:scale-0 group-data-[empty=true]/composer:opacity-0 group-data-[running=true]/composer:opacity-0">
-                <SendHorizonal width={16} height={16} />
-              </ComposerPrimitive.Send>
-              <ComposerPrimitive.Cancel className="absolute inset-0 flex items-center justify-center rounded-full bg-[#1e1f20] text-[#e3e3e3] transition-all duration-300 ease-out hover:bg-[#2b2c2d] group-data-[running=false]/composer:scale-0 group-data-[running=false]/composer:opacity-0">
-                <Square width={10} height={10} fill="currentColor" />
-              </ComposerPrimitive.Cancel>
-            </div>
+          <div className="relative h-[36px] w-[36px]">
+            <ComposerPrimitive.Send className="absolute inset-0 flex items-center justify-center rounded-full bg-transparent text-[#9aa0a6] transition-all duration-300 ease-out hover:bg-white/8 group-data-[empty=true]/composer:scale-0 group-data-[running=true]/composer:scale-0 group-data-[empty=true]/composer:opacity-0 group-data-[running=true]/composer:opacity-0">
+              <SendHorizonal width={16} height={16} />
+            </ComposerPrimitive.Send>
+            <ComposerPrimitive.Cancel className="absolute inset-0 flex items-center justify-center rounded-full bg-transparent text-[#9aa0a6] transition-all duration-300 ease-out hover:bg-white/8 group-data-[running=false]/composer:scale-0 group-data-[running=false]/composer:opacity-0">
+              <Square width={10} height={10} fill="currentColor" />
+            </ComposerPrimitive.Cancel>
           </div>
         </div>
       </div>

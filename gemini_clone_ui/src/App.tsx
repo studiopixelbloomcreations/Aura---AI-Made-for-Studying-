@@ -14,8 +14,8 @@ import {
   LogOut,
   X,
   PenSquare,
-  ChevronDown,
   Gem,
+  PanelLeft,
 } from 'lucide-react'
 
 type GateStage = "login" | "checking" | "onboarding" | "loading" | "ready";
@@ -416,15 +416,22 @@ export default function App() {
         {/* Main Content Area */}
         <div className="flex-1 h-full flex flex-col min-w-0 bg-black relative gemini-gradient-bg">
           
-          {/* Gemini-style top bar: model selector left, Upgrade + settings right */}
+          {/* Gemini-style top bar */}
           <header className="h-[52px] w-full flex items-center justify-between px-3 bg-transparent shrink-0 z-30 select-none">
-            {/* Left: Model name dropdown — Gemini exact */}
-            <button className="flex items-center gap-1.5 text-[20px] font-normal text-[#e3e3e3] hover:bg-white/5 px-3 py-1.5 rounded-full transition-colors duration-150">
-              <span>Aura 2.5 Pro</span>
-              <ChevronDown className="size-[18px] opacity-60" />
-            </button>
+            {/* Left: Sidebar expand button (visible only when sidebar is collapsed) */}
+            {!isSidebarExpanded ? (
+              <button
+                onClick={() => setIsSidebarExpanded(true)}
+                className="size-10 flex items-center justify-center rounded-full hover:bg-white/5 text-[#c4c7c5] transition-colors duration-150"
+                title="Expand menu"
+              >
+                <PanelLeft className="size-[20px]" />
+              </button>
+            ) : (
+              <div /> // Empty space when sidebar is open, matching the reference image
+            )}
 
-            {/* Right: Upgrade + settings icon */}
+            {/* Right: Upgrade + new chat pen icon */}
             <div className="flex items-center gap-2">
               {/* Upgrade button — Gemini exact blue pill */}
               <button className="flex items-center gap-1.5 h-[36px] px-4 rounded-full bg-[#0b57d0] hover:bg-[#0842a0] text-white text-[14px] font-medium transition-colors duration-150">
@@ -432,7 +439,7 @@ export default function App() {
                 <span>Upgrade</span>
               </button>
 
-              {/* Settings/customize icon — Gemini's small circular pen icon */}
+              {/* Customize/Pen icon */}
               <button
                 onClick={() => setTemporaryChat(!isTemporaryChat)}
                 className={`size-[36px] flex items-center justify-center rounded-full transition-colors duration-150 ${
