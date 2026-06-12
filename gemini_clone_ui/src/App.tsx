@@ -9,7 +9,6 @@ import { AssistantRuntimeProvider, useLocalRuntime } from "@assistant-ui/react"
 import { askBackend, API_BASE_URL, getAuraIdentity, type AuraIdentity } from './lib/api'
 import { useAppStore } from './store/useAppStore'
 import {
-  Sparkles,
   Camera,
   Plus,
   LogOut,
@@ -18,7 +17,7 @@ import {
   ChevronDown,
 } from 'lucide-react'
 
-type GateStage = "landing" | "login" | "checking" | "onboarding" | "loading" | "ready";
+type GateStage = "login" | "checking" | "onboarding" | "loading" | "ready";
 
 type BasicAnswers = {
   preferred_name: string;
@@ -157,7 +156,7 @@ async function ensureFirebaseAuthRuntime() {
 }
 
 export default function App() {
-  const [gateStage, setGateStage] = useState<GateStage>("landing")
+  const [gateStage, setGateStage] = useState<GateStage>("login")
   const [gateIdentity, setGateIdentity] = useState<AuraIdentity | null>(null)
   const [gateError, setGateError] = useState("")
   const [gateStatus, setGateStatus] = useState("Checking your Aura identity...")
@@ -197,11 +196,6 @@ export default function App() {
       verifyStrictProfile(identity);
     }
   }, []);
-
-  const launchLogin = async () => {
-    setGateError("");
-    setGateStage("login");
-  };
 
   const skipAsGuest = () => {
     setGateError("");
@@ -296,7 +290,7 @@ export default function App() {
     localStorage.removeItem("aura_email");
     localStorage.removeItem("aura_name");
     setGateIdentity(null);
-    setGateStage("landing");
+    setGateStage("login");
   };
 
   const runtime = useLocalRuntime({
@@ -359,51 +353,11 @@ export default function App() {
 
   const gateScreen = useMemo(() => {
     if (gateStage === "ready") return null;
-    if (gateStage === "landing") {
-      return (
-        <div className="min-h-screen bg-black text-[#e3e3e3] flex flex-col">
-          <header className="h-16 px-6 flex items-center justify-between border-b border-white/5">
-            <div className="flex items-center gap-2">
-              <AuraLogo className="size-8" />
-              <span className="text-xl font-semibold text-[#e3e3e3]">Aura</span>
-            </div>
-            <button onClick={launchLogin} className="h-10 px-5 rounded-full bg-[#c2e7ff] text-[#001d35] text-sm font-bold">Log in</button>
-          </header>
-          <main className="flex-1 flex items-center px-6 py-12">
-            <div className="mx-auto max-w-5xl grid md:grid-cols-[1.1fr_0.9fr] gap-10 items-center">
-              <div className="space-y-6">
-                <div className="inline-flex items-center gap-2 rounded-full bg-blue-950/30 px-4 py-2 text-xs font-bold text-blue-300">
-                  <Sparkles className="size-4" /> Grade 9 Personal Intelligence
-                </div>
-                <h1 className="text-5xl md:text-7xl font-medium tracking-tight leading-none bg-gradient-to-r from-[#4285f4] via-[#9b72cb] to-[#d96570] text-transparent bg-clip-text">
-                  Aura AI
-                </h1>
-                <p className="text-lg text-[#bdc1c6] leading-8 max-w-2xl">
-                  A personal study AI that remembers your learning style, routes every answer through Harmony, and builds a private intelligence profile for your Google account.
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  <button onClick={launchLogin} className="h-12 px-6 rounded-full bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/20">
-                    Start with Google
-                  </button>
-                  <button onClick={skipAsGuest} className="h-12 px-6 rounded-full border border-[#2d2f31] text-[#e3e3e3] font-bold hover:bg-white/5">
-                    Continue as Guest
-                  </button>
-                </div>
-              </div>
-              <div className="rounded-[28px] border border-[#2d2f31] bg-[#1e1f20] p-6 shadow-2xl">
-                <img src="/aura-logo.png" alt="Aura AI" className="w-full rounded-2xl object-contain bg-black/20 p-8" />
-              </div>
-            </div>
-          </main>
-        </div>
-      );
-    }
     if (gateStage === "login") {
       return (
         <GateShell title="Log in to continue" subtitle="Aura must bind your unique intelligence to your Google account before the UI opens.">
           <button onClick={signInWithGoogle} className="w-full h-12 rounded-full bg-blue-600 text-white font-bold">Continue with Google</button>
-          <button onClick={skipAsGuest} className="w-full h-11 rounded-full bg-white/5 text-[#a8c7fa] text-sm font-bold hover:bg-white/10">Skip — Continue as Guest</button>
-          <button onClick={() => setGateStage("landing")} className="w-full h-11 rounded-full border border-[#2d2f31] text-[#e3e3e3] text-sm font-bold hover:bg-white/5">Back</button>
+          <button onClick={skipAsGuest} className="w-full h-11 rounded-full bg-white/5 text-[#a8c7fa] text-sm font-bold hover:bg-white/10">Continue as Guest</button>
           {gateError && <p className="text-xs text-red-500">{gateError}</p>}
         </GateShell>
       );
