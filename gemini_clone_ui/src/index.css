@@ -61,6 +61,11 @@
     background: #000000;
     color: #E3E3E3;
   }
+
+  /* Gemini-style gradient background for main content */
+  .gemini-gradient-bg {
+    background: radial-gradient(ellipse 80% 60% at 50% 40%, #0d1b2a 0%, #0a0e14 50%, #000000 100%);
+  }
 }
 
 /* Custom CSS Animations for Gemini Live & Personalization Loaders */

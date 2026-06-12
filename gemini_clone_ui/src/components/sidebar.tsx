@@ -7,10 +7,8 @@ import {
   Image,
   Library,
   Settings as SettingsIcon,
-  ChevronDown,
-  ChevronRight,
   Plus,
-  MessageSquare,
+  FileText,
   Volume2,
   Sparkles,
 } from "lucide-react";
@@ -36,7 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
     setIsPersonalizing,
   } = useAppStore();
 
-  const [agentsOpen, setAgentsOpen] = useState(true);
+  const [notebooksOpen, setNotebooksOpen] = useState(true);
   const [recentsOpen, setRecentsOpen] = useState(true);
 
   const handleNewChat = () => {
@@ -61,14 +59,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
     }
   };
 
-  // Collapsed state: only hamburger icon visible (Gemini style)
+  // Collapsed state: only hamburger icon visible
   if (!isExpanded) {
     return (
       <div className="h-full flex flex-col items-start pt-2 pl-2 shrink-0 select-none">
         <button
           onClick={() => setIsExpanded(true)}
           className="size-12 flex items-center justify-center rounded-full hover:bg-[#393b3d] text-[#c4c7c5] transition-colors duration-150"
-          title="Open sidebar"
         >
           <Menu className="size-[22px]" />
         </button>
@@ -79,51 +76,49 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
   return (
     <aside className="h-full flex flex-col shrink-0 select-none bg-[#1e1f20] w-[260px] animate-sidebar-in overflow-hidden">
       {/* Header: Menu + Aura branding */}
-      <div className="flex items-center gap-1 px-2 pt-2 pb-1 shrink-0">
+      <div className="flex items-center gap-1 px-2 pt-2 pb-1 shrink-0 h-[56px]">
         <button
           onClick={() => setIsExpanded(false)}
-          className="size-12 flex items-center justify-center rounded-full hover:bg-[#393b3d] text-[#c4c7c5] transition-colors duration-150"
-          title="Close sidebar"
+          className="size-12 flex items-center justify-center rounded-full hover:bg-[#393b3d] text-[#c4c7c5] transition-colors duration-150 shrink-0"
         >
           <Menu className="size-[22px]" />
         </button>
-        <div className="flex items-center gap-2 ml-1">
-          <div className="size-7 rounded-full bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 flex items-center justify-center">
-            <Sparkles className="size-4 text-white" />
+        <div className="flex items-center gap-2.5 ml-1">
+          {/* Gemini-style colorful star logo */}
+          <div className="size-6 relative">
+            <Sparkles className="size-6 text-blue-400" style={{ filter: "drop-shadow(0 0 4px rgba(66,133,244,0.4))" }} />
           </div>
           <span className="text-[22px] font-normal text-[#c4c7c5] tracking-tight">Aura</span>
         </div>
       </div>
 
-      {/* New chat button */}
-      <div className="px-3 pt-1 pb-1 shrink-0">
+      {/* New chat button — Gemini's rounded pill style */}
+      <div className="px-3 pt-2 pb-0.5 shrink-0">
         <button
           onClick={handleNewChat}
-          className="w-full flex items-center gap-3 bg-[#393b3d] hover:bg-[#484a4d] text-[#e3e3e3] text-[14px] font-normal py-3 px-4 rounded-full transition-colors duration-150"
+          className="w-full flex items-center gap-3 bg-[#282a2c] hover:bg-[#393b3d] text-[#e3e3e3] text-[14px] font-medium py-2.5 px-4 rounded-full transition-colors duration-150"
         >
-          <PenSquare className="size-[20px] text-[#e3e3e3] shrink-0" />
+          <PenSquare className="size-[18px] text-[#e3e3e3] shrink-0" />
           <span>New chat</span>
         </button>
       </div>
 
       {/* Search chats */}
-      <div className="px-3 pb-1 shrink-0">
-        <button
-          className="w-full flex items-center gap-3 hover:bg-[#393b3d] text-[#e3e3e3] text-[14px] font-normal py-3 px-4 rounded-full transition-colors duration-150"
-        >
-          <Search className="size-[20px] text-[#e3e3e3] shrink-0" />
+      <div className="px-3 pt-1 shrink-0">
+        <button className="w-full flex items-center gap-3 hover:bg-[#393b3d] text-[#e3e3e3] text-[14px] font-normal py-2.5 px-4 rounded-full transition-colors duration-150">
+          <Search className="size-[18px] text-[#e3e3e3] shrink-0" />
           <span>Search chats</span>
         </button>
       </div>
 
       {/* Nav: Images, Library */}
-      <div className="px-3 pb-2 shrink-0 space-y-0.5">
-        <button className="w-full flex items-center gap-3 hover:bg-[#393b3d] text-[#e3e3e3] text-[14px] font-normal py-3 px-4 rounded-full transition-colors duration-150">
-          <Image className="size-[20px] text-[#e3e3e3] shrink-0" />
+      <div className="px-3 space-y-0 shrink-0">
+        <button className="w-full flex items-center gap-3 hover:bg-[#393b3d] text-[#e3e3e3] text-[14px] font-normal py-2.5 px-4 rounded-full transition-colors duration-150">
+          <Image className="size-[18px] text-[#e3e3e3] shrink-0" />
           <span>Images</span>
         </button>
-        <button className="w-full flex items-center gap-3 hover:bg-[#393b3d] text-[#e3e3e3] text-[14px] font-normal py-3 px-4 rounded-full transition-colors duration-150">
-          <Library className="size-[20px] text-[#e3e3e3] shrink-0" />
+        <button className="w-full flex items-center gap-3 hover:bg-[#393b3d] text-[#e3e3e3] text-[14px] font-normal py-2.5 px-4 rounded-full transition-colors duration-150">
+          <Library className="size-[18px] text-[#e3e3e3] shrink-0" />
           <span>Library</span>
         </button>
       </div>
@@ -131,18 +126,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
       {/* Scrollable middle section */}
       <div className="flex-1 overflow-y-auto px-3 min-h-0">
 
-        {/* Aura Live Agents section (replaces Notebooks) */}
-        <div className="pt-3 pb-1">
+        {/* Aura Live Agents section (replaces Notebooks) — Gemini section style */}
+        <div className="pt-4 pb-0.5">
           <button
-            onClick={() => setAgentsOpen(!agentsOpen)}
-            className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] font-medium text-[#9aa0a6] hover:text-[#e3e3e3] transition-colors duration-150"
+            onClick={() => setNotebooksOpen(!notebooksOpen)}
+            className="w-full flex items-center px-4 py-1.5 text-[12px] font-medium text-[#9aa0a6] hover:text-[#c4c7c5] transition-colors duration-150"
           >
-            {agentsOpen ? <ChevronDown className="size-[16px]" /> : <ChevronRight className="size-[16px]" />}
             <span>Aura Live Agents</span>
           </button>
 
-          {agentsOpen && (
-            <div className="space-y-0.5 animate-fade-in">
+          {notebooksOpen && (
+            <div className="space-y-0 animate-fade-in">
               {/* + New Aura Live Agent */}
               <button
                 onClick={handleNewAgent}
@@ -159,7 +153,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
                   onClick={handleAgentClick}
                   className="w-full flex items-center gap-3 hover:bg-[#393b3d] text-[#e3e3e3] text-[14px] font-normal py-2.5 px-4 rounded-full transition-colors duration-150 text-left"
                 >
-                  <Volume2 className="size-[18px] text-emerald-400 shrink-0" />
+                  <Volume2 className="size-[16px] text-emerald-400 shrink-0" />
                   <span className="truncate">{agent.name}</span>
                   {agent.status === "active" && (
                     <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse ml-auto shrink-0" />
@@ -173,7 +167,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
                   key={chat.id}
                   className="w-full flex items-center gap-3 hover:bg-[#393b3d] text-[#c4c7c5] text-[14px] font-normal py-2.5 px-4 rounded-full transition-colors duration-150 text-left"
                 >
-                  <MessageSquare className="size-[18px] shrink-0 opacity-60" />
+                  <FileText className="size-[16px] shrink-0 opacity-50" />
                   <span className="truncate">{chat.title}</span>
                 </button>
               ))}
@@ -181,18 +175,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
           )}
         </div>
 
-        {/* Recents section */}
-        <div className="pt-2 pb-1">
+        {/* Recents section — Gemini style: section header + plain text list */}
+        <div className="pt-3 pb-0.5">
           <button
             onClick={() => setRecentsOpen(!recentsOpen)}
-            className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] font-medium text-[#9aa0a6] hover:text-[#e3e3e3] transition-colors duration-150"
+            className="w-full flex items-center px-4 py-1.5 text-[12px] font-medium text-[#9aa0a6] hover:text-[#c4c7c5] transition-colors duration-150"
           >
-            {recentsOpen ? <ChevronDown className="size-[16px]" /> : <ChevronRight className="size-[16px]" />}
             <span>Recents</span>
           </button>
 
           {recentsOpen && (
-            <div className="space-y-0.5 animate-fade-in">
+            <div className="space-y-0 animate-fade-in">
               {chats.length === 0 ? (
                 <p className="text-[13px] text-[#9aa0a6] px-4 py-2">No recent chats yet</p>
               ) : (
@@ -205,14 +198,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
                         setActiveChatId(chat.id);
                         setActiveTab("chats");
                       }}
-                      className={`w-full flex items-center gap-3 text-[14px] font-normal py-2.5 px-4 rounded-full transition-colors duration-150 text-left ${
+                      className={`w-full text-left text-[14px] font-normal py-2.5 px-4 rounded-full transition-colors duration-150 truncate ${
                         isActive
                           ? "bg-[#393b3d] text-[#e3e3e3]"
                           : "hover:bg-[#393b3d] text-[#e3e3e3]"
                       }`}
                     >
-                      <MessageSquare className="size-[18px] shrink-0 opacity-60" />
-                      <span className="truncate">{chat.title}</span>
+                      {chat.title}
                     </button>
                   );
                 })
@@ -222,8 +214,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
         </div>
       </div>
 
-      {/* Bottom: Settings */}
-      <div className="shrink-0 px-3 pb-3">
+      {/* Bottom: User avatar + name + Settings */}
+      <div className="shrink-0 px-3 pb-3 pt-2 border-t border-white/5">
         <button
           onClick={() => setActiveTab("settings")}
           className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-[14px] font-normal transition-colors duration-150 text-left ${
@@ -232,8 +224,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
               : "hover:bg-[#393b3d] text-[#e3e3e3]"
           }`}
         >
-          <SettingsIcon className="size-[20px] shrink-0" />
-          <span>Settings</span>
+          <div className="size-7 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center text-white text-[10px] font-bold shrink-0 overflow-hidden">
+            <span>A</span>
+          </div>
+          <span className="truncate flex-1">Student</span>
+          <SettingsIcon className="size-[18px] text-[#9aa0a6] shrink-0" />
         </button>
       </div>
     </aside>
